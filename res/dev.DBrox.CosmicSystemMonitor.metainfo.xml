@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.DBrox.CosmicSystemMonitor</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <project_group>COSMIC</project_group>
+  <developer_name>D-Brox</developer_name>
+  <update_contact>davidfbg0@gmail.com</update_contact>
+  <url type="homepage"></url>
+  <url type="bugtracker"></url>
+  <name>System Monitor</name>
+  <summary>System monitor applet for the COSMIC DE</summary>
+  <description>
+    <p>System monitor applet for the COSMIC DE</p>
+  </description>
+  <launchable type="desktop-id">dev.DBrox.CosmicSystemMonitor.desktop</launchable>
+  <icon type="stock">dev.DBrox.CosmicSystemMonitor-symbolic</icon>
+  <screenshots>
+  </screenshots>
+  <provides>
+    <mimetypes>
+      <mimetype>text/plain</mimetype>
+    </mimetypes>
+    <binaries>
+      <binary>cosmic-ext-applet-system-monitor</binary>
+    </binaries>
+  </provides>
+</component>

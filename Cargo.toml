@@ -1,0 +1,31 @@
+[package]
+name = "cosmic-ext-applet-system-monitor"
+version = "0.1.0"
+edition = "2021"
+authors = ["D-Brox <davidfbg00@gmail.com"]
+description = "System monitor applet for the COSMIC DE"
+readme = "README.md"
+license = "GPL-3.0"
+homepage = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor"
+repository = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor.git"
+
+
+[dependencies]
+circular-queue = "0.2.6"
+i18n-embed-fl = "0.9.1"
+once_cell = "1.19.0"
+open = "5.1.3"
+plotters = "0.3.6"
+plotters-iced = { git = "https://github.com/D-Brox/plotters-cosmic-iced.git" }
+rust-embed = "8.3.0"
+serde = "1.0.209"
+sysinfo = "0.31.3"
+
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic.git"
+default-features = false
+features = ["applet", "tokio", "wayland"]
+
+[dependencies.i18n-embed]
+version = "0.15"
+features = ["fluent-system", "desktop-requester"]
