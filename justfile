@@ -48,6 +48,16 @@ build-debug *args:
 # Compiles with release profile
 build-release *args: (build-debug '--release' args)
 
+# Compiles and packages with release profile 
+build-deb:
+    #!/usr/bin/env sh
+    if command -v cargo-deb; then
+        cargo deb
+    else
+        cargo install cargo-deb
+        cargo deb
+    fi
+    
 # Compiles release profile with vendored dependencies
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
 
@@ -76,6 +86,9 @@ install:
     install -Dm0644 {{desktop-src}} {{desktop-dst}}
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
     install -Dm0644 "{{icons-src}}/scalable/apps/{{APPID}}.svg" "{{icons-dst}}/scalable/apps/{{APPID}}.svg"; \
+
+install-deb:
+    apt install ./target/debian/*.deb
 
 # Installs files
 flatpak:

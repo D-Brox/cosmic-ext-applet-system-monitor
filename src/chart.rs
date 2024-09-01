@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
+use std::cmp::max;
+
 use crate::{
     app::Message,
     color::Color,
@@ -20,7 +22,7 @@ use plotters::style::Color as plottersColor;
 use plotters_iced::{Chart, ChartBuilder, ChartWidget};
 use sysinfo::{
     MemoryRefreshKind,
-    // Networks,
+    Networks,
     // Disks,
     System,
 };
@@ -29,39 +31,38 @@ use crate::fl;
 
 pub struct SystemMonitorChart {
     sys: System,
-    // net: Networks,
+    nets: Networks,
     // disks: Disks,
-    
     charts: Vec<UsedChart>,
     cpu: Option<SingleChart>,
     ram: Option<SingleChart>,
     swap: Option<SingleChart>,
-    // net: (),
-    // disk: (),
-    // vram: (),
+    net: Option<DoubleChart>,
+    // disk: Option<DoubleChart>,
+    // vram: Option<SingleChart>,
 }
 
 impl SystemMonitorChart {
     pub fn new(config: &Config, theme: &Theme) -> Self {
         let mut new_self = Self {
             sys: System::new(),
-            // nets: Networks::new_with_refreshed_list(),
+            nets: Networks::new_with_refreshed_list(),
             // disks: Disks::new_with_refreshed_list(),
             charts: vec![],
             cpu: None,
             ram: None,
             swap: None,
-            // net: (),
-            // disk: (),
-            // vram: (),
+            net: None,
+            // disk: None,
+            // vram: None,
         };
         new_self.update_config(&config, theme);
         new_self.update_cpu(theme);
         new_self.update_ram(theme);
         new_self.update_swap(theme);
-        // new_self.update_net(theme);
-        // new_self.update_vram(theme);
+        new_self.update_net(theme);
         // new_self.update_disk(theme);
+        // new_self.update_vram(theme);
         new_self
     }
 }
@@ -82,10 +83,10 @@ impl SystemMonitorChart {
         self.swap.is_some()
     }
 
-    // #[inline]
-    // fn is_initialized_net(&self) -> bool {
-    //     self.net.is_some()
-    // }
+    #[inline]
+    fn is_initialized_net(&self) -> bool {
+        self.net.is_some()
+    }
 
     // #[inline]
     // fn is_initialized_disk(&self) -> bool {
@@ -136,26 +137,30 @@ impl SystemMonitorChart {
         }
     }
 
-    // pub fn update_net(&mut self, _theme: &Theme) {
-    //     if self.is_initialized_net() {
-    //         self.nets.refresh_list();
-    //         self.nets.refresh();
-    //         let mut _download = 0;
-    //         let mut _upload = 0;
+    pub fn update_net(&mut self, theme: &Theme) {
+        if self.is_initialized_net() {
+            self.nets.refresh();
+            let mut upload = 0;
+            let mut download = 0;
 
-    //         for (_, data) in self.nets.iter() {
-    //             _download += data.total_received();
-    //             _upload += data.total_transmitted();
-    //         }
-    //     }
-    // }
+            for (_, data) in self.nets.iter() {
+                upload += data.transmitted();
+                download += data.received();
+                println!("{}",data.received());
+            }
+
+            let net = self.net.as_mut().expect("Error: uninitialized swap chart");
+            net.push_data(upload, download);
+            net.update_rgb_color(theme);
+        }
+    }
 
     // pub fn update_disk(&mut self, _theme: &Theme) {
     //     if self.is_initialized_disk() {}
     // }
 
     // pub fn update_vram(&mut self, _theme: &Theme) {
-    //     if self.is_initialized_disk() {}
+    //     if self.is_initialized_vram() {}
     // }
 
     pub fn update_config(&mut self, config: &Config, theme: &Theme) {
@@ -196,28 +201,28 @@ impl SystemMonitorChart {
                             Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
                     }
                 }
-                ChartConfig::Net(_) | ChartConfig::Disk(_) | ChartConfig::VRAM(_) => (),
-                // ChartConfig::Net(c) => {
-                //     charts.push(UsedChart::Net);
-                //     if self.is_initialized_net() {
-                //         let net = self.net.as_mut().expect("Error: uninitialized swap chart");
-                //         net.update_colors(c.color_up.clone(),c.color_down.clone(), theme);
-                //         net.resize_queue(c.samples);
-                //     } else {
-                //         self.net = Some(DoubleChart::new(
-                //             c.color_up.clone(),
-                //             c.color_down.clone(),
-                //             c.size,
-                //             c.samples,
-                //             theme,
-                //         ));
-                //     }
-                // },
+                ChartConfig::Net(c) => {
+                    charts.push(UsedChart::Net);
+                    if self.is_initialized_net() {
+                        let net = self.net.as_mut().expect("Error: uninitialized swap chart");
+                        net.update_colors(c.color_up.clone(), c.color_down.clone(), theme);
+                        net.resize_queue(c.samples);
+                    } else {
+                        self.net = Some(DoubleChart::new(
+                            c.color_up.clone(),
+                            c.color_down.clone(),
+                            c.size,
+                            c.samples,
+                            theme,
+                        ));
+                    }
+                }
+                ChartConfig::Disk(_) | ChartConfig::VRAM(_) => (),
                 // ChartConfig::Disk(c) => {
                 //     charts.push(UsedChart::Disk);
                 //     if self.is_initialized_disk() {
                 //         let disk = self.disk.as_mut().expect("Error: uninitialized swap chart");
-                //         disk.update_colors(c.color_write.clone(),c.color_read.clone(), theme);
+                //         disk.update_colors(c.color_write.clone(), c.color_read.clone(), theme);
                 //         disk.resize_queue(c.samples);
                 //     } else {
                 //         self.disk = Some(DoubleChart::new(
@@ -228,7 +233,7 @@ impl SystemMonitorChart {
                 //             theme,
                 //         ));
                 //     }
-                // },
+                // }
                 // ChartConfig::VRAM(c) => {
                 //     charts.push(UsedChart::Vram);
                 //     if self.is_initialized_vram() {
@@ -282,17 +287,17 @@ impl SystemMonitorChart {
                             .view(height);
                         charts.push(swap_chart);
                     }
-                } // UsedChart::Net => {
-                  //     if self.is_initialized_swap() {
-                  //         let swap_chart = self
-                  //             .swap
-                  //             .as_ref()
-                  //             .expect("Error: uninitialized swap chart")
-                  //             .view(height);
-                  //         charts.push(swap_chart);
-                  //     }
-                  // },
-                  // UsedChart::Disk => {
+                }
+                UsedChart::Net => {
+                    if self.is_initialized_net() {
+                        let net_chart = self
+                            .net
+                            .as_ref()
+                            .expect("Error: uninitialized swap chart")
+                            .view(height);
+                        charts.push(net_chart);
+                    }
+                } // UsedChart::Disk => {
                   //     if self.is_initialized_disk() {
                   //         let disk_chart = self
                   //             .swap
@@ -301,7 +306,7 @@ impl SystemMonitorChart {
                   //             .view(height);
                   //         charts.push(disk_chart);
                   //     }
-                  // },
+                  // }
                   // UsedChart::Vram => {
                   //     if self.is_initialized_swap() {
                   //         let vram_chart = self
@@ -342,7 +347,7 @@ struct SingleChart {
 impl SingleChart {
     fn new(theme_color: Color, size: f32, samples: usize, theme: &Theme) -> Self {
         let data_points = CircularQueue::with_capacity(samples);
-        // data_points.push()
+
         Self {
             cache: Cache::new(),
             data_points,
@@ -419,107 +424,155 @@ impl Chart<Message> for SingleChart {
     }
 }
 
-// struct DoubleChart {
-//     cache: Cache,
-//     samples: usize,
-//     size: f32,
+struct DoubleChart {
+    cache: Cache,
+    samples: usize,
+    size: f32,
 
-//     data_points1: CircularQueue<i32>,
-//     theme_color1: Color,
-//     rgb_color1: RGBColor,
+    data_points1: CircularQueue<u64>,
+    theme_color1: Color,
+    rgb_color1: RGBColor,
 
-//     data_points2: CircularQueue<i32>,
-//     theme_color2: Color,
-//     rgb_color2: RGBColor,
-// }
+    data_points2: CircularQueue<u64>,
+    theme_color2: Color,
+    rgb_color2: RGBColor,
+}
 
-// impl DoubleChart {
-//     fn new(theme_color1: Color,theme_color2: Color, size: f32, samples: usize, theme: &Theme) -> Self {
-//         let data_points1 = CircularQueue::with_capacity(samples);
-//         let data_points2 = CircularQueue::with_capacity(samples);
-//         // data_points.push()
-//         Self {
-//             cache: Cache::new(),
-//             samples,
-//             size,
+impl DoubleChart {
+    fn new(
+        theme_color1: Color,
+        theme_color2: Color,
+        size: f32,
+        samples: usize,
+        theme: &Theme,
+    ) -> Self {
+        let data_points1 = CircularQueue::with_capacity(samples);
+        let data_points2 = CircularQueue::with_capacity(samples);
 
-//             data_points1,
-//             rgb_color1: theme_color1.clone().as_rgb_color(theme),
-//             theme_color1,
+        Self {
+            cache: Cache::new(),
+            samples,
+            size,
 
-//             data_points2,
-//             rgb_color2: theme_color2.clone().as_rgb_color(theme),
-//             theme_color2,
-//         }
-//     }
+            data_points1,
+            rgb_color1: theme_color1.clone().as_rgb_color(theme),
+            theme_color1,
 
-//     fn resize_queue(&mut self, samples: usize) {
-//         let mut data_points1 = CircularQueue::with_capacity(samples);
-//         let mut data_points2 = CircularQueue::with_capacity(samples);
-//         for data in self.data_points1.asc_iter() {
-//             data_points1.push(*data);
-//         }
-//         for data in self.data_points2.asc_iter() {
-//             data_points2.push(*data);
-//         }
-//         self.samples = samples;
-//         self.data_points1 = data_points1;
-//         self.data_points2 = data_points2;
-//     }
+            data_points2,
+            rgb_color2: theme_color2.clone().as_rgb_color(theme),
+            theme_color2,
+        }
+    }
 
-//     fn update_rgb_color(&mut self, theme: &Theme) {
-//         self.rgb_color1 = self.theme_color1.clone().as_rgb_color(theme);
-//         self.rgb_color2 = self.theme_color2.clone().as_rgb_color(theme);
-//     }
+    fn resize_queue(&mut self, samples: usize) {
+        let mut data_points1 = CircularQueue::with_capacity(samples);
+        let mut data_points2 = CircularQueue::with_capacity(samples);
+        for data in self.data_points1.asc_iter() {
+            data_points1.push(*data);
+        }
+        for data in self.data_points2.asc_iter() {
+            data_points2.push(*data);
+        }
+        self.samples = samples;
+        self.data_points1 = data_points1;
+        self.data_points2 = data_points2;
+    }
 
-//     fn update_colors(&mut self, color1: Color, color2: Color, theme: &Theme) {
-//         self.theme_color1 = color1;
-//         self.theme_color2 = color2;
-//         self.update_rgb_color(theme);
-//     }
+    fn update_rgb_color(&mut self, theme: &Theme) {
+        self.rgb_color1 = self.theme_color1.clone().as_rgb_color(theme);
+        self.rgb_color2 = self.theme_color2.clone().as_rgb_color(theme);
+    }
 
-//     fn push_data(&mut self, value1: i32,value2: i32) {
-//         self.data_points1.push(value1);
-//         self.data_points2.push(value2);
-//         self.cache.clear();
-//     }
+    fn update_colors(&mut self, color1: Color, color2: Color, theme: &Theme) {
+        self.theme_color1 = color1;
+        self.theme_color2 = color2;
+        self.update_rgb_color(theme);
+    }
 
-//     fn view(&self, height: f32) -> Element<Message> {
-//         ChartWidget::new(self)
-//             .height(Length::Fixed(height))
-//             .width(Length::Fixed(height * self.size))
-//             .into()
-//     }
-// }
+    fn push_data(&mut self, value1: u64, value2: u64) {
+        self.data_points1.push(value1);
+        self.data_points2.push(value2);
+        self.cache.clear();
+    }
 
-// impl Chart<Message> for DoubleChart {
-//     type State =();
+    fn view(&self, height: f32) -> Element<Message> {
+        ChartWidget::new(self)
+            .height(Length::Fixed(height))
+            .width(Length::Fixed(height * self.size))
+            .into()
+    }
+}
 
-//     #[inline]
-//     fn draw<R: plotters_iced::Renderer, F: Fn(&mut Frame)>(
-//         &self,
-//         renderer: &R,
-//         bounds: Size,
-//         draw_fn: F,
-//     ) -> Geometry {
-//         renderer.draw_cache(&self.cache, bounds, draw_fn)
-//     }
+impl Chart<Message> for DoubleChart {
+    type State = ();
 
-//     fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, mut builder: ChartBuilder<DB>) {
-//         let mut chart = builder
-//             .build_cartesian_2d(0..self.samples as i32, 0..100)
-//             .expect("Error: failed to build chart");
+    #[inline]
+    fn draw<R: plotters_iced::Renderer, F: Fn(&mut Frame)>(
+        &self,
+        renderer: &R,
+        bounds: Size,
+        draw_fn: F,
+    ) -> Geometry {
+        renderer.draw_cache(&self.cache, bounds, draw_fn)
+    }
 
-//         todo!("properly display both charts")
-//     }
-// }
+    fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, mut builder: ChartBuilder<DB>) {
+        let mut chart = builder
+            .build_cartesian_2d(0..self.samples as i32, 0..100)
+            .expect("Error: failed to build chart");
+
+        let max = self
+            .data_points1
+            .iter()
+            .zip(self.data_points2.iter())
+            .fold(10240, |a, (&b, &c)| max(a, max(b, c)));
+        let scale = 80.0 / max as f64;
+
+        let series_iter1 = (0..self.samples as i32)
+            .rev()
+            .zip(self.data_points1.iter().chain(std::iter::repeat(&0)))
+            .map(|x| (x.0, (*x.1 as f64 * scale) as i32));
+        let series_iter2 = (0..self.samples as i32)
+            .rev()
+            .zip(self.data_points2.iter().chain(std::iter::repeat(&0)))
+            .map(|x| (x.0, (*x.1 as f64 * scale) as i32));
+        chart
+            .draw_series(AreaSeries::new(
+                series_iter1.clone(),
+                0,
+                self.rgb_color1.mix(0.5),
+            ))
+            .expect("Error: failed to draw data series");
+
+        chart
+            .draw_series(AreaSeries::new(
+                series_iter2.clone(),
+                0,
+                self.rgb_color2.mix(0.5),
+            ))
+            .expect("Error: failed to draw data series");
+
+        chart
+            .draw_series(LineSeries::new(
+                series_iter1,
+                ShapeStyle::from(self.rgb_color1).stroke_width(1),
+            ))
+            .expect("Error: failed to draw data series");
+        chart
+            .draw_series(LineSeries::new(
+                series_iter2,
+                ShapeStyle::from(self.rgb_color2).stroke_width(1),
+            ))
+            .expect("Error: failed to draw data series");
+    }
+}
 
 #[derive(Clone)]
 enum UsedChart {
     Cpu,
     Ram,
     Swap,
-    // Net,
+    Net,
     // Disk,
     // Vram,
 }

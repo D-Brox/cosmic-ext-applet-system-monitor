@@ -29,7 +29,7 @@ pub enum Message {
     TickCpu,
     TickRam,
     TickSwap,
-    // TickNet,
+    TickNet,
     // TickDisk,
     // TickVRAM,
 }
@@ -117,7 +117,7 @@ impl Application for SystemMonitor {
             Message::TickCpu => self.chart.update_cpu(&self.get_theme()),
             Message::TickRam => self.chart.update_ram(&self.get_theme()),
             Message::TickSwap => self.chart.update_swap(&self.get_theme()),
-            // Message::TickNet => self.chart.update_net(&self.get_theme()),
+            Message::TickNet => self.chart.update_net(&self.get_theme()),
             // Message::TickDisk => self.chart.update_disk(&self.get_theme()),
             // Message::TickVRAM => self.chart.update_vram(&self.get_theme()),
         }
@@ -141,11 +141,9 @@ impl Application for SystemMonitor {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickSwap)
                     }
-                    ChartConfig::Net(_c) => {
-                        // uninplemented
-                        continue;
-                        // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
-                        //     .map(|_| Message::TickNet)
+                    ChartConfig::Net(c) => {
+                        cosmic::iced::time::every(Duration::from_millis(c.update_interval))
+                            .map(|_| Message::TickNet)
                     }
                     ChartConfig::Disk(_c) => {
                         // uninplemented
