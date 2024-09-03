@@ -14,7 +14,7 @@
     <p>System monitor applet for the COSMIC DE</p>
   </description>
   <launchable type="desktop-id">dev.DBrox.CosmicSystemMonitor.desktop</launchable>
-  <icon type="stock">dev.DBrox.CosmicSystemMonitor-symbolic</icon>
+  <icon type="remote" width="256" height="256">https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/master/res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg</icon>
   <screenshots>
   </screenshots>
   <provides>
