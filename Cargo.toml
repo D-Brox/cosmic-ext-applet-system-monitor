@@ -8,12 +8,11 @@ readme = "README.md"
 license = "GPL-3.0"
 homepage = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor"
 repository = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor.git"
-
+rust-version = "1.80"
 
 [dependencies]
 circular-queue = "0.2.6"
 i18n-embed-fl = "0.9.1"
-once_cell = "1.19.0"
 open = "5.1.3"
 plotters = "0.3.6"
 plotters-iced = { git = "https://github.com/D-Brox/plotters-cosmic-iced.git" }
@@ -36,6 +35,6 @@ license-file = "LICENSE"
 assets = [
     ["target/release/cosmic-ext-applet-system-monitor", "usr/bin/", "755"],
     ["res/dev.DBrox.CosmicSystemMonitor.desktop", "usr/share/applications/", "644"],
-    ["res/dev.DBrox.CosmicSystemMonitor.metainfo.xml", "usr/share/metadata/", "644"],
+    ["res/dev.DBrox.CosmicSystemMonitor.metainfo.xml", "usr/share/metainfo/", "644"],
     ["res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
 ]
