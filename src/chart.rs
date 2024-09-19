@@ -408,13 +408,16 @@ impl Chart<Message> for SingleChart {
             .build_cartesian_2d(0..self.samples as i32, 0..100)
             .expect("Error: failed to build chart");
 
+        let mut data: VecDeque<_> = self.data_points.iter().collect();
+        data.push_front(data.front().unwrap_or(&&0));
+        data.push_back(data.back().unwrap_or(&&0));
         chart
             .draw_series(
                 AreaSeries::new(
-                    (0..self.samples as i32)
+                    ((-1)..=self.samples as i32)
                         .rev()
-                        .zip(self.data_points.iter().chain(std::iter::repeat(&0)))
-                        .map(|x| (x.0, *x.1)),
+                        .zip(data.iter().chain(std::iter::repeat(&&0)))
+                        .map(|x| (x.0, **x.1)),
                     0,
                     self.rgb_color.mix(0.5),
                 )
@@ -528,14 +531,21 @@ impl Chart<Message> for DoubleChart {
             .fold(10240, |a, (&b, &c)| max(a, max(b, c)));
         let scale = 80.0 / max as f64;
 
-        let series_iter1 = (0..self.samples as i32)
+        let mut data1: VecDeque<_> = self.data_points1.iter().collect();
+        data1.push_front(data1.front().unwrap_or(&&0));
+        data1.push_back(data1.back().unwrap_or(&&0));
+        let series_iter1 = ((-1)..=self.samples as i32)
             .rev()
-            .zip(self.data_points1.iter().chain(std::iter::repeat(&0)))
-            .map(|x| (x.0, (*x.1 as f64 * scale) as i32));
-        let series_iter2 = (0..self.samples as i32)
+            .zip(data1.iter().chain(std::iter::repeat(&&0)))
+            .map(|x| (x.0, (**x.1 as f64 * scale) as i32));
+
+        let mut data2: VecDeque<_> = self.data_points1.iter().collect();
+        data2.push_front(data2.front().unwrap_or(&&0));
+        data2.push_back(data2.back().unwrap_or(&&0));
+        let series_iter2 = ((-1)..=self.samples as i32)
             .rev()
-            .zip(self.data_points2.iter().chain(std::iter::repeat(&0)))
-            .map(|x| (x.0, (*x.1 as f64 * scale) as i32));
+            .zip(data2.iter().chain(std::iter::repeat(&&0)))
+            .map(|x| (x.0, (**x.1 as f64 * scale) as i32));
         chart
             .draw_series(AreaSeries::new(
                 series_iter1.clone(),
