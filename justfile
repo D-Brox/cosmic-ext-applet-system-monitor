@@ -74,7 +74,7 @@ fmt:
 
 # Run with args
 run *args:
-    just run {{args}}
+    cargo run {{args}}
 
 # Run with debug logs
 run-logs *args:

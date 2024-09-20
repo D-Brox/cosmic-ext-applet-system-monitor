@@ -7,7 +7,6 @@ use cosmic::app::{Command, Core};
 
 use cosmic::iced::Subscription;
 use cosmic::iced_style::application;
-use cosmic::widget;
 use cosmic::{cosmic_config, Application, Element, Theme};
 
 use crate::config::{config_subscription, ChartConfig, Config};
@@ -79,8 +78,9 @@ impl Application for SystemMonitor {
     }
 
     fn view(&self) -> Element<Self::Message> {
-        let (_, height) = self.core.applet.suggested_size(false);
-        widget::layer_container(self.chart.view(height.into())).into()
+        let (_, size) = self.core.applet.suggested_size(false);
+        let pad = self.core.applet.suggested_padding(false);
+        self.chart.view(size.into(),pad.into())
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::cmp::max;
+use std::{cmp::max, collections::VecDeque};
 
 use crate::{
     app::Message,
@@ -8,6 +8,7 @@ use crate::{
     config::{ChartConfig, Config},
 };
 use circular_queue::CircularQueue;
+use cosmic::cosmic_theme::Layer;
 use cosmic::iced::{
     alignment::{Horizontal, Vertical},
     widget::Row,
@@ -15,8 +16,8 @@ use cosmic::iced::{
 };
 use cosmic::iced_renderer::Geometry;
 use cosmic::iced_widget::canvas::{Cache, Frame};
-use cosmic::widget::Text;
-use cosmic::{Element, Theme};
+use cosmic::widget::{layer_container, Text};
+use cosmic::{Apply, Element, Theme};
 use plotters::prelude::*;
 use plotters::style::Color as plottersColor;
 use plotters_iced::{Chart, ChartBuilder, ChartWidget};
@@ -56,7 +57,7 @@ impl SystemMonitorChart {
             // disk: None,
             // vram: None,
         };
-        new_self.update_config(&config, theme);
+        new_self.update_config(config, theme);
         new_self.update_cpu(theme);
         new_self.update_ram(theme);
         new_self.update_swap(theme);
@@ -146,7 +147,7 @@ impl SystemMonitorChart {
             for (_, data) in self.nets.iter() {
                 upload += data.transmitted();
                 download += data.received();
-                println!("{}",data.received());
+                // println!("{}", data.received());
             }
 
             let net = self.net.as_mut().expect("Error: uninitialized swap chart");
@@ -254,7 +255,8 @@ impl SystemMonitorChart {
         self.charts = charts;
     }
 
-    pub fn view(&self, height: f32) -> Element<Message> {
+    pub fn view(&self, size: f32, pad: f32) -> Element<Message> {
+        let height = size + pad;
         let mut charts = Vec::new();
         for chart in &self.charts {
             match chart {
@@ -329,7 +331,8 @@ impl SystemMonitorChart {
         let row = Row::with_children(charts)
             .width(Length::Shrink)
             .height(Length::Shrink)
-            .align_items(Alignment::Center);
+            .align_items(Alignment::Center)
+            .spacing(pad/2.0);
         row.into()
     }
 }
@@ -385,6 +388,9 @@ impl SingleChart {
         ChartWidget::new(self)
             .height(Length::Fixed(height))
             .width(Length::Fixed(height * self.size))
+            .apply(layer_container)
+            .layer(Layer::Primary)
+            .padding(0)
             .into()
     }
 }
@@ -502,6 +508,9 @@ impl DoubleChart {
         ChartWidget::new(self)
             .height(Length::Fixed(height))
             .width(Length::Fixed(height * self.size))
+            .apply(layer_container)
+            .layer(Layer::Primary)
+            .padding(0)
             .into()
     }
 }
@@ -528,7 +537,7 @@ impl Chart<Message> for DoubleChart {
             .data_points1
             .iter()
             .zip(self.data_points2.iter())
-            .fold(10240, |a, (&b, &c)| max(a, max(b, c)));
+            .fold(102400, |a, (&b, &c)| max(a, max(b, c)));
         let scale = 80.0 / max as f64;
 
         let mut data1: VecDeque<_> = self.data_points1.iter().collect();
