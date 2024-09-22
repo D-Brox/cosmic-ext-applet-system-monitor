@@ -39,3 +39,20 @@ assets = [
     ["res/dev.DBrox.CosmicSystemMonitor.metainfo.xml", "usr/share/metainfo/", "644"],
     ["res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
 ]
+
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/cosmic-ext-applet-system-monitor", dest = "/usr/bin/", mode = "755" },
+    { source = "LICENSE", dest = "/usr/share/doc/cosmic-ext-applet-system-monitor/LICENSE", doc = true, mode = "644" },
+    { source = "res/*.desktop", dest = "/usr/share/applications/", mode = "644" },
+    { source = "res/icons/hicolor/scalable/apps/*.svg", dest = "/usr/share/icons/scalable/apps/", mode = "644"},
+]
+
+[package.metadata.aur]
+files = [
+    ["res/dev.DBrox.CosmicSystemMonitor.desktop", "/usr/share/applications/dev.DBrox.CosmicSystemMonitor.desktop"],
+    ["res/dev.DBrox.CosmicSystemMonitor.metainfo.xml", "/usr/share/metainfo/dev.DBrox.CosmicSystemMonitor.metainfo.xml"],
+    ["LICENSE","/usr/share/doc/cosmic-ext-applet-system-monitor/LICENSE"],
+    ["res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg", "/usr/share/icons/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg"],
+]

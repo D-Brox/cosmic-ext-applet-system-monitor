@@ -3,16 +3,11 @@ export APPID := 'dev.DBrox.CosmicSystemMonitor'
 
 rootdir := ''
 prefix := '/usr'
-flatpak-prefix := '/app'
-
 base-dir := absolute_path(clean(rootdir / prefix))
-flatpak-base-dir := absolute_path(clean(rootdir / flatpak-prefix))
 
-export INSTALL_DIR := base-dir / 'share'
 
 bin-src := 'target' / 'release' / name
 bin-dst := base-dir / 'bin' / name
-flatpak-bin-dst := flatpak-base-dir / 'bin' / name
 
 desktop := APPID + '.desktop'
 desktop-src := 'res' / desktop
@@ -24,6 +19,8 @@ metainfo-dst := clean(rootdir / prefix) / 'share' / 'metainfo' / metainfo
 
 icons-src := 'res' / 'icons' / 'hicolor'
 icons-dst := clean(rootdir / prefix) / 'share' / 'icons' / 'hicolor'
+
+import "packaging.just"
 
 # Default recipe which runs `just build-release`
 [private]
@@ -47,30 +44,20 @@ build-debug *args:
 
 # Compiles with release profile
 build-release *args: (build-debug '--release' args)
-
-# Compiles and packages with release profile 
-build-deb:
-    #!/usr/bin/env sh
-    if command -v cargo-deb; then
-        cargo deb
-    else
-        cargo install cargo-deb
-        cargo deb
-    fi
     
 # Compiles release profile with vendored dependencies
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
 
+# Runs `cargo fmt`
+fmt: 
+    cargo fmt
+
 # Runs a clippy check
-check *args:
+check *args: fmt
     cargo clippy --all-features {{args}} -- -W clippy::pedantic
 
 # Runs a clippy check with JSON message format
 check-json: (check '--message-format=json')
-
-# Runs `cargo fmt`
-fmt: 
-    cargo fmt
 
 # Run with args
 run *args:
@@ -83,16 +70,6 @@ run-logs *args:
 # Installs files
 install:
     install -Dm0755 {{bin-src}} {{bin-dst}}
-    install -Dm0644 {{desktop-src}} {{desktop-dst}}
-    install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
-    install -Dm0644 "{{icons-src}}/scalable/apps/{{APPID}}.svg" "{{icons-dst}}/scalable/apps/{{APPID}}.svg"; \
-
-install-deb:
-    apt install ./target/debian/*.deb
-
-# Installs files
-flatpak:
-    install -Dm0755 {{bin-src}} {{flatpak-bin-dst}}
     install -Dm0644 {{desktop-src}} {{desktop-dst}}
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
     install -Dm0644 "{{icons-src}}/scalable/apps/{{APPID}}.svg" "{{icons-dst}}/scalable/apps/{{APPID}}.svg"; \
