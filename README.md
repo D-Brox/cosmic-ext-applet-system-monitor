@@ -31,7 +31,7 @@ sudo just install
 - [x] CPU usage
 - [x] Memory usage (RAM and swap)
 - [x] Network chart (upload/download)
-- [ ] Disk chart (write/read)
+- [x] Disk chart (write/read)
 - [ ] GPU VRAM chart (help needed)
 - [x] Displayed charts config
 - [x] Sampling configs
@@ -41,13 +41,13 @@ sudo just install
 
 ## Configuring
 
-You can configure the charts displayed by editing `~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v1/charts`. Only charts in this config will be displayed. `Disk` and `VRAM` will be ignored until they are implemented.
+You can configure the charts displayed by editing `~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v1/charts`. Only charts in this config will be displayed. `VRAM` will be ignored until it is implemented.
 
 The fields `update_interval`, `samples` and `size` are the sampling time in milliseconds, the total number of samples displayed and the size relative to the panel height (top/bottom panels), respectively.
 
 You can use colors defined in [CosmicPaletteInner](https://pop-os.github.io/libcosmic/cosmic/cosmic_theme/struct.CosmicPaletteInner.html), as well as `rgb("")` with a hexcode.
 
-Example config where only the CPU, RAM, Swap and Net charts are displayed, in this order:
+Example config where the CPU, RAM, Swap, Net and Disk charts are displayed, in this order:
 ```ron
 [
     CPU((
@@ -75,17 +75,17 @@ Example config where only the CPU, RAM, Swap and Net charts are displayed, in th
          color_up: accent_yellow,
          color_down: accent_red,
      )),
-    // Disk((
-    //     update_interval: 1000,
-    //     samples: 60,
-    //     color_up: accent_yellow,
-    //     color_down: accent_red,
-    //     size: 1.5,
-    // )),
+     Disk((
+         update_interval: 2000,
+         samples: 30,
+         color_up: accent_orange,
+         color_down: accent_pink,
+         size: 1.5,
+     )),
     // VRAM((
     //     update_interval: 1000,
     //     samples: 60,
-    //     color: accent_yellow,
+    //     color: accent_indigo,
     //     size: 1.5,
     // )),
 ]

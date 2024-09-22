@@ -51,14 +51,14 @@ impl Default for Config {
                 }),
                 ChartConfig::Disk(Disk {
                     update_interval: 2000,
-                    color_read: Color::accent_indigo,
+                    color_read: Color::accent_orange,
                     color_write: Color::accent_pink,
                     size: 1.5,
                     samples: 30,
                 }),
                 ChartConfig::VRAM(Generic {
                     update_interval: 2000,
-                    color: Color::accent_orange,
+                    color: Color::accent_indigo,
                     size: 1.5,
                     samples: 30,
                 }),

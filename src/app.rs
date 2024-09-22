@@ -29,7 +29,7 @@ pub enum Message {
     TickRam,
     TickSwap,
     TickNet,
-    // TickDisk,
+    TickDisk,
     // TickVRAM,
 }
 
@@ -80,7 +80,7 @@ impl Application for SystemMonitor {
     fn view(&self) -> Element<Self::Message> {
         let (_, size) = self.core.applet.suggested_size(false);
         let pad = self.core.applet.suggested_padding(false);
-        self.chart.view(size.into(),pad.into())
+        self.chart.view(size.into(), pad.into())
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
@@ -118,7 +118,7 @@ impl Application for SystemMonitor {
             Message::TickRam => self.chart.update_ram(&self.get_theme()),
             Message::TickSwap => self.chart.update_swap(&self.get_theme()),
             Message::TickNet => self.chart.update_net(&self.get_theme()),
-            // Message::TickDisk => self.chart.update_disk(&self.get_theme()),
+            Message::TickDisk => self.chart.update_disk(&self.get_theme()),
             // Message::TickVRAM => self.chart.update_vram(&self.get_theme()),
         }
         Command::none()
@@ -145,11 +145,9 @@ impl Application for SystemMonitor {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickNet)
                     }
-                    ChartConfig::Disk(_c) => {
-                        // uninplemented
-                        continue;
-                        // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
-                        // .map(|_| Message::TickDisk)
+                    ChartConfig::Disk(c) => {
+                        cosmic::iced::time::every(Duration::from_millis(c.update_interval))
+                            .map(|_| Message::TickDisk)
                     }
                     ChartConfig::VRAM(_c) => {
                         // uninplemented
