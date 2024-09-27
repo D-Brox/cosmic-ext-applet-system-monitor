@@ -11,7 +11,7 @@ A highly configurable system resource monitor for the COSMIC DE
 
 ```sh
 git clone https://github.com/D-Brox/cosmic-ext-applet-system-monitor 
-cd cosmic-ext-applet-emoji-selector 
+cd cosmic-ext-applet-system-monitor 
 ```
 
 For debian based distros you can build and install as a deb package:
