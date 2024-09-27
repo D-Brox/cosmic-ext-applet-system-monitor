@@ -78,8 +78,8 @@ Example config where the CPU, RAM, Swap, Net and Disk charts are displayed, in t
      Disk((
          update_interval: 2000,
          samples: 30,
-         color_up: accent_orange,
-         color_down: accent_pink,
+         color_read: accent_orange,
+         color_write: accent_pink,
          size: 1.5,
      )),
     // VRAM((
