@@ -18,6 +18,7 @@
   <screenshots>
   </screenshots>
   <provides>
+    <id>com.system76.CosmicApplet</id>
     <mimetypes>
       <mimetype>text/plain</mimetype>
     </mimetypes>
