@@ -14,8 +14,8 @@ use cosmic::iced::{
     widget::Row,
     Alignment, Length, Size,
 };
-use cosmic::iced_renderer::Geometry;
 use cosmic::iced_widget::canvas::{Cache, Frame};
+use cosmic::widget::canvas::Geometry;
 use cosmic::widget::{layer_container, Text};
 use cosmic::{Apply, Element, Theme};
 use plotters::prelude::*;
@@ -267,7 +267,7 @@ impl SystemMonitorChart {
     }
 
     pub fn view(&self, size: f32, pad: f32) -> Element<Message> {
-        let height = size + pad;
+        let height = size + 2.0 * pad;
         let mut charts = Vec::new();
         for chart in &self.charts {
             match chart {
@@ -334,15 +334,15 @@ impl SystemMonitorChart {
         }
         if charts.is_empty() {
             return Text::new(fl!("loading"))
-                .horizontal_alignment(Horizontal::Center)
-                .vertical_alignment(Vertical::Center)
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Center)
                 .into();
         }
 
         let row = Row::with_children(charts)
             .width(Length::Shrink)
             .height(Length::Shrink)
-            .align_items(Alignment::Center)
+            .align_y(Alignment::Center)
             .spacing(pad / 2.0);
         row.into()
     }

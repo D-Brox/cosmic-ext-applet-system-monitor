@@ -16,10 +16,8 @@ i18n-embed-fl = "0.9.1"
 open = "5.1.3"
 plotters = "0.3.6"
 plotters-iced = { git = "https://github.com/D-Brox/plotters-cosmic-iced.git" }
-# proc_sys_parser = "0.1.22"
 rust-embed = "8.3.0"
 serde = "1.0.209"
-# sysinfo = "0.31.3"
 sysinfo = { git = "https://github.com/D-Brox/sysinfo.git" }
 
 [dependencies.libcosmic]

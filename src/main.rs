@@ -35,5 +35,6 @@ fn main() -> cosmic::iced::Result {
         config_handler,
         config,
     };
-    cosmic::applet::run::<SystemMonitor>(true, flags)
+
+    cosmic::applet::run::<SystemMonitor>(flags)
 }

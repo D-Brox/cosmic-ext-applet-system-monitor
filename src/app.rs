@@ -3,11 +3,11 @@
 use std::time::Duration;
 
 use crate::chart::SystemMonitorChart;
-use cosmic::app::{Command, Core};
+use cosmic::app::{Core, Task};
 
-use cosmic::iced::Subscription;
-use cosmic::iced_style::application;
+use cosmic::iced::{Alignment,Subscription};
 use cosmic::{cosmic_config, Application, Element, Theme};
+use cosmic::widget::row;
 
 use crate::config::{config_subscription, ChartConfig, Config};
 
@@ -65,7 +65,7 @@ impl Application for SystemMonitor {
         &mut self.core
     }
 
-    fn init(core: Core, flags: Self::Flags) -> (Self, Command<Self::Message>) {
+    fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let theme = core.applet.theme().expect("Error: applet theme not found");
         let app = SystemMonitor {
             core,
@@ -74,16 +74,19 @@ impl Application for SystemMonitor {
             config_handler: flags.config_handler,
         };
 
-        (app, Command::none())
+        (app, Task::none())
     }
 
     fn view(&self) -> Element<Self::Message> {
         let (_, size) = self.core.applet.suggested_size(false);
         let pad = self.core.applet.suggested_padding(false);
-        self.chart.view(size.into(), pad.into())
+        self.core
+            .applet
+            .autosize_window(row().push(self.chart.view(size.into(), pad.into())).align_y(Alignment::Center))
+            .into()
     }
 
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         #[allow(unused_macros)]
         macro_rules! config_set {
             ($name: ident, $value: expr) => {
@@ -121,7 +124,7 @@ impl Application for SystemMonitor {
             Message::TickDisk => self.chart.update_disk(&self.get_theme()),
             // Message::TickVRAM => self.chart.update_vram(&self.get_theme()),
         }
-        Command::none()
+        Task::none()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -165,7 +168,7 @@ impl Application for SystemMonitor {
         Subscription::batch(subs)
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 }

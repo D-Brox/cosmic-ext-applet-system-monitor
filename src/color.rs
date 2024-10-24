@@ -8,13 +8,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[allow(non_camel_case_types)]
 pub enum Color {
-    blue,
-    red,
-    green,
-    yellow,
     gray_1,
     gray_2,
-    gray_3,
     neutral_0,
     neutral_1,
     neutral_2,
@@ -53,13 +48,8 @@ impl Color {
         let accent_color = theme.cosmic().accent_color();
         let palette = &theme.cosmic().palette;
         color_to_rgb(match self {
-            Color::blue => palette.blue.color,
-            Color::red => palette.red.color,
-            Color::green => palette.green.color,
-            Color::yellow => palette.yellow.color,
             Color::gray_1 => palette.gray_1.color,
             Color::gray_2 => palette.gray_2.color,
-            Color::gray_3 => palette.gray_3.color,
             Color::neutral_0 => palette.neutral_0.color,
             Color::neutral_1 => palette.neutral_1.color,
             Color::neutral_2 => palette.neutral_2.color,
