@@ -5,7 +5,8 @@ A highly configurable system resource monitor for the COSMIC DE
 ![screenshot of the applet](./res/screenshot.png)
 
 
-
+## Dependencies
+- libfontconfig-dev
 
 ## Install
 
