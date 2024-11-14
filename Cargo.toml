@@ -54,3 +54,4 @@ files = [
     ["LICENSE","/usr/share/doc/cosmic-ext-applet-system-monitor/LICENSE"],
     ["res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg", "/usr/share/icons/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg"],
 ]
+

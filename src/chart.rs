@@ -8,24 +8,24 @@ use crate::{
     config::{ChartConfig, Config},
 };
 use circular_queue::CircularQueue;
-use cosmic::cosmic_theme::Layer;
 use cosmic::iced::{
     alignment::{Horizontal, Vertical},
-    widget::Row,
-    Alignment, Length, Size,
+    Length,
 };
-use cosmic::iced_widget::canvas::{Cache, Frame};
-use cosmic::widget::canvas::Geometry;
 use cosmic::widget::{layer_container, Text};
 use cosmic::{Apply, Element, Theme};
-use plotters::prelude::*;
-use plotters::style::Color as plottersColor;
+use plotters::style::{Color as plottersColor, RelativeSize};
+use plotters::{coord::Shift, prelude::*};
 use plotters_iced::{Chart, ChartBuilder, ChartWidget};
 use sysinfo::{Disks, MemoryRefreshKind, Networks, System};
 
 use crate::fl;
 
 pub struct SystemMonitorChart {
+    relative_size: f32,
+    breakpoints: Vec<f32>,
+    bg_color: RGBAColor,
+
     sys: System,
     nets: Networks,
     disks: Disks,
@@ -41,7 +41,18 @@ pub struct SystemMonitorChart {
 
 impl SystemMonitorChart {
     pub fn new(config: &Config, theme: &Theme) -> Self {
+        let primary = theme.cosmic().primary.base;
+        let rgb = primary.color.into_components();
+        let r = (rgb.0 * 255.0) as u8;
+        let g = (rgb.1 * 255.0) as u8;
+        let b = (rgb.2 * 255.0) as u8;
+
+        let bg_color = RGBAColor(r, g, b, primary.alpha as f64);
         let mut new_self = Self {
+            relative_size: 0.0,
+            breakpoints: Vec::new(),
+            bg_color,
+
             sys: System::new(),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
@@ -60,6 +71,7 @@ impl SystemMonitorChart {
         new_self.update_net(theme);
         new_self.update_disk(theme);
         // new_self.update_vram(theme);
+        new_self.update_size();
         new_self
     }
 }
@@ -143,7 +155,6 @@ impl SystemMonitorChart {
             for (_, data) in self.nets.iter() {
                 upload += data.transmitted();
                 download += data.received();
-                // println!("{}", data.received());
             }
 
             let net = self.net.as_mut().expect("Error: uninitialized swap chart");
@@ -183,6 +194,7 @@ impl SystemMonitorChart {
                         let cpu = self.cpu.as_mut().expect("Error: uninitialized CPU chart");
                         cpu.update_colors(c.color.clone(), theme);
                         cpu.resize_queue(c.samples);
+                        cpu.update_size(c.size);
                     } else {
                         self.cpu =
                             Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
@@ -193,8 +205,8 @@ impl SystemMonitorChart {
                     if self.is_initialized_swap() {
                         let ram = self.ram.as_mut().expect("Error: uninitialized RAM chart");
                         ram.update_colors(c.color.clone(), theme);
-
                         ram.resize_queue(c.samples);
+                        ram.update_size(c.size);
                     } else {
                         self.ram =
                             Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
@@ -206,6 +218,7 @@ impl SystemMonitorChart {
                         let swap = self.swap.as_mut().expect("Error: uninitialized swap chart");
                         swap.update_colors(c.color.clone(), theme);
                         swap.resize_queue(c.samples);
+                        swap.update_size(c.size);
                     } else {
                         self.swap =
                             Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
@@ -217,6 +230,7 @@ impl SystemMonitorChart {
                         let net = self.net.as_mut().expect("Error: uninitialized swap chart");
                         net.update_colors(c.color_up.clone(), c.color_down.clone(), theme);
                         net.resize_queue(c.samples);
+                        net.update_size(c.size);
                     } else {
                         self.net = Some(DoubleChart::new(
                             c.color_up.clone(),
@@ -234,6 +248,7 @@ impl SystemMonitorChart {
                         let disk = self.disk.as_mut().expect("Error: uninitialized swap chart");
                         disk.update_colors(c.color_write.clone(), c.color_read.clone(), theme);
                         disk.resize_queue(c.samples);
+                        disk.update_size(c.size);
                     } else {
                         self.disk = Some(DoubleChart::new(
                             c.color_write.clone(),
@@ -263,93 +278,148 @@ impl SystemMonitorChart {
                 // },
             }
         }
+        self.update_size();
+        println!("{}", self.relative_size);
         self.charts = charts;
     }
 
-    pub fn view(&self, size: f32, pad: f32) -> Element<Message> {
-        let height = size + 2.0 * pad;
-        let mut charts = Vec::new();
-        for chart in &self.charts {
-            match chart {
+    fn update_size(&mut self) {
+        let mut size = 0.0;
+        let mut breakpoints = Vec::new();
+        for chart in self.charts.iter() {
+            size += match chart {
                 UsedChart::Cpu => {
                     if self.is_initialized_cpu() {
-                        let cpu_chart = self
-                            .cpu
-                            .as_ref()
-                            .expect("Error: uninitialized CPU chart")
-                            .view(height);
-                        charts.push(cpu_chart);
+                        self.cpu.as_ref().unwrap().size
+                    } else {
+                        0.0
                     }
                 }
                 UsedChart::Ram => {
                     if self.is_initialized_ram() {
-                        let ram_chart = self
-                            .ram
-                            .as_ref()
-                            .expect("Error: uninitialized RAM chart")
-                            .view(height);
-                        charts.push(ram_chart);
+                        self.ram.as_ref().unwrap().size
+                    } else {
+                        0.0
                     }
                 }
                 UsedChart::Swap => {
                     if self.is_initialized_swap() {
-                        let swap_chart = self
-                            .swap
-                            .as_ref()
-                            .expect("Error: uninitialized swap chart")
-                            .view(height);
-                        charts.push(swap_chart);
+                        self.swap.as_ref().unwrap().size
+                    } else {
+                        0.0
                     }
                 }
                 UsedChart::Net => {
                     if self.is_initialized_net() {
-                        let net_chart = self
-                            .net
-                            .as_ref()
-                            .expect("Error: uninitialized net chart")
-                            .view(height);
-                        charts.push(net_chart);
+                        self.cpu.as_ref().unwrap().size
+                    } else {
+                        0.0
                     }
                 }
                 UsedChart::Disk => {
                     if self.is_initialized_disk() {
-                        let disk_chart = self
-                            .disk
-                            .as_ref()
-                            .expect("Error: uninitialized disk chart")
-                            .view(height);
-                        charts.push(disk_chart);
+                        self.disk.as_ref().unwrap().size
+                    } else {
+                        0.0
                     }
-                } // UsedChart::Vram => {
-                  //     if self.is_initialized_swap() {
-                  //         let vram_chart = self
-                  //             .vram
-                  //             .as_ref()
-                  //             .expect("Error: uninitialized swap chart")
-                  //             .view(height);
-                  //         charts.push(vram_chart);
-                  //     }
-                  // },
-            }
+                }
+            };
+            breakpoints.push(size);
         }
-        if charts.is_empty() {
+        self.relative_size = size;
+        if size != 0.0 {
+            breakpoints.pop();
+            self.breakpoints = breakpoints.iter().map(|bp| bp / size).collect();
+        }
+    }
+
+    pub fn view(&self, size: f32, pad: f32) -> Element<Message> {
+        if self.charts.is_empty() {
             return Text::new(fl!("loading"))
                 .align_x(Horizontal::Center)
                 .align_y(Vertical::Center)
                 .into();
         }
-
-        let row = Row::with_children(charts)
-            .width(Length::Shrink)
-            .height(Length::Shrink)
-            .align_y(Alignment::Center)
-            .spacing(pad / 2.0);
-        row.into()
+        let height = size + 2.0 * pad;
+        ChartWidget::new((self, self.breakpoints.clone(), pad))
+            .height(Length::Fixed(height))
+            .apply(layer_container)
+            .width(Length::Fixed(self.relative_size * height))
+            .padding(0)
+            .into()
     }
 }
 
+impl Chart<Message> for (&SystemMonitorChart, Vec<f32>, f32) {
+    type State = ();
+
+    fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, _builder: ChartBuilder<DB>) {}
+
+    fn draw_chart<DB: DrawingBackend>(&self, _state: &Self::State, root: DrawingArea<DB, Shift>) {
+        let children = root.split_by_breakpoints(
+            self.1
+                .iter()
+                .map(|bp| RelativeSize::Width(*bp as f64))
+                .collect::<Vec<_>>(),
+            vec![0.0; 0],
+        );
+        for (child, chart) in children.iter().zip(self.0.charts.clone().iter()) {
+            let mut on = ChartBuilder::on(child);
+            let builder = on.margin(self.2 / 2.0);
+
+            match chart {
+                UsedChart::Cpu => {
+                    if self.0.is_initialized_cpu() {
+                        self.0
+                            .cpu
+                            .clone()
+                            .unwrap()
+                            .draw_chart(builder, self.0.bg_color);
+                    }
+                }
+                UsedChart::Ram => {
+                    if self.0.is_initialized_ram() {
+                        self.0
+                            .ram
+                            .clone()
+                            .unwrap()
+                            .draw_chart(builder, self.0.bg_color);
+                    }
+                }
+                UsedChart::Swap => {
+                    if self.0.is_initialized_swap() {
+                        self.0
+                            .swap
+                            .clone()
+                            .unwrap()
+                            .draw_chart(builder, self.0.bg_color);
+                    }
+                }
+                UsedChart::Net => {
+                    if self.0.is_initialized_net() {
+                        self.0
+                            .net
+                            .clone()
+                            .unwrap()
+                            .draw_chart(builder, self.0.bg_color);
+                    }
+                }
+                UsedChart::Disk => {
+                    if self.0.is_initialized_disk() {
+                        self.0
+                            .disk
+                            .clone()
+                            .unwrap()
+                            .draw_chart(builder, self.0.bg_color);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
 struct SingleChart {
-    cache: Cache,
     samples: usize,
     size: f32,
 
@@ -363,7 +433,6 @@ impl SingleChart {
         let data_points = CircularQueue::with_capacity(samples);
 
         Self {
-            cache: Cache::new(),
             data_points,
             samples,
             rgb_color: theme_color.clone().as_rgb_color(theme),
@@ -381,6 +450,10 @@ impl SingleChart {
         self.data_points = data_points;
     }
 
+    fn update_size(&mut self, size: f32) {
+        self.size = size;
+    }
+
     fn update_rgb_color(&mut self, theme: &Theme) {
         self.rgb_color = self.theme_color.clone().as_rgb_color(theme);
     }
@@ -392,35 +465,9 @@ impl SingleChart {
 
     fn push_data(&mut self, value: i64) {
         self.data_points.push(value);
-        self.cache.clear();
     }
 
-    fn view(&self, height: f32) -> Element<Message> {
-        ChartWidget::new(self)
-            .height(Length::Fixed(height))
-            .width(Length::Fixed(height * self.size))
-            .apply(layer_container)
-            .layer(Layer::Primary)
-            .padding(0)
-            .into()
-    }
-}
-
-impl Chart<Message> for SingleChart {
-    type State = ();
-
-    #[inline]
-    fn draw<R: plotters_iced::Renderer, F: Fn(&mut Frame)>(
-        &self,
-        renderer: &R,
-        bounds: Size,
-        draw_fn: F,
-    ) -> Geometry {
-        renderer.draw_cache(&self.cache, bounds, draw_fn)
-    }
-
-    fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, mut builder: ChartBuilder<DB>) {
-        // Acquire time range
+    fn draw_chart<DB: DrawingBackend>(self, builder: &mut ChartBuilder<DB>, color: RGBAColor) {
         let mut chart = builder
             .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
             .expect("Error: failed to build chart");
@@ -428,6 +475,7 @@ impl Chart<Message> for SingleChart {
         let mut data: VecDeque<_> = self.data_points.iter().collect();
         data.push_front(data.front().unwrap_or(&&0));
         data.push_back(data.back().unwrap_or(&&0));
+        chart.plotting_area().fill(&color).unwrap();
         chart
             .draw_series(
                 AreaSeries::new(
@@ -444,8 +492,8 @@ impl Chart<Message> for SingleChart {
     }
 }
 
+#[derive(Clone)]
 struct DoubleChart {
-    cache: Cache,
     samples: usize,
     size: f32,
     min_scale: u64,
@@ -472,7 +520,6 @@ impl DoubleChart {
         let data_points2 = CircularQueue::with_capacity(samples);
 
         Self {
-            cache: Cache::new(),
             samples,
             size,
             min_scale,
@@ -501,6 +548,10 @@ impl DoubleChart {
         self.data_points2 = data_points2;
     }
 
+    fn update_size(&mut self, size: f32) {
+        self.size = size;
+    }
+
     fn update_rgb_color(&mut self, theme: &Theme) {
         self.rgb_color1 = self.theme_color1.clone().as_rgb_color(theme);
         self.rgb_color2 = self.theme_color2.clone().as_rgb_color(theme);
@@ -515,37 +566,13 @@ impl DoubleChart {
     fn push_data(&mut self, value1: u64, value2: u64) {
         self.data_points1.push(value1);
         self.data_points2.push(value2);
-        self.cache.clear();
     }
 
-    fn view(&self, height: f32) -> Element<Message> {
-        ChartWidget::new(self)
-            .height(Length::Fixed(height))
-            .width(Length::Fixed(height * self.size))
-            .apply(layer_container)
-            .layer(Layer::Primary)
-            .padding(0)
-            .into()
-    }
-}
-
-impl Chart<Message> for DoubleChart {
-    type State = ();
-
-    #[inline]
-    fn draw<R: plotters_iced::Renderer, F: Fn(&mut Frame)>(
-        &self,
-        renderer: &R,
-        bounds: Size,
-        draw_fn: F,
-    ) -> Geometry {
-        renderer.draw_cache(&self.cache, bounds, draw_fn)
-    }
-
-    fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, mut builder: ChartBuilder<DB>) {
+    fn draw_chart<DB: DrawingBackend>(self, builder: &mut ChartBuilder<DB>, color: RGBAColor) {
         let mut chart = builder
             .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
             .expect("Error: failed to build chart");
+        chart.plotting_area().fill(&color).unwrap();
 
         let max = self
             .data_points1

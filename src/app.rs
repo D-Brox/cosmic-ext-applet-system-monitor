@@ -5,9 +5,9 @@ use std::time::Duration;
 use crate::chart::SystemMonitorChart;
 use cosmic::app::{Core, Task};
 
-use cosmic::iced::{Alignment,Subscription};
-use cosmic::{cosmic_config, Application, Element, Theme};
+use cosmic::iced::{Alignment, Subscription};
 use cosmic::widget::row;
+use cosmic::{cosmic_config, Application, Element, Theme};
 
 use crate::config::{config_subscription, ChartConfig, Config};
 
@@ -82,7 +82,11 @@ impl Application for SystemMonitor {
         let pad = self.core.applet.suggested_padding(false);
         self.core
             .applet
-            .autosize_window(row().push(self.chart.view(size.into(), pad.into())).align_y(Alignment::Center))
+            .autosize_window(
+                row()
+                    .push(self.chart.view(size.into(), pad.into()))
+                    .align_y(Alignment::Center),
+            )
             .into()
     }
 
@@ -114,6 +118,7 @@ impl Application for SystemMonitor {
             Message::Config(config) => {
                 if config != self.config {
                     self.config = config;
+                    println!("config");
                     self.chart.update_config(&self.config, &self.get_theme());
                 }
             }
