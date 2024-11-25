@@ -18,7 +18,8 @@ plotters = "0.3.6"
 plotters-iced = { git = "https://github.com/D-Brox/plotters-cosmic-iced.git" }
 rust-embed = "8.3.0"
 serde = "1.0.209"
-sysinfo = { git = "https://github.com/D-Brox/sysinfo.git" }
+# sysinfo = "0.33.0"
+sysinfo = { git = "https://github.com/GuillaumeGomez/sysinfo", rev = "1fd8cd1" }
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
@@ -54,4 +55,3 @@ files = [
     ["LICENSE","/usr/share/doc/cosmic-ext-applet-system-monitor/LICENSE"],
     ["res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg", "/usr/share/icons/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg"],
 ]
-

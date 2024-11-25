@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{cmp::max, collections::VecDeque};
+use std::cmp::max;
 
 use crate::{
     app::Message,
@@ -170,8 +170,9 @@ impl SystemMonitorChart {
             let mut read = 0;
 
             for disk in self.disks.iter() {
-                write += disk.bytes_write();
-                read += disk.bytes_read();
+                let usage = disk.usage();
+                write += usage.written_bytes;
+                read += usage.read_bytes;
             }
 
             let disk = self.disk.as_mut().expect("Error: uninitialized disk chart");
@@ -365,7 +366,7 @@ impl Chart<Message> for (&SystemMonitorChart, Vec<f32>, f32) {
         );
         for (child, chart) in children.iter().zip(self.0.charts.clone().iter()) {
             let mut on = ChartBuilder::on(child);
-            let builder = on.margin(self.2 / 2.0);
+            let builder = on.margin(self.2 / 4.0);
 
             match chart {
                 UsedChart::Cpu => {
@@ -430,7 +431,10 @@ struct SingleChart {
 
 impl SingleChart {
     fn new(theme_color: Color, size: f32, samples: usize, theme: &Theme) -> Self {
-        let data_points = CircularQueue::with_capacity(samples);
+        let mut data_points = CircularQueue::with_capacity(samples);
+        for _ in 0..samples {
+            data_points.push(0);
+        }
 
         Self {
             data_points,
@@ -472,17 +476,13 @@ impl SingleChart {
             .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
             .expect("Error: failed to build chart");
 
-        let mut data: VecDeque<_> = self.data_points.iter().collect();
-        data.push_front(data.front().unwrap_or(&&0));
-        data.push_back(data.back().unwrap_or(&&0));
         chart.plotting_area().fill(&color).unwrap();
         chart
             .draw_series(
                 AreaSeries::new(
-                    ((-1)..=self.samples as i64)
-                        .rev()
-                        .zip(data.iter().chain(std::iter::repeat(&&0)))
-                        .map(|x| (x.0, **x.1)),
+                    (0..self.samples as i64)
+                        .zip(self.data_points.asc_iter())
+                        .map(|x| (x.0, *x.1)),
                     0,
                     self.rgb_color.mix(0.5),
                 )
@@ -516,8 +516,12 @@ impl DoubleChart {
         theme: &Theme,
         min_scale: u64,
     ) -> Self {
-        let data_points1 = CircularQueue::with_capacity(samples);
-        let data_points2 = CircularQueue::with_capacity(samples);
+        let mut data_points1 = CircularQueue::with_capacity(samples);
+        let mut data_points2 = CircularQueue::with_capacity(samples);
+        for _ in 0..samples {
+            data_points1.push(0);
+            data_points2.push(0);
+        }
 
         Self {
             samples,
@@ -581,24 +585,11 @@ impl DoubleChart {
             .fold(self.min_scale, |a, (&b, &c)| max(a, max(b, c)));
         let scale = 80.0 / max as f64;
 
-        let mut data1: VecDeque<_> = self.data_points1.iter().collect();
-        data1.push_front(data1.front().unwrap_or(&&0));
-        data1.push_back(data1.back().unwrap_or(&&0));
-        let series_iter1 = ((-1)..=self.samples as i64)
-            .rev()
-            .zip(data1.iter().chain(std::iter::repeat(&&0)))
-            .map(|x| (x.0, (**x.1 as f64 * scale) as i64));
-
-        let mut data2: VecDeque<_> = self.data_points2.iter().collect();
-        data2.push_front(data2.front().unwrap_or(&&0));
-        data2.push_back(data2.back().unwrap_or(&&0));
-        let series_iter2 = ((-1)..=self.samples as i64)
-            .rev()
-            .zip(data2.iter().chain(std::iter::repeat(&&0)))
-            .map(|x| (x.0, (**x.1 as f64 * scale) as i64));
         chart
             .draw_series(AreaSeries::new(
-                series_iter1.clone(),
+                (0..self.samples as i64)
+                    .zip(self.data_points1.asc_iter())
+                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
                 0,
                 self.rgb_color1.mix(0.5),
             ))
@@ -606,7 +597,9 @@ impl DoubleChart {
 
         chart
             .draw_series(AreaSeries::new(
-                series_iter2.clone(),
+                (0..self.samples as i64)
+                    .zip(self.data_points2.asc_iter())
+                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
                 0,
                 self.rgb_color2.mix(0.5),
             ))
@@ -614,13 +607,17 @@ impl DoubleChart {
 
         chart
             .draw_series(LineSeries::new(
-                series_iter1,
+                (0..self.samples as i64)
+                    .zip(self.data_points1.asc_iter())
+                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
                 ShapeStyle::from(self.rgb_color1).stroke_width(1),
             ))
             .expect("Error: failed to draw data series");
         chart
             .draw_series(LineSeries::new(
-                series_iter2,
+                (0..self.samples as i64)
+                    .zip(self.data_points2.asc_iter())
+                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
                 ShapeStyle::from(self.rgb_color2).stroke_width(1),
             ))
             .expect("Error: failed to draw data series");
