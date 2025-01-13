@@ -121,7 +121,7 @@ impl SystemMonitorChart {
     pub fn update_ram(&mut self, theme: &Theme) {
         if self.is_initialized_ram() {
             self.sys
-                .refresh_memory_specifics(MemoryRefreshKind::new().with_swap());
+                .refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
             let total_ram = self.sys.total_memory() as f64;
             let used_ram = self.sys.used_memory() as f64;
             let ram_data = ((used_ram / total_ram) * 100.0) as i64;
@@ -135,7 +135,7 @@ impl SystemMonitorChart {
     pub fn update_swap(&mut self, theme: &Theme) {
         if self.is_initialized_swap() {
             self.sys
-                .refresh_memory_specifics(MemoryRefreshKind::new().with_swap());
+                .refresh_memory_specifics(MemoryRefreshKind::nothing().with_swap());
             let total_swap = self.sys.total_swap() as f64;
             let used_swap = self.sys.used_swap() as f64;
             let ram_swap = ((used_swap / total_swap) * 100.0) as i64;
@@ -148,7 +148,7 @@ impl SystemMonitorChart {
 
     pub fn update_net(&mut self, theme: &Theme) {
         if self.is_initialized_net() {
-            self.nets.refresh();
+            self.nets.refresh(true);
             let mut upload = 0;
             let mut download = 0;
 
@@ -165,7 +165,7 @@ impl SystemMonitorChart {
 
     pub fn update_disk(&mut self, theme: &Theme) {
         if self.is_initialized_disk() {
-            self.disks.refresh();
+            self.disks.refresh(true);
             let mut write = 0;
             let mut read = 0;
 
