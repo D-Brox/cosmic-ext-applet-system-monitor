@@ -1015,7 +1015,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ext-applet-system-monitor"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "circular-queue",
  "i18n-embed",
