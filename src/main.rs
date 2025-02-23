@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-mod app;
+mod applet;
 mod chart;
 mod color;
 mod config;
+// mod gpu;
 mod localization;
 
-use app::{Flags, SystemMonitor, ID};
+use applet::{Flags, SystemMonitor, ID};
 use config::{Config, CONFIG_VERSION};
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 

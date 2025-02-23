@@ -80,11 +80,12 @@ impl Application for SystemMonitor {
     fn view(&self) -> Element<Self::Message> {
         let (_, size) = self.core.applet.suggested_size(false);
         let pad = self.core.applet.suggested_padding(false);
+        let is_horizontal = self.core.applet.is_horizontal();
         self.core
             .applet
             .autosize_window(
                 row()
-                    .push(self.chart.view(size.into(), pad.into()))
+                    .push(self.chart.view(size.into(), pad.into(), is_horizontal))
                     .align_y(Alignment::Center),
             )
             .into()

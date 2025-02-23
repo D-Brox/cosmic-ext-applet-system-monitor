@@ -9,7 +9,7 @@ use cosmic::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::{Message, ID},
+    applet::{Message, ID},
     color::Color,
 };
 

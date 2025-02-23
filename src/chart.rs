@@ -3,9 +3,10 @@
 use std::cmp::max;
 
 use crate::{
-    app::Message,
+    applet::Message,
     color::Color,
     config::{ChartConfig, Config},
+    // gpu::Gpus,
 };
 use circular_queue::CircularQueue;
 use cosmic::iced::{
@@ -29,7 +30,7 @@ pub struct SystemMonitorChart {
     sys: System,
     nets: Networks,
     disks: Disks,
-
+    // gpus: Gpus,
     charts: Vec<UsedChart>,
     cpu: Option<SingleChart>,
     ram: Option<SingleChart>,
@@ -56,6 +57,7 @@ impl SystemMonitorChart {
             sys: System::new(),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
+            // gpus: Gpus {},
             charts: vec![],
             cpu: None,
             ram: None,
@@ -334,36 +336,53 @@ impl SystemMonitorChart {
         }
     }
 
-    pub fn view(&self, size: f32, pad: f32) -> Element<Message> {
+    pub fn view(&self, size: f32, pad: f32, is_horizontal: bool) -> Element<Message> {
         if self.charts.is_empty() {
             return Text::new(fl!("loading"))
                 .align_x(Horizontal::Center)
                 .align_y(Vertical::Center)
                 .into();
         }
-        let height = size + 2.0 * pad;
-        ChartWidget::new((self, self.breakpoints.clone(), pad))
+        let (height, width) = if is_horizontal {
+            let h = size + 2.0 * pad;
+            (h, h * self.relative_size)
+        } else {
+            let w = size + 2.0 * pad;
+            (w * self.relative_size, w)
+        };
+        ChartWidget::new((self, self.breakpoints.clone(), pad, is_horizontal))
             .height(Length::Fixed(height))
             .apply(layer_container)
-            .width(Length::Fixed(self.relative_size * height))
+            .width(Length::Fixed(width))
             .padding(0)
             .into()
     }
 }
 
-impl Chart<Message> for (&SystemMonitorChart, Vec<f32>, f32) {
+impl Chart<Message> for (&SystemMonitorChart, Vec<f32>, f32, bool) {
     type State = ();
 
     fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, _builder: ChartBuilder<DB>) {}
 
     fn draw_chart<DB: DrawingBackend>(&self, _state: &Self::State, root: DrawingArea<DB, Shift>) {
-        let children = root.split_by_breakpoints(
-            self.1
-                .iter()
-                .map(|bp| RelativeSize::Width(*bp as f64))
-                .collect::<Vec<_>>(),
-            vec![0.0; 0],
-        );
+        let children = if self.3 {
+            root.split_by_breakpoints(
+                self.1
+                    .iter()
+                    .map(|bp| RelativeSize::Width(*bp as f64))
+                    .collect::<Vec<_>>(),
+                vec![0.0; 0],
+            )
+        } else {
+            root.split_by_breakpoints(
+                vec![0.0; 0],
+                self.1
+                    .iter()
+                    .map(|bp| RelativeSize::Height(*bp as f64))
+                    .collect::<Vec<_>>(),
+            )
+        };
+
         for (child, chart) in children.iter().zip(self.0.charts.clone().iter()) {
             let mut on = ChartBuilder::on(child);
             let builder = on.margin(self.2 / 4.0);
@@ -477,17 +496,18 @@ impl SingleChart {
             .expect("Error: failed to build chart");
 
         chart.plotting_area().fill(&color).unwrap();
+        let iter = (0..self.samples as i64)
+            .zip(self.data_points.asc_iter())
+            .map(|x| (x.0, *x.1));
+
         chart
-            .draw_series(
-                AreaSeries::new(
-                    (0..self.samples as i64)
-                        .zip(self.data_points.asc_iter())
-                        .map(|x| (x.0, *x.1)),
-                    0,
-                    self.rgb_color.mix(0.5),
-                )
-                .border_style(ShapeStyle::from(self.rgb_color).stroke_width(1)),
-            )
+            .draw_series(AreaSeries::new(iter.clone(), 0, self.rgb_color.mix(0.5)))
+            .expect("Error: failed to draw data series");
+        chart
+            .draw_series(LineSeries::new(
+                iter,
+                ShapeStyle::from(self.rgb_color).stroke_width(1),
+            ))
             .expect("Error: failed to draw data series");
     }
 }
@@ -585,39 +605,31 @@ impl DoubleChart {
             .fold(self.min_scale, |a, (&b, &c)| max(a, max(b, c)));
         let scale = 80.0 / max as f64;
 
+        let iter1 = (0..self.samples as i64)
+            .zip(self.data_points2.asc_iter())
+            .map(|x| (x.0, (*x.1 as f64 * scale) as i64));
+
+        let iter2 = (0..self.samples as i64)
+            .zip(self.data_points1.asc_iter())
+            .map(|x| (x.0, (*x.1 as f64 * scale) as i64));
+
         chart
-            .draw_series(AreaSeries::new(
-                (0..self.samples as i64)
-                    .zip(self.data_points1.asc_iter())
-                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
-                0,
-                self.rgb_color1.mix(0.5),
-            ))
+            .draw_series(AreaSeries::new(iter1.clone(), 0, self.rgb_color1.mix(0.5)))
             .expect("Error: failed to draw data series");
 
         chart
-            .draw_series(AreaSeries::new(
-                (0..self.samples as i64)
-                    .zip(self.data_points2.asc_iter())
-                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
-                0,
-                self.rgb_color2.mix(0.5),
-            ))
+            .draw_series(AreaSeries::new(iter2.clone(), 0, self.rgb_color2.mix(0.5)))
             .expect("Error: failed to draw data series");
 
         chart
             .draw_series(LineSeries::new(
-                (0..self.samples as i64)
-                    .zip(self.data_points1.asc_iter())
-                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
+                iter1,
                 ShapeStyle::from(self.rgb_color1).stroke_width(1),
             ))
             .expect("Error: failed to draw data series");
         chart
             .draw_series(LineSeries::new(
-                (0..self.samples as i64)
-                    .zip(self.data_points2.asc_iter())
-                    .map(|x| (x.0, (*x.1 as f64 * scale) as i64)),
+                iter2,
                 ShapeStyle::from(self.rgb_color2).stroke_width(1),
             ))
             .expect("Error: failed to draw data series");

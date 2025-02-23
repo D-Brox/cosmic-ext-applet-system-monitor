@@ -7,6 +7,7 @@ A highly configurable system resource monitor for the COSMIC DE
 
 ## Dependencies
 - libfontconfig-dev
+- libxkbcommon0-dev
 
 ## Install
 
@@ -37,7 +38,7 @@ sudo just install
 - [x] Displayed charts config
 - [x] Sampling configs
 - [x] Chart theming
-- [ ] Vertical charts (for left/right panels)
+- [x] Vertical charts (for left/right panels)
 - [ ] Popup (general system info)
 
 ## Configuring
