@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
-
 use std::time::Duration;
 
+use crate::bar_chart::{self, SortMethod};
+use crate::bar_chart::{BarConfig, Orientation};
 use crate::chart::SystemMonitorChart;
 use cosmic::app::{Core, Task};
 
-use cosmic::iced::{Alignment, Subscription};
-use cosmic::widget::row;
+use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::Subscription;
+use cosmic::iced_widget::{column, row};
+use cosmic::Also;
 use cosmic::{cosmic_config, Application, Element, Theme};
+use sysinfo::System;
 
 use crate::config::{config_subscription, ChartConfig, Config};
 
@@ -20,6 +24,7 @@ pub struct SystemMonitor {
     #[allow(dead_code)]
     config_handler: Option<cosmic_config::Config>,
     chart: SystemMonitorChart,
+    sys: System,
 }
 
 #[derive(Debug, Clone)]
@@ -67,11 +72,16 @@ impl Application for SystemMonitor {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let theme = core.applet.theme().expect("Error: applet theme not found");
+
+        let mut sys = System::new();
+        sys.refresh_cpu_usage(); // otherwise, sys.cpus().len == 0, meaning no bars will be drawn until the first refresh
+
         let app = SystemMonitor {
             core,
             chart: SystemMonitorChart::new(&flags.config, &theme),
             config: flags.config,
             config_handler: flags.config_handler,
+            sys,
         };
 
         (app, Task::none())
@@ -81,13 +91,42 @@ impl Application for SystemMonitor {
         let (_, size) = self.core.applet.suggested_size(false);
         let pad = self.core.applet.suggested_padding(false);
         let is_horizontal = self.core.applet.is_horizontal();
+
+        let config = BarConfig {
+            full_length: size.into(),
+            width_fraction: 0.25,
+            orientation: if is_horizontal {
+                Orientation::PointingUp
+            } else {
+                Orientation::PointingRight
+            },
+            ..Default::default()
+        };
+
+        let children = vec![
+            self.chart
+                .view(size.into(), pad.into(), is_horizontal)
+                .into(),
+            bar_chart::per_core_cpu_container(&self.sys.cpus(), config).into(),
+        ];
+
         self.core
             .applet
-            .autosize_window(
-                row()
-                    .push(self.chart.view(size.into(), pad.into(), is_horizontal))
-                    .align_y(Alignment::Center),
-            )
+            .autosize_window(if is_horizontal {
+                Element::from(
+                    row(children)
+                        .align_y(Vertical::Center)
+                        .padding([0, pad])
+                        .spacing(pad),
+                )
+            } else {
+                Element::from(
+                    column(children)
+                        .align_x(Horizontal::Center)
+                        .padding([pad, 0])
+                        .spacing(pad),
+                )
+            })
             .into()
     }
 
@@ -123,7 +162,10 @@ impl Application for SystemMonitor {
                     self.chart.update_config(&self.config, &self.get_theme());
                 }
             }
-            Message::TickCpu => self.chart.update_cpu(&self.get_theme()),
+            Message::TickCpu => {
+                self.chart.update_cpu(&self.get_theme());
+                self.sys.refresh_cpu_usage();
+            }
             Message::TickRam => self.chart.update_ram(&self.get_theme()),
             Message::TickSwap => self.chart.update_swap(&self.get_theme()),
             Message::TickNet => self.chart.update_net(&self.get_theme()),

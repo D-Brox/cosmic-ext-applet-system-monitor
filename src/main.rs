@@ -5,6 +5,7 @@ mod chart;
 mod color;
 mod config;
 // mod gpu;
+mod bar_chart;
 mod localization;
 
 use applet::{Flags, SystemMonitor, ID};
