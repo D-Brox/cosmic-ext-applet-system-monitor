@@ -3,6 +3,7 @@
 mod applet;
 mod color;
 mod config;
+mod bar_chart;
 mod localization;
 mod sysmon;
 
