@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod applet;
-mod chart;
 mod color;
 mod config;
-// mod gpu;
 mod localization;
+mod sysmon;
 
-use applet::{Flags, SystemMonitor, ID};
+use applet::{Flags, SystemMonitorApplet, ID};
 use config::{Config, CONFIG_VERSION};
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 
@@ -37,5 +36,5 @@ fn main() -> cosmic::iced::Result {
         config,
     };
 
-    cosmic::applet::run::<SystemMonitor>(flags)
+    cosmic::applet::run::<SystemMonitorApplet>(flags)
 }

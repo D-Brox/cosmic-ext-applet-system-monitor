@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use crate::chart::SystemMonitorChart;
+use crate::sysmon::SystemMonitor;
 use cosmic::app::{Core, Task};
 
 use cosmic::iced::{Alignment, Subscription};
@@ -14,12 +14,12 @@ use crate::config::{config_subscription, ChartConfig, Config};
 // pub const CONFIG_VERSION: u64 = 1;
 pub const ID: &str = "dev.DBrox.CosmicSystemMonitor";
 
-pub struct SystemMonitor {
+pub struct SystemMonitorApplet {
     core: Core,
     config: Config,
     #[allow(dead_code)]
     config_handler: Option<cosmic_config::Config>,
-    chart: SystemMonitorChart,
+    chart: SystemMonitor,
 }
 
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ pub struct Flags {
     pub config: Config,
 }
 
-impl SystemMonitor {
+impl SystemMonitorApplet {
     fn get_theme(&self) -> Theme {
         self.core
             .applet
@@ -48,7 +48,7 @@ impl SystemMonitor {
     }
 }
 
-impl Application for SystemMonitor {
+impl Application for SystemMonitorApplet {
     type Executor = cosmic::executor::Default;
 
     type Flags = Flags;
@@ -67,9 +67,9 @@ impl Application for SystemMonitor {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let theme = core.applet.theme().expect("Error: applet theme not found");
-        let app = SystemMonitor {
+        let app = Self {
             core,
-            chart: SystemMonitorChart::new(&flags.config, &theme),
+            chart: SystemMonitor::new(&flags.config, &theme),
             config: flags.config,
             config_handler: flags.config_handler,
         };
