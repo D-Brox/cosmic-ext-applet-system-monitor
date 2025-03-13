@@ -34,54 +34,49 @@ impl Chart<Message> for (&SystemMonitor, Vec<f32>, f32, bool) {
             )
         };
 
-        for (child, chart) in children.iter().zip(self.0.charts.clone().iter()) {
+        for (child, chart) in children.iter().zip(self.0.charts.iter()) {
             let mut on = ChartBuilder::on(child);
             let builder = on.margin(self.2 / 4.0);
 
             match chart {
                 UsedChart::Cpu => {
-                    if self.0.is_initialized_cpu() {
-                        self.0
-                            .cpu
-                            .clone()
-                            .unwrap()
-                            .draw_chart(builder, self.0.bg_color);
+                    match &self.0.cpu {
+                        Some(data) => {
+                            data.draw_chart(builder, self.0.bg_color);
+                        }
+                        _ => ()
                     }
                 }
                 UsedChart::Ram => {
-                    if self.0.is_initialized_ram() {
-                        self.0
-                            .ram
-                            .clone()
-                            .unwrap()
-                            .draw_chart(builder, self.0.bg_color);
+                    match &self.0.ram {
+                        Some(data) => {
+                            data.draw_chart(builder, self.0.bg_color);
+                        }
+                        _ => (),
                     }
                 }
                 UsedChart::Swap => {
-                    if self.0.is_initialized_swap() {
-                        self.0
-                            .swap
-                            .clone()
-                            .unwrap()
-                            .draw_chart(builder, self.0.bg_color);
+                    match &self.0.swap {
+                        Some(data) => {
+                            data.draw_chart(builder, self.0.bg_color);
+                        }
+                        _ => (),
                     }
                 }
                 UsedChart::Net => {
-                    if self.0.is_initialized_net() {
-                        self.0
-                            .net
-                            .clone()
-                            .unwrap()
-                            .draw_chart(builder, self.0.bg_color);
+                    match &self.0.net {
+                        Some(data) => {
+                            data.draw_chart(builder, self.0.bg_color);
+                        }
+                        _ => (),
                     }
                 }
                 UsedChart::Disk => {
-                    if self.0.is_initialized_disk() {
-                        self.0
-                            .disk
-                            .clone()
-                            .unwrap()
-                            .draw_chart(builder, self.0.bg_color);
+                    match &self.0.disk {
+                        Some(data) => {
+                            data.draw_chart(builder, self.0.bg_color);
+                        }
+                        _ => (),
                     }
                 }
             }
@@ -141,7 +136,7 @@ impl SingleChart {
         self.data_points.push(value);
     }
 
-    fn draw_chart<DB: DrawingBackend>(self, builder: &mut ChartBuilder<DB>, color: RGBAColor) {
+    fn draw_chart<DB: DrawingBackend>(&self, builder: &mut ChartBuilder<DB>, color: RGBAColor) {
         let mut chart = builder
             .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
             .expect("Error: failed to build chart");
@@ -243,7 +238,7 @@ impl DoubleChart {
         self.data_points2.push(value2);
     }
 
-    fn draw_chart<DB: DrawingBackend>(self, builder: &mut ChartBuilder<DB>, color: RGBAColor) {
+    fn draw_chart<DB: DrawingBackend>(&self, builder: &mut ChartBuilder<DB>, color: RGBAColor) {
         let mut chart = builder
             .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
             .expect("Error: failed to build chart");
