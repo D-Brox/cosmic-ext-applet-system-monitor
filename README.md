@@ -109,3 +109,18 @@ just build-debug && sudo just debug=1 install
 - [edfloreshz](https://github.com/edfloreshz) for the [template for COSMIC applets](https://github.com/edfloreshz/cosmic-applet-template), which taught me the logic behind an applet
 - [aschiavon91](https://github.com/aschiavon91) for their initial work at a [system status applet](https://github.com/aschiavon91/cosmic-applet-sys-status/), which was used as a reference implementation
 - [Joylei](https://github.com/Joylei) for implementing an [Iced backend for `plotters`](https://github.com/Joylei/plotters-iced), used at the core of this applet
+
+## Known wgpu issue
+
+There are currently some rendering issues with the `wgpu` libcosmic features in some older hybrid gpus.
+If you are affected by this, you can build and install it with this feature disabled:
+
+```sh
+just build-no-wgpu
+# On debian based distros (apt-integration)
+command -v cargo-deb || cargo install cargo-deb
+cargo deb
+sudo just install-deb
+# On other distros
+sudo just install
+```

@@ -44,6 +44,9 @@ build-debug *args:
 
 # Compiles with release profile
 build-release *args: (build-debug '--release' args)
+
+# Compiles with release profile with wgpu disabled
+build-no-wgpu *args: (build-debug '--release --no-default-features' args)
     
 # Compiles release profile with vendored dependencies
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)

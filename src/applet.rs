@@ -119,7 +119,6 @@ impl Application for SystemMonitorApplet {
             Message::Config(config) => {
                 if config != self.config {
                     self.config = config;
-                    println!("config");
                     self.chart.update_config(&self.config, &self.get_theme());
                 }
             }
