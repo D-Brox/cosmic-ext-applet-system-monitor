@@ -1,3 +1,5 @@
+name := 'cosmic-ext-applet-system-monitor'
+export APPID := 'dev.DBrox.CosmicSystemMonitor'
 import "res/packaging.just"
 
 # Default recipe which runs `just build-release`

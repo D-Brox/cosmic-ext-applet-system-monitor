@@ -1,10 +1,6 @@
-name := 'cosmic-ext-applet-system-monitor'
-export APPID := 'dev.DBrox.CosmicSystemMonitor'
-
 rootdir := ''
 prefix := '/usr'
 base-dir := absolute_path(clean(rootdir / prefix))
-
 
 bin-src := 'target' / 'release' / name
 bin-path := 'bin' / name
@@ -36,6 +32,7 @@ build-no-wgpu *args: (build-debug '--release --no-default-features' args)
 build-release *args: (build-debug '--release' args)
 
 # Installs files globally
+[no-cd]
 install:
     install -Dm0755 {{bin-src}} {{bin-dst}}
     install -Dm0644 {{desktop-src}} {{desktop-dst}}
@@ -51,43 +48,48 @@ uninstall:
 
 
 # Installs files locally
+[no-cd]
 install-local:
-    install -Dm0755 {{bin-src}} "~/.local/bin/{{name}}"
-    install -Dm0644 {{desktop-src}} "${XDG_DATA_HOME:-~/.local/share}/{{desktop-path}}"
-    install -Dm0644 {{metainfo-src}} "${XDG_DATA_HOME:-~/.local/share}/{{metainfo-path}}"
-    install -Dm0644 "{{icons-src}}" "${XDG_DATA_HOME:-~/.local/share}/{{icons-dst}}"
+    install -Dm0755 {{bin-src}} ~/.local/bin/{{name}}
+    install -Dm0644 {{desktop-src}} ${XDG_DATA_HOME:-~/.local/share}/{{desktop-path}}
+    install -Dm0644 {{metainfo-src}} ${XDG_DATA_HOME:-~/.local/share}/{{metainfo-path}}
+    install -Dm0644 {{icons-src}} ${XDG_DATA_HOME:-~/.local/share}/{{icons-dst}}
 
 # Uninstalls locally installed files
 uninstall-local:
-    rm "~/.local/bin/{{name}}"
-    rm "${XDG_DATA_HOME:-~/.local/share}/{{desktop-path}}"
-    rm "${XDG_DATA_HOME:-~/.local/share}/{{metainfo-path}}"
-    rm "{{icons-src}}" "${XDG_DATA_HOME:-~/.local/share}/{{icons-dst}}"
+    rm ~/.local/bin/{{name}}
+    rm ${XDG_DATA_HOME:-~/.local/share}/{{desktop-path}}
+    rm ${XDG_DATA_HOME:-~/.local/share}/{{metainfo-path}}
+    rm ${XDG_DATA_HOME:-~/.local/share}/{{icons-dst}}
 
 # Compiles and packages deb with release profile
 build-deb:
     command -v cargo-deb || cargo install cargo-deb
     cargo deb
 
+[no-cd]
 install-deb:
     apt install --reinstall ./target/debian/*.deb
 
 # Compiles and packages rpm with release profile
+[no-cd]
 build-rpm: build-release
     command -v cargo-generate-rpm || cargo install cargo-generate-rpm
-    strip -s $(pwd)/{{bin-src}}
+    strip -s {{bin-src}}
     cargo generate-rpm
 
+[no-cd]
 install-rpm:
-    dnf localinstall ./target/generate-rpm/*.rpm
+    dnf install ./target/generate-rpm/*.rpm
 
 install-aur aur_helper:
-    {{aur_helper}} -S cosmic-ext-applet-system-monitor-git
+    {{aur_helper}} -S {{name}}-git
 
 # Compiles release profile with vendored dependencies
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
 
 # Vendor dependencies locally
+[no-cd]
 vendor:
     #!/usr/bin/env bash
     mkdir -p .cargo
@@ -108,6 +110,7 @@ vendor:
     rm -rf .cargo vendor
 
 # Extracts vendored dependencies
+[no-cd]
 vendor-extract:
     rm -rf vendor
     tar pxf vendor.tar
