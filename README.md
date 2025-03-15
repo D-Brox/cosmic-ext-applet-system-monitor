@@ -6,26 +6,37 @@ A highly configurable system resource monitor for the COSMIC DE
 
 
 ## Dependencies
+
 - libfontconfig-dev
 - libxkbcommon0-dev
 
+Or equivalent packages in non-debian based distros
+
 ## Install
+
+Clone the repo and run the commands corresponding to your distro:
 
 ```sh
 git clone https://github.com/D-Brox/cosmic-ext-applet-system-monitor 
 cd cosmic-ext-applet-system-monitor 
-```
 
-For debian based distros you can build and install as a deb package:
-```sh
+# Debian based distros
 just build-deb
 sudo just install-deb
-```
 
-For any other distros, run:
-```sh
+# RPM based distros
+just build-rpm
+sudo just install-rpm
+
+# Arch based distros
+just install-aur ${aur_helper}
+
+# For other distros
 just build-release
+# Global install (root)
 sudo just install
+# or local install (user)
+just install-local
 ```
 
 ## Roadmap
@@ -117,10 +128,17 @@ If you are affected by this, you can build and install it with this feature disa
 
 ```sh
 just build-no-wgpu
-# On debian based distros (apt-integration)
+
+# Debin based
 command -v cargo-deb || cargo install cargo-deb
 cargo deb
 sudo just install-deb
-# On other distros
+
+# RPM based
+strip -s target/release/cosmic-ext-applet-system-monitor
+cargo generate-rpm
+sudo just install-rpm
+
+# Other distros
 sudo just install
 ```

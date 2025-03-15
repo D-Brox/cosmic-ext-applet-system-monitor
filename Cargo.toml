@@ -11,7 +11,7 @@ repository = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor.git"
 rust-version = "1.80"
 
 [dependencies]
-circular-queue = "0.2.6"
+circular-queue = "0.2.7"
 i18n-embed-fl = "0.9.1"
 # lazy-regex = "3.4.1"
 # nvml-wrapper = "0.10.0"
