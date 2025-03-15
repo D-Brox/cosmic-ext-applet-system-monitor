@@ -8,9 +8,9 @@ A highly configurable system resource monitor for the COSMIC DE
 ## Dependencies
 
 - libfontconfig-dev
-- libxkbcommon0-dev
+- libxkbcommon-dev
 
-Or equivalent packages in non-debian based distros
+Or equivalent packages in non-debian based distros.
 
 ## Install
 

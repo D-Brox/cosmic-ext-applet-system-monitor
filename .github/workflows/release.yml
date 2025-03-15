@@ -1,0 +1,97 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "*"
+
+env:
+  CARGO_TERM_COLOR: always
+  GITHUB_TOKEN: ${{ github.token }}
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+        - aarch64-unknown-linux-gnu
+        - x86_64-unknown-linux-gnu
+        include:
+        - target: aarch64-unknown-linux-gnu
+          os: ubuntu-24.04-arm
+          target_rustflags: ''
+        - target: x86_64-unknown-linux-gnu
+          os: ubuntu-latest
+          target_rustflags: ''
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install libfontconfig-dev libxkbcommon-dev
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.0
+      - name: Install packaging plugins
+        run: |
+          cargo binstall just
+          cargo binstall cargo-deb
+          cargo binstall cargo-generate-rpm
+      - name: Build packages
+        id: package
+        run: |
+          just build-release
+          echo `uname -m`=`pwd`/target/release/cosmic-ext-applet-system-monitor >> $GITHUB_OUTPUT
+          just build-deb
+          echo `uname -m`-deb=`pwd`/target/debian/*.deb >> $GITHUB_OUTPUT
+          just build-rpm
+          echo `uname -m`-rpm=`pwd`/target/generate-rpm/*.rpm >> $GITHUB_OUTPUT
+      - name: Publish artifacts and release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          files: |
+            ${{ steps.package.outputs.x86_64 }}
+            ${{ steps.package.outputs.aarch64 }}
+            
+            ${{ steps.package.outputs.x86_64-deb }}
+            ${{ steps.package.outputs.aarch64-deb }}
+            
+            ${{ steps.package.outputs.x86_64-rpm }}
+            ${{ steps.package.outputs.aarch64-rpm }}
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  checksum:
+    runs-on: ubuntu-latest
+
+    needs:
+    - build
+    steps:
+    - name: Download Release Archives
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        gh release download
+        --repo D-Brox/cosmic-ext-applet-system-monitor
+        --pattern '*'
+        --dir release
+        ${{ github.ref_name }}
+
+    - name: Create Checksums
+      run: |
+        cd release
+        shasum -a 256 * > ../SHA256SUMS
+
+    - name: Publish Checksums
+      uses: softprops/action-gh-release@v2.2.1
+      with:
+        draft: false
+        files: SHA256SUMS
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        

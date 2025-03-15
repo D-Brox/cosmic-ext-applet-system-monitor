@@ -75,7 +75,7 @@ install-deb:
 # Compiles and packages rpm with release profile
 build-rpm: build-release
     command -v cargo-generate-rpm || cargo install cargo-generate-rpm
-    strip -s {{bin-src}}
+    strip -s $(pwd)/{{bin-src}}
     cargo generate-rpm
 
 install-rpm:
