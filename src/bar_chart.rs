@@ -1,16 +1,16 @@
 use cosmic::{
+    applet::cosmic_panel_config::PanelAnchor,
     iced::{
         self,
         alignment::{Alignment, Horizontal, Vertical},
-        core::{
-            self, layout, mouse, renderer, widget::Tree, Color, Element, Layout, Length, Rectangle,
-            Size,
-        },
+        core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size},
         Background,
     },
-    widget::{container, progress_bar, Column, Row, Widget},
-    Renderer, Theme,
+    widget::{container, Container, Column, Row, Widget},
+    Element, Renderer, Theme,
 };
+use cosmic::cosmic_theme::palette::Srgba;
+use renderer::Style;
 use sysinfo::Cpu;
 
 use crate::applet::Message;
@@ -25,6 +25,15 @@ pub enum SortMethod {
 pub enum Orientation {
     PointingUp,
     PointingRight, // todo more
+}
+impl Orientation {
+    pub(crate) fn default_for(anchor: PanelAnchor) -> Orientation {
+        match anchor {
+            PanelAnchor::Left => Orientation::PointingRight,
+            PanelAnchor::Right => Orientation::PointingRight,
+            PanelAnchor::Top | PanelAnchor::Bottom => Orientation::PointingUp,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -49,10 +58,7 @@ impl Default for BarConfig {
     }
 }
 
-pub fn per_core_cpu_container<'a>(
-    cpus: &'a [Cpu],
-    config: BarConfig,
-) -> container::Container<'a, Message, Theme> {
+pub fn per_core_cpu_container(cpus: &[Cpu], config: BarConfig, color: Srgba) -> Container<Message, Theme> {
     let (Length::Fixed(spacing), Length::Fixed(full_length)) = (config.spacing, config.full_length)
     else {
         unimplemented!()
@@ -68,83 +74,145 @@ pub fn per_core_cpu_container<'a>(
             SortMethod::Ascending => cpu_values.sort_by(|a, b| a.partial_cmp(b).unwrap()),
         }
     }
+    // dbg!(full_length, static_dimension);
 
-    let inner: Element<'_, Message, Theme, Renderer> =
+    let inner: Element<Message> =
         match config.orientation {
-            Orientation::PointingUp => Row::with_children(cpu_values.iter().map(|&val| {
-                Element::from(VerticalPercentageBar::new(
-                    val,
-                    full_length,
-                    static_dimension,
-                ))
-            }))
-            .align_y(Vertical::Bottom)
-            .spacing(spacing)
-            .into(),
+            Orientation::PointingUp => {
+                Row::with_children(cpu_values.iter().enumerate().map(|(i, &val)| {
+                    VerticalPercentageBar::new(
+                        val,
+                        full_length,
+                        static_dimension,
+                        color,
+                    )
+                    .into()
+                }))
+                .height(full_length)
+                .align_y(Vertical::Bottom)
+                .spacing(spacing)
+                .into()
+            }
             Orientation::PointingRight => Column::with_children(cpu_values.iter().map(|&val| {
-                HorizontalPercentageBar::new(val, full_length, static_dimension).into()
+                HorizontalPercentageBar::new(val, full_length, static_dimension, color).into()
             }))
+            .width(full_length)
             .align_x(Horizontal::Left)
             .spacing(spacing)
             .into(),
         };
 
     let outer = cosmic::widget::container(inner).style(|_| container::Style {
-        background: Some(Background::Color(Color {
+/*        background: Some(Background::Color(iced::Color {
             r: 20.0 / 255.0,
             g: 20.0 / 255.0,
             b: 20.0 / 255.0,
             a: 1.0,
-        })),
+        })),*/
         ..container::Style::default()
     });
-
-    let outer = match config.orientation {
-        Orientation::PointingUp => outer.align_bottom(full_length),
-        Orientation::PointingRight => outer.align_left(full_length),
-    };
     outer
 }
 
-#[allow(missing_debug_implementations)]
-pub struct VerticalPercentageBar<'a, T>
-where
-    T: progress_bar::Catalog,
-{
-    value: f32,
-    width: Length,
-    varying_length_max: Length,
-    class: T::Class<'a>,
+pub enum PercentageBar {
+    Vertical(VerticalPercentageBar),
+    Horizontal(HorizontalPercentageBar),
 }
-
-impl<'a, T> VerticalPercentageBar<'a, T>
-where
-    T: progress_bar::Catalog,
-{
-    pub fn new(value: f32, height: impl Into<Length>, width: impl Into<Length>) -> Self {
-        VerticalPercentageBar {
-            value: value.clamp(0.0, 100.0),
-            width: width.into(),
-            varying_length_max: height.into(),
-            class: T::default(),
+impl PercentageBar {
+    pub(crate) fn new(
+        is_horizontal: bool,
+        value: f32,
+        width: f32,
+        height: f32,
+        theme_color: Srgba,
+    ) -> Self {
+        if is_horizontal {
+            Self::Vertical(VerticalPercentageBar::new(
+                value,
+                height,
+                width,
+                theme_color,
+            ))
+        } else {
+            Self::Horizontal(HorizontalPercentageBar::new(value, width, height, theme_color))
         }
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for VerticalPercentageBar<'a, Theme>
-where
-    Theme: progress_bar::Catalog,
-    Renderer: core::Renderer,
-{
+impl<'a> Widget<Message, Theme, Renderer> for PercentageBar {
     fn size(&self) -> Size<Length> {
-        let Length::Fixed(max_length) = self.varying_length_max else {
-            todo!("solve the flex length issue")
-        };
+        match self {
+            PercentageBar::Vertical(v) => Widget::<Message, Theme, Renderer>::size(v),
+            PercentageBar::Horizontal(h) => Widget::<Message, Theme, Renderer>::size(h),
+        }
+    }
 
+    fn layout(
+        &self,
+        tree: &mut Tree,
+        renderer: &Renderer,
+        limits: &layout::Limits,
+    ) -> layout::Node {
+        match self {
+            PercentageBar::Vertical(v) => {
+                Widget::<Message, Theme, Renderer>::layout(v, tree, renderer, limits)
+            }
+            PercentageBar::Horizontal(h) => {
+                Widget::<Message, Theme, Renderer>::layout(h, tree, renderer, limits)
+            }
+        }
+    }
+
+    fn draw(
+        &self,
+        tree: &Tree,
+        renderer: &mut Renderer,
+        theme: &Theme,
+        style: &Style,
+        layout: Layout<'_>,
+        cursor: mouse::Cursor,
+        viewport: &Rectangle,
+    ) {
+        match self {
+            PercentageBar::Vertical(v) => Widget::<Message, Theme, Renderer>::draw(
+                v, tree, renderer, theme, style, layout, cursor, viewport,
+            ),
+            PercentageBar::Horizontal(h) => Widget::<Message, Theme, Renderer>::draw(
+                h, tree, renderer, theme, style, layout, cursor, viewport,
+            ),
+        }
+    }
+}
+
+#[allow(missing_debug_implementations)]
+pub struct VerticalPercentageBar {
+    percentage: f32,
+    width: Length,
+    varying_length_max: Length,
+    theme_color: Srgba,
+}
+
+impl<'a> VerticalPercentageBar {
+    pub fn new(
+        value: f32,
+        height: impl Into<Length>,
+        width: impl Into<Length>,
+        theme_color: Srgba,
+    ) -> Self {
+        VerticalPercentageBar {
+            percentage: value.clamp(0.0, 100.0),
+            width: width.into(),
+            varying_length_max: height.into(),
+            theme_color,
+        }
+    }
+}
+
+impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
+    fn size(&self) -> Size<Length> {
         Size {
             width: self.width,
-            height: (max_length * self.value / 100.0).into(),
+            height: self.varying_length_max,
         }
     }
 
@@ -154,10 +222,10 @@ where
         _renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let Size { width, height } =
-            <VerticalPercentageBar<'_, _> as Widget<Message, _, Renderer>>::size(self);
+        let Size { width, height } = Widget::size(self);
 
-        layout::atomic(limits, width, height)
+        let layout = layout::atomic(limits, width, height);
+        layout
     }
 
     fn draw(
@@ -165,67 +233,62 @@ where
         _state: &Tree,
         renderer: &mut Renderer,
         theme: &Theme,
-        _style: &renderer::Style,
+        _style: &Style,
         layout: Layout<'_>,
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
-        renderer.fill_quad(
+        if self.percentage <= 0.0 {
+            return;
+        }
+        let outer = &layout.bounds();
+        let fill_height = self.percentage / 100.0 * outer.height;
+        let rect = Rectangle {
+            y: outer.y + outer.height - fill_height,
+            height: fill_height,
+            ..*outer
+        };
+        iced::core::Renderer::fill_quad(
+            renderer,
             renderer::Quad {
-                bounds: layout.bounds(),
+                bounds: rect,
                 ..renderer::Quad::default()
             },
-            theme.style(&self.class).bar,
+            iced::Color::from(self.theme_color),
         );
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<VerticalPercentageBar<'a, Theme>>
-    for Element<'a, Message, Theme, Renderer>
-where
-    Message: 'a,
-    Theme: 'a + progress_bar::Catalog,
-    Renderer: 'a + core::Renderer,
-{
-    fn from(
-        percentage_tower: VerticalPercentageBar<'a, Theme>,
-    ) -> Element<'a, Message, Theme, Renderer> {
+impl<'a> From<VerticalPercentageBar> for Element<'a, Message> {
+    fn from(percentage_tower: VerticalPercentageBar) -> Element<'a, Message> {
         Element::new(percentage_tower)
     }
 }
 
-pub(crate) struct HorizontalPercentageBar<'a, T>
-where
-    T: progress_bar::Catalog,
-{
+pub struct HorizontalPercentageBar {
     value: f32,
     bar_thickness: Length,
     varying_length_max: Length,
-    class: T::Class<'a>,
+    color: Srgba
 }
-impl<'a, T> HorizontalPercentageBar<'a, T>
-where
-    T: progress_bar::Catalog,
-{
+impl HorizontalPercentageBar {
     pub fn new(
         value: f32,
         varying_length_max: impl Into<Length>,
         static_length: impl Into<Length>,
+        color: impl Into<Srgba>
     ) -> Self {
+        let color = color.into();
         Self {
             value: value.clamp(0.0, 100.0),
             bar_thickness: static_length.into(),
             varying_length_max: varying_length_max.into(),
-            class: T::default(),
+            color,
         }
     }
 }
 
-impl<'a, M, T, R> Widget<M, T, R> for HorizontalPercentageBar<'a, T>
-where
-    R: iced::core::Renderer,
-    T: progress_bar::Catalog,
-{
+impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
     fn size(&self) -> Size<Length> {
         let Length::Fixed(max_length) = self.varying_length_max else {
             unimplemented!()
@@ -239,12 +302,11 @@ where
 
     fn layout(
         &self,
-        _tree: &mut cosmic::iced_core::widget::Tree,
-        _renderer: &R,
-        limits: &cosmic::iced_core::layout::Limits,
-    ) -> cosmic::iced_core::layout::Node {
-        let Size { width, height } =
-            <HorizontalPercentageBar<'a, T> as Widget<M, T, R>>::size(self);
+        _tree: &mut Tree,
+        _renderer: &Renderer,
+        limits: &layout::Limits,
+    ) -> layout::Node {
+        let Size { width, height } = Widget::<Message, Theme, Renderer>::size(self);
         layout::atomic(limits, width, height).align(
             Alignment::Start,
             Alignment::Center,
@@ -254,31 +316,27 @@ where
 
     fn draw(
         &self,
-        _tree: &cosmic::iced_core::widget::Tree,
-        renderer: &mut R,
-        theme: &T,
-        _style: &cosmic::iced_core::renderer::Style,
-        layout: cosmic::iced_core::Layout<'_>,
-        _cursor: cosmic::iced_core::mouse::Cursor,
-        _viewport: &cosmic::iced::Rectangle,
+        _tree: &Tree,
+        renderer: &mut Renderer,
+        theme: &Theme,
+        _style: &Style,
+        layout: Layout<'_>,
+        _cursor: mouse::Cursor,
+        _viewport: &Rectangle,
     ) {
-        renderer.fill_quad(
+        iced::core::Renderer::fill_quad(
+            renderer,
             renderer::Quad {
                 bounds: layout.bounds(),
                 ..renderer::Quad::default()
             },
-            theme.style(&self.class).bar,
+            iced::Color::from(self.color),
         );
     }
 }
 
-impl<'a, M, T, R> From<HorizontalPercentageBar<'a, T>> for iced::core::Element<'a, M, T, R>
-where
-    M: 'a,
-    T: 'a + progress_bar::Catalog,
-    R: 'a + iced::core::Renderer,
-{
-    fn from(value: HorizontalPercentageBar<'a, T>) -> Self {
-        iced::core::Element::new(value)
+impl<'a> From<HorizontalPercentageBar> for Element<'a, Message> {
+    fn from(value: HorizontalPercentageBar) -> Self {
+        Element::new(value)
     }
 }

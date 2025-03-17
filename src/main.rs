@@ -4,6 +4,7 @@ mod applet;
 mod color;
 mod config;
 mod bar_chart;
+mod cpu_widget;
 mod localization;
 mod sysmon;
 

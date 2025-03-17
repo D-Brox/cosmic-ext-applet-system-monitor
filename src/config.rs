@@ -83,7 +83,7 @@ pub struct Generic {
     pub update_interval: u64,
     pub samples: usize,
     pub color: Color,
-    pub size: f32,
+    pub size: f32, // todo: `size` is never used?
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::time::Duration;
-
+use circular_queue::CircularQueue;
 use crate::bar_chart::{self, SortMethod};
 use crate::bar_chart::{BarConfig, Orientation};
 use crate::sysmon::SystemMonitor;
+use crate::cpu_widget::{self, CpuVisualization, CpuWidget};
 use cosmic::app::{Core, Task};
 
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::Subscription;
 use cosmic::iced_widget::{column, row};
-use cosmic::Also;
+use cosmic::{iced, Also};
 use cosmic::{cosmic_config, Application, Element, Theme};
 use sysinfo::System;
 
-use crate::config::{config_subscription, ChartConfig, Config};
+use crate::config::{config_subscription, ChartConfig, Config, Generic};
 
 // pub const CONFIG_VERSION: u64 = 1;
 pub const ID: &str = "dev.DBrox.CosmicSystemMonitor";
@@ -25,6 +26,7 @@ pub struct SystemMonitorApplet {
     config_handler: Option<cosmic_config::Config>,
     chart: SystemMonitor,
     sys: System,
+    cpu_history: CircularQueue<i64>
 }
 
 #[derive(Debug, Clone)]
@@ -76,12 +78,18 @@ impl Application for SystemMonitorApplet {
         let mut sys = System::new();
         sys.refresh_cpu_usage(); // otherwise, sys.cpus().len == 0, meaning no bars will be drawn until the first refresh
 
+
+
+
+
         let app = Self {
             core,
             chart: SystemMonitor::new(&flags.config, &theme),
             config: flags.config,
             config_handler: flags.config_handler,
             sys,
+            cpu_history: CircularQueue::with_capacity(40)
+
         };
 
         (app, Task::none())
@@ -94,21 +102,36 @@ impl Application for SystemMonitorApplet {
 
         let config = BarConfig {
             full_length: size.into(),
-            width_fraction: 0.25,
             orientation: if is_horizontal {
                 Orientation::PointingUp
             } else {
                 Orientation::PointingRight
             },
+            spacing: 5.0.into(),
             ..Default::default()
         };
 
-        let children = vec![
-            self.chart
-                .view(size.into(), pad.into(), is_horizontal)
-                .into(),
-            bar_chart::per_core_cpu_container(&self.sys.cpus(), config).into(),
-        ];
+        let generic_config = Generic {
+            update_interval: 1000,
+            samples: 60,
+            color: crate::color::Color::bright_green,
+            size: 1.5,
+        };
+        let children: Vec<Element<Message>> = Vec::from_iter([
+            Element::from(CpuWidget::run_chart(generic_config.clone(), &self.sys, &self.core.applet, self.cpu_history.clone())).explain(iced::Color::WHITE),
+
+            // self.chart.view(size.into(), pad.into(), is_horizontal),
+            bar_chart::per_core_cpu_container(&self.sys.cpus(), config.clone(), generic_config.color.as_srgba(&self.get_theme())).into(),
+            CpuWidget::global_bar(
+                generic_config.clone(),
+                &self.sys,
+                &self.core.applet,
+                size as f32,
+                size as f32,
+            )
+            .into(),
+            CpuWidget::multi_bar(generic_config.clone(), &self.sys, config, &self.core.applet).into(),
+        ]);
 
         self.core
             .applet
@@ -164,6 +187,7 @@ impl Application for SystemMonitorApplet {
             Message::TickCpu => {
                 self.chart.update_cpu(&self.get_theme());
                 self.sys.refresh_cpu_usage();
+                self.cpu_history.push(self.sys.global_cpu_usage() as i64);
             }
             Message::TickRam => self.chart.update_ram(&self.get_theme()),
             Message::TickSwap => self.chart.update_swap(&self.get_theme()),

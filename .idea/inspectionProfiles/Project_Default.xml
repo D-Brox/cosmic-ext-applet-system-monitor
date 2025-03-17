@@ -1,0 +1,106 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="ClangTidy" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="clangTidyChecks" value="-*,cert-dcl21-cpp,cert-dcl58-cpp,cert-err34-c,cert-err52-cpp,cert-err60-cpp,cert-flp30-c,cert-msc50-cpp,cert-msc51-cpp,cert-str34-c,cppcoreguidelines-interfaces-global-init,cppcoreguidelines-narrowing-conversions,cppcoreguidelines-pro-type-member-init,cppcoreguidelines-pro-type-static-cast-downcast,cppcoreguidelines-slicing,google-default-arguments,google-explicit-constructor,google-runtime-operator,mpi-buffer-deref,mpi-type-mismatch,openmp-use-default-none,performance-faster-string-find,performance-for-range-copy,performance-implicit-conversion-in-loop,performance-inefficient-algorithm,performance-inefficient-string-concatenation,performance-inefficient-vector-operation,performance-move-const-arg,performance-move-constructor-init,performance-no-automatic-move,performance-noexcept-move-constructor,performance-trivially-destructible,performance-type-promotion-in-math-fn,performance-unnecessary-copy-initialization,portability-simd-intrinsics,bugprone-*,clang-analyzer-*,hicpp-*,misc-*,modernize-*,readability-*,-modernize-use-trailing-return-type,-bugprone-easily-swappable-parameters,-hicpp-special-member-functions,-modernize-use-nodiscard,-misc-include-cleaner" />
+    </inspection_tool>
+    <inspection_tool class="CommaExpressionJS" enabled="true" level="WEAK WARNING" enabled_by_default="true" editorAttributes="INFO_ATTRIBUTES" />
+    <inspection_tool class="CppParameterMayBeConst" enabled="false" level="HINT" enabled_by_default="false" />
+    <inspection_tool class="DuplicatedCode" enabled="true" level="TEXT ATTRIBUTES" enabled_by_default="true" editorAttributes="CONSIDERATION_ATTRIBUTES">
+      <scope name="Project Files" level="WEAK WARNING" enabled="true" />
+    </inspection_tool>
+    <inspection_tool class="Eslint" enabled="false" level="INFORMATION" enabled_by_default="false" />
+    <inspection_tool class="ExceptionCaughtLocallyJS" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="GrazieInspection" enabled="false" level="GRAMMAR_ERROR" enabled_by_default="false" />
+    <inspection_tool class="HttpUrlsUsage" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredUrls">
+        <list>
+          <option value="http://0.0.0.0" />
+          <option value="http://127.0.0.1" />
+          <option value="http://activemq.apache.org/schema/" />
+          <option value="http://cxf.apache.org/schemas/" />
+          <option value="http://java.sun.com/" />
+          <option value="http://javafx.com/fxml" />
+          <option value="http://javafx.com/javafx/" />
+          <option value="http://json-schema.org/draft" />
+          <option value="http://localhost" />
+          <option value="http://maven.apache.org/POM/" />
+          <option value="http://maven.apache.org/xsd/" />
+          <option value="http://primefaces.org/ui" />
+          <option value="http://schema.cloudfoundry.org/spring/" />
+          <option value="http://schemas.xmlsoap.org/" />
+          <option value="http://tiles.apache.org/" />
+          <option value="http://www.bom.gov.au" />
+          <option value="http://www.forevervintage.net.au" />
+          <option value="http://www.ibm.com/webservices/xsd" />
+          <option value="http://www.jboss.com/xml/ns/" />
+          <option value="http://www.jboss.org/j2ee/schema/" />
+          <option value="http://www.springframework.org/schema/" />
+          <option value="http://www.springframework.org/security/tags" />
+          <option value="http://www.springframework.org/tags" />
+          <option value="http://www.thymeleaf.org" />
+          <option value="http://www.w3.org/" />
+          <option value="http://xmlns.jcp.org/" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="IncorrectFormatting" enabled="false" level="TEXT ATTRIBUTES" enabled_by_default="false" editorAttributes="CONSIDERATION_ATTRIBUTES" />
+    <inspection_tool class="JSUnresolvedReference" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES" />
+    <inspection_tool class="JSUnusedAssignment" enabled="true" level="WEAK WARNING" enabled_by_default="true" editorAttributes="INFO_ATTRIBUTES" />
+    <inspection_tool class="JSUnusedGlobalSymbols" enabled="true" level="WEAK WARNING" enabled_by_default="true" editorAttributes="INFO_ATTRIBUTES" />
+    <inspection_tool class="JSUnusedLocalSymbols" enabled="true" level="WEAK WARNING" enabled_by_default="true" editorAttributes="INFO_ATTRIBUTES" />
+    <inspection_tool class="NestingDepthJS" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="5" />
+    </inspection_tool>
+    <inspection_tool class="PyPep8Inspection" enabled="true" level="INFORMATION" enabled_by_default="true" editorAttributes="INFORMATION_ATTRIBUTES">
+      <option name="ignoredErrors">
+        <list>
+          <option value="E302" />
+          <option value="E305" />
+          <option value="E303" />
+          <option value="E231" />
+          <option value="W292" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyProtectedMemberInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoreAnnotations" value="true" />
+    </inspection_tool>
+    <inspection_tool class="PyShadowingNamesInspection" enabled="true" level="INFORMATION" enabled_by_default="true" editorAttributes="INFORMATION_ATTRIBUTES" />
+    <inspection_tool class="SSBasedInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <replaceConfiguration name="Shorthand Array" description="Use shorthand Type[] over Array&lt;Type&gt;" suppressId="verbose-Array" problemDescriptor="Can use the array shorthand" cleanup="true" text="$something$: Array&lt;$type$&gt;" recursive="false" caseInsensitive="true" type="TypeScript" reformatAccordingToStyle="false" shortenFQN="false" replacement="$something$: $type$[]">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="type" target="true" within="" contains="" />
+        <constraint name="something" within="" contains="" />
+      </replaceConfiguration>
+      <replaceConfiguration name="Shorthand Array" cleanup="true" text="function $fname$($params$): Array&lt;$type$&gt; {&#10;    $statements$&#10;}" recursive="false" caseInsensitive="true" type="TypeScript" reformatAccordingToStyle="false" shortenFQN="false" replacement="function $fname$($params$): $type$[] {&#10;    $statements$&#10;}">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="type" within="" contains="" />
+        <constraint name="fname" within="" contains="" />
+        <constraint name="params" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="statements" minCount="0" maxCount="2147483647" within="" contains="" />
+      </replaceConfiguration>
+      <replaceConfiguration name="Shorthand Array" text="const $name$: Array&lt;$type$&gt; = $statement$" recursive="false" caseInsensitive="true" type="TypeScript" reformatAccordingToStyle="false" shortenFQN="false" replacement="const $name$: $type$[] = $statement$;">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="name" within="" contains="" />
+        <constraint name="statement" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="type" within="" contains="" />
+      </replaceConfiguration>
+      <replaceConfiguration name="Shorthand Array" text="let $name$: Array&lt;$type$&gt; = $statement$" recursive="false" caseInsensitive="true" type="TypeScript" reformatAccordingToStyle="false" shortenFQN="false" replacement="let $name$: $type$[] = $statement$;">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="name" within="" contains="" />
+        <constraint name="statement" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="type" within="" contains="" />
+      </replaceConfiguration>
+    </inspection_tool>
+    <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
+      <option name="processCode" value="true" />
+      <option name="processLiterals" value="true" />
+      <option name="processComments" value="true" />
+    </inspection_tool>
+    <inspection_tool class="UnnecessaryLocalVariableJS" enabled="true" level="WEAK WARNING" enabled_by_default="true" editorAttributes="INFO_ATTRIBUTES">
+      <option name="m_ignoreImmediatelyReturnedVariables" value="false" />
+      <option name="m_ignoreAnnotatedVariables" value="false" />
+    </inspection_tool>
+  </profile>
+</component>
