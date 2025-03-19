@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
+mod bar_chart;
 mod chart;
-use chart::{DoubleChart, SingleChart, UsedChart};
-use plotters_iced::ChartWidget;
+mod cpu_chart;
+mod viewable;
 // mod gpu;
 // use gpu::Gpus,
 use crate::{
     applet::Message,
     config::{ChartConfig, Config},
 };
+use chart::{DoubleChart, SingleChart, UsedChart};
 
-use cosmic::iced::{
-    alignment::{Horizontal, Vertical},
-    Length,
-};
-use cosmic::widget::{layer_container, Text};
-use cosmic::{Apply, Element, Theme};
-
+use crate::config::{ChartView, CpuView};
+use crate::sysmon::chart::MonitorItem;
+use crate::sysmon::cpu_chart::CpuChart;
+use cosmic::iced::{alignment, Padding};
+use cosmic::widget::{Column, Row};
+use cosmic::{applet, Apply, Element, Theme};
 use plotters::style::RGBAColor;
 use sysinfo::{Disks, MemoryRefreshKind, Networks, System};
 
@@ -31,7 +32,7 @@ pub struct SystemMonitor {
     disks: Disks,
     // gpus: Gpus,
     charts: Vec<UsedChart>,
-    cpu: Option<SingleChart>,
+    cpu: Option<CpuChart>,
     ram: Option<SingleChart>,
     swap: Option<SingleChart>,
     net: Option<DoubleChart>,
@@ -46,7 +47,6 @@ impl SystemMonitor {
         let r = (rgb.0 * 255.0) as u8;
         let g = (rgb.1 * 255.0) as u8;
         let b = (rgb.2 * 255.0) as u8;
-
         let bg_color = RGBAColor(r, g, b, f64::from(primary.alpha));
         let mut new_self = Self {
             relative_size: 0.0,
@@ -114,8 +114,8 @@ impl SystemMonitor {
             let cpu_data = self.sys.global_cpu_usage() as i64;
 
             let cpu = self.cpu.as_mut().expect("Error: uninitialized CPU chart");
+            cpu.update_latest_per_core(self.sys.cpus());
             cpu.push_data(cpu_data);
-            cpu.update_rgb_color(theme);
         }
     }
 
@@ -197,8 +197,14 @@ impl SystemMonitor {
                         cpu.resize_queue(c.samples);
                         cpu.update_size(c.size);
                     } else {
-                        self.cpu =
-                            Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
+                        self.cpu = Some(CpuChart::new(
+                            c.visualization,
+                            c.color.clone(),
+                            c.samples,
+                            c.size,
+                            theme,
+                            self.sys.cpus(),
+                        ))
                     }
                 }
                 ChartConfig::RAM(c) => {
@@ -209,8 +215,13 @@ impl SystemMonitor {
                         ram.resize_queue(c.samples);
                         ram.update_size(c.size);
                     } else {
-                        self.ram =
-                            Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
+                        self.ram = Some(SingleChart::new(
+                            c.color.clone(),
+                            c.size,
+                            c.samples,
+                            theme,
+                            c.visualization,
+                        ));
                     }
                 }
                 ChartConfig::Swap(c) => {
@@ -221,8 +232,13 @@ impl SystemMonitor {
                         swap.resize_queue(c.samples);
                         swap.update_size(c.size);
                     } else {
-                        self.swap =
-                            Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
+                        self.swap = Some(SingleChart::new(
+                            c.color.clone(),
+                            c.size,
+                            c.samples,
+                            theme,
+                            c.visualization,
+                        ));
                     }
                 }
                 ChartConfig::Net(c) => {
@@ -240,6 +256,7 @@ impl SystemMonitor {
                             c.samples,
                             theme,
                             10 << 10,
+                            c.visualization,
                         ));
                     }
                 }
@@ -258,6 +275,7 @@ impl SystemMonitor {
                             c.samples,
                             theme,
                             1 << 10,
+                            c.visualization,
                         ));
                     }
                 }
@@ -334,7 +352,8 @@ impl SystemMonitor {
         }
     }
 
-    pub fn view(&self, size: f32, pad: f32, is_horizontal: bool) -> Element<Message> {
+    // old version
+    /*    pub fn view(&self, size: f32, pad: f32, is_horizontal: bool) -> Element<Message> {
         if self.charts.is_empty() {
             return Text::new(fl!("loading"))
                 .align_x(Horizontal::Center)
@@ -356,5 +375,47 @@ impl SystemMonitor {
             .width(Length::Fixed(width))
             .padding(0)
             .into()
+    }*/
+    pub fn view(&self, context: &applet::Context) -> Element<Message> {
+        let mut vec: Vec<Element<Message>> = Vec::with_capacity(5);
+
+        if let Some(cpu) = &self.cpu {
+            vec.push(cpu.view_as_configured(context));
+            // vec.push(cpu.view_as(CpuView::PerCoreUsageHistogram, context));
+            // vec.push(cpu.view_as(CpuView::GlobalUsageBarChart, context));
+        }
+
+        if let Some(ram) = &self.ram {
+            vec.push(ram.view_as_configured(context));
+            // vec.push(ram.view_as(ChartView::BarChart, context));
+        }
+
+        if let Some(swap) = &self.swap {
+            vec.push(swap.view_as_configured(context));
+            // vec.push(swap.view_as(ChartView::BarChart, context));
+        }
+
+        if let Some(net) = &self.net {
+            vec.push(net.view_as_configured(context));
+            // vec.push(net.view_as(ChartView::BarChart, context));
+        }
+
+        if let Some(disk) = &self.disk {
+            vec.push(disk.view_as_configured(context));
+            // vec.push(disk.view_as(ChartView::BarChart, context));
+        }
+
+        if context.is_horizontal() {
+            Row::with_children(vec)
+                .spacing(30)
+                .align_y(alignment::Vertical::Bottom)
+                .padding(Padding {
+                    left: 200.0.into(),
+                    ..Default::default()
+                })
+                .into()
+        } else {
+            Column::with_children(vec).spacing(30).into()
+        }
     }
 }

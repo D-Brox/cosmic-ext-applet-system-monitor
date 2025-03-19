@@ -24,23 +24,26 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             charts: vec![
-                ChartConfig::CPU(Generic {
+                ChartConfig::CPU(Cpu {
                     update_interval: 1000,
                     color: Color::accent_blue,
                     size: 1.5,
                     samples: 60,
+                    visualization: CpuView::GlobalUsageRunChart,
                 }),
                 ChartConfig::RAM(Generic {
                     update_interval: 2000,
                     color: Color::accent_green,
                     size: 1.5,
                     samples: 30,
+                    visualization: ChartView::RunChart,
                 }),
                 ChartConfig::Swap(Generic {
                     update_interval: 5000,
                     color: Color::accent_purple,
                     size: 1.5,
                     samples: 12,
+                    visualization: ChartView::RunChart,
                 }),
                 ChartConfig::Net(Network {
                     update_interval: 1000,
@@ -48,6 +51,7 @@ impl Default for Config {
                     color_down: Color::accent_red,
                     size: 1.5,
                     samples: 60,
+                    visualization: ChartView::RunChart,
                 }),
                 ChartConfig::Disk(Disk {
                     update_interval: 2000,
@@ -55,22 +59,33 @@ impl Default for Config {
                     color_write: Color::accent_pink,
                     size: 1.5,
                     samples: 30,
+                    visualization: ChartView::RunChart,
                 }),
                 ChartConfig::VRAM(Generic {
                     update_interval: 2000,
                     color: Color::accent_indigo,
                     size: 1.5,
                     samples: 30,
+                    visualization: ChartView::RunChart,
                 }),
             ],
         }
     }
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Cpu {
+    pub update_interval: u64,
+    pub samples: usize,
+    pub color: Color,
+    pub size: f32, // todo: `size` is never used?
+    pub visualization: CpuView,
+}
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ChartConfig {
-    CPU(Generic),
+    CPU(Cpu),
     RAM(Generic),
     Swap(Generic),
     Net(Network),
@@ -84,6 +99,7 @@ pub struct Generic {
     pub samples: usize,
     pub color: Color,
     pub size: f32, // todo: `size` is never used?
+    pub visualization: ChartView,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -93,6 +109,7 @@ pub struct Network {
     pub color_up: Color,
     pub color_down: Color,
     pub size: f32,
+    pub visualization: ChartView,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -102,6 +119,7 @@ pub struct Disk {
     pub color_read: Color,
     pub color_write: Color,
     pub size: f32,
+    pub visualization: ChartView,
 }
 
 pub fn config_subscription() -> Subscription<Message> {
@@ -120,4 +138,17 @@ pub fn config_subscription() -> Subscription<Message> {
         }
         Message::Config(update.config)
     })
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum ChartView {
+    RunChart,
+    BarChart,
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum CpuView {
+    GlobalUsageRunChart,
+    PerCoreUsageHistogram,
+    GlobalUsageBarChart,
 }

@@ -1,17 +1,15 @@
+use cosmic::cosmic_theme::palette::Srgba;
 use cosmic::{
-    applet::cosmic_panel_config::PanelAnchor,
     iced::{
         self,
         alignment::{Alignment, Horizontal, Vertical},
-        core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size},
-        Background,
+        core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size}
+        ,
     },
-    widget::{container, Container, Column, Row, Widget},
+    widget::{container, Column, Container, Row, Widget},
     Element, Renderer, Theme,
 };
-use cosmic::cosmic_theme::palette::Srgba;
 use renderer::Style;
-use sysinfo::Cpu;
 
 use crate::applet::Message;
 
@@ -26,7 +24,7 @@ pub enum Orientation {
     PointingUp,
     PointingRight, // todo more
 }
-impl Orientation {
+/*impl Orientation {
     pub(crate) fn default_for(anchor: PanelAnchor) -> Orientation {
         match anchor {
             PanelAnchor::Left => Orientation::PointingRight,
@@ -34,7 +32,7 @@ impl Orientation {
             PanelAnchor::Top | PanelAnchor::Bottom => Orientation::PointingUp,
         }
     }
-}
+}*/
 
 #[derive(Clone)]
 pub struct BarConfig {
@@ -42,7 +40,7 @@ pub struct BarConfig {
     /// The length in the direction the bar varies it's length
     pub full_length: Length,
     pub width_fraction: f32,
-    pub spacing: Length,
+    pub spacing: f32,
     pub sort_method: Option<SortMethod>,
 }
 
@@ -52,63 +50,55 @@ impl Default for BarConfig {
             orientation: Orientation::PointingUp,
             full_length: Length::Fill,
             width_fraction: 0.25,
-            spacing: Length::Fixed(1.0),
+            spacing: 1.0,
             sort_method: Some(SortMethod::Descending),
         }
     }
 }
 
-pub fn per_core_cpu_container(cpus: &[Cpu], config: BarConfig, color: Srgba) -> Container<Message, Theme> {
-    let (Length::Fixed(spacing), Length::Fixed(full_length)) = (config.spacing, config.full_length)
-    else {
-        unimplemented!()
-    };
+pub fn percentage_histogram<'a>(mut values: Box<[f32]>, config: BarConfig, color: Srgba) -> Container<'a, Message, Theme> {
+    let full_length = if let Length::Fixed(config_length) = config.full_length {
+        config_length
+    } else {50.0};
+
 
     let static_dimension = full_length * config.width_fraction;
 
-    let mut cpu_values: Box<[_]> = cpus.iter().map(Cpu::cpu_usage).collect();
 
     if let Some(sort_method) = config.sort_method {
         match sort_method {
-            SortMethod::Descending => cpu_values.sort_by(|a, b| b.partial_cmp(a).unwrap()),
-            SortMethod::Ascending => cpu_values.sort_by(|a, b| a.partial_cmp(b).unwrap()),
+            SortMethod::Descending => values.sort_by(|a, b| b.partial_cmp(a).unwrap()),
+            SortMethod::Ascending => values.sort_by(|a, b| a.partial_cmp(b).unwrap()),
         }
     }
-    // dbg!(full_length, static_dimension);
 
     let inner: Element<Message> =
         match config.orientation {
             Orientation::PointingUp => {
-                Row::with_children(cpu_values.iter().enumerate().map(|(i, &val)| {
+                Row::with_children(values.iter().map(|&val| {
                     VerticalPercentageBar::new(
                         val,
                         full_length,
                         static_dimension,
                         color,
                     )
-                    .into()
+                        .into()
                 }))
-                .height(full_length)
-                .align_y(Vertical::Bottom)
-                .spacing(spacing)
-                .into()
+                    .height(full_length)
+                    .align_y(Vertical::Bottom)
+                    .spacing(config.spacing)
+                    .into()
             }
-            Orientation::PointingRight => Column::with_children(cpu_values.iter().map(|&val| {
+            Orientation::PointingRight => Column::with_children(values.iter().map(|&val| {
                 HorizontalPercentageBar::new(val, full_length, static_dimension, color).into()
             }))
-            .width(full_length)
-            .align_x(Horizontal::Left)
-            .spacing(spacing)
-            .into(),
+                .width(full_length)
+                .align_x(Horizontal::Left)
+                .spacing(config.spacing)
+                .into(),
         };
 
     let outer = cosmic::widget::container(inner).style(|_| container::Style {
-/*        background: Some(Background::Color(iced::Color {
-            r: 20.0 / 255.0,
-            g: 20.0 / 255.0,
-            b: 20.0 / 255.0,
-            a: 1.0,
-        })),*/
         ..container::Style::default()
     });
     outer
@@ -122,8 +112,8 @@ impl PercentageBar {
     pub(crate) fn new(
         is_horizontal: bool,
         value: f32,
-        width: f32,
-        height: f32,
+        width: impl Into<Length>,
+        height: impl Into<Length>,
         theme_color: Srgba,
     ) -> Self {
         if is_horizontal {
@@ -136,6 +126,23 @@ impl PercentageBar {
         } else {
             Self::Horizontal(HorizontalPercentageBar::new(value, width, height, theme_color))
         }
+    }
+}
+
+/*impl Deref for PercentageBar {
+    type Target = dyn Widget<Message, Theme, Renderer>;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            PercentageBar::Vertical(v) => v,
+            PercentageBar::Horizontal(h) => h
+        }
+    }
+}*/
+
+impl From<PercentageBar> for Element<'_, Message> {
+    fn from(value: PercentageBar) -> Self {
+        Element::new(value)
     }
 }
 
@@ -183,6 +190,7 @@ impl<'a> Widget<Message, Theme, Renderer> for PercentageBar {
         }
     }
 }
+
 
 #[allow(missing_debug_implementations)]
 pub struct VerticalPercentageBar {
@@ -318,7 +326,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
         &self,
         _tree: &Tree,
         renderer: &mut Renderer,
-        theme: &Theme,
+        _theme: &Theme,
         _style: &Style,
         layout: Layout<'_>,
         _cursor: mouse::Cursor,
