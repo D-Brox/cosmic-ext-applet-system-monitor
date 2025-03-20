@@ -78,38 +78,8 @@ impl SystemMonitor {
 }
 
 impl SystemMonitor {
-    #[inline]
-    pub fn is_initialized_cpu(&self) -> bool {
-        self.cpu.is_some()
-    }
-
-    #[inline]
-    pub fn is_initialized_ram(&self) -> bool {
-        self.ram.is_some()
-    }
-
-    #[inline]
-    pub fn is_initialized_swap(&self) -> bool {
-        self.swap.is_some()
-    }
-
-    #[inline]
-    pub fn is_initialized_net(&self) -> bool {
-        self.net.is_some()
-    }
-
-    #[inline]
-    pub fn is_initialized_disk(&self) -> bool {
-        self.disk.is_some()
-    }
-
-    // #[inline]
-    // fn is_initialized_vram(&self) -> bool {
-    //     self.vram.is_some()
-    // }
-
     pub fn update_cpu(&mut self, theme: &Theme) {
-        if self.is_initialized_cpu() {
+        if self.cpu.is_some() {
             self.sys.refresh_cpu_usage();
             let cpu_data = self.sys.global_cpu_usage() as i64;
 
@@ -120,7 +90,7 @@ impl SystemMonitor {
     }
 
     pub fn update_ram(&mut self, theme: &Theme) {
-        if self.is_initialized_ram() {
+        if self.ram.is_some() {
             self.sys
                 .refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
             let total_ram = self.sys.total_memory() as f64;
@@ -133,7 +103,7 @@ impl SystemMonitor {
         }
     }
     pub fn update_swap(&mut self, theme: &Theme) {
-        if self.is_initialized_swap() {
+        if self.swap.is_some() {
             self.sys
                 .refresh_memory_specifics(MemoryRefreshKind::nothing().with_swap());
             let total_swap = self.sys.total_swap() as f64;
@@ -147,7 +117,7 @@ impl SystemMonitor {
     }
 
     pub fn update_net(&mut self, theme: &Theme) {
-        if self.is_initialized_net() {
+        if self.net.is_some() {
             self.nets.refresh(true);
             let mut upload = 0;
             let mut download = 0;
@@ -164,7 +134,7 @@ impl SystemMonitor {
     }
 
     pub fn update_disk(&mut self, theme: &Theme) {
-        if self.is_initialized_disk() {
+        if self.disk.is_some() {
             self.disks.refresh(true);
             let mut write = 0;
             let mut read = 0;
@@ -182,7 +152,7 @@ impl SystemMonitor {
     }
 
     // pub fn update_vram(&mut self, _theme: &Theme) {
-    //     if self.is_initialized_vram() {}
+    //     if self.vram.is_some() {}
     // }
 
     pub fn update_config(&mut self, config: &Config, theme: &Theme) {
@@ -191,7 +161,7 @@ impl SystemMonitor {
             match chart {
                 ChartConfig::CPU(c) => {
                     charts.push(UsedChart::Cpu);
-                    if self.is_initialized_cpu() {
+                    if self.cpu.is_some() {
                         let cpu = self.cpu.as_mut().expect("Error: uninitialized CPU chart");
                         cpu.update_colors(c.color.clone(), theme);
                         cpu.resize_queue(c.samples);
@@ -209,7 +179,7 @@ impl SystemMonitor {
                 }
                 ChartConfig::RAM(c) => {
                     charts.push(UsedChart::Ram);
-                    if self.is_initialized_swap() {
+                    if self.ram.is_some() {
                         let ram = self.ram.as_mut().expect("Error: uninitialized RAM chart");
                         ram.update_colors(c.color.clone(), theme);
                         ram.resize_queue(c.samples);
@@ -226,7 +196,7 @@ impl SystemMonitor {
                 }
                 ChartConfig::Swap(c) => {
                     charts.push(UsedChart::Swap);
-                    if self.is_initialized_swap() {
+                    if self.swap.is_some() {
                         let swap = self.swap.as_mut().expect("Error: uninitialized swap chart");
                         swap.update_colors(c.color.clone(), theme);
                         swap.resize_queue(c.samples);
@@ -243,7 +213,7 @@ impl SystemMonitor {
                 }
                 ChartConfig::Net(c) => {
                     charts.push(UsedChart::Net);
-                    if self.is_initialized_net() {
+                    if self.net.is_some() {
                         let net = self.net.as_mut().expect("Error: uninitialized swap chart");
                         net.update_colors(c.color_up.clone(), c.color_down.clone(), theme);
                         net.resize_queue(c.samples);
@@ -262,7 +232,7 @@ impl SystemMonitor {
                 }
                 ChartConfig::Disk(c) => {
                     charts.push(UsedChart::Disk);
-                    if self.is_initialized_disk() {
+                    if self.disk.is_some() {
                         let disk = self.disk.as_mut().expect("Error: uninitialized swap chart");
                         disk.update_colors(c.color_write.clone(), c.color_read.clone(), theme);
                         disk.resize_queue(c.samples);
@@ -282,7 +252,7 @@ impl SystemMonitor {
                 ChartConfig::VRAM(_) => (),
                 // ChartConfig::VRAM(c) => {
                 //     charts.push(UsedChart::Vram);
-                //     if self.is_initialized_vram() {
+                //     if self.vram.is_some() {
                 //         let vram = self.vram.as_mut().expect("Error: uninitialized swap chart");
                 //         vram.update_colors(c.color.clone(), theme);
                 //         vram.resize_queue(c.samples);
@@ -308,35 +278,35 @@ impl SystemMonitor {
         for chart in &self.charts {
             size += match chart {
                 UsedChart::Cpu => {
-                    if self.is_initialized_cpu() {
+                    if self.cpu.is_some() {
                         self.cpu.as_ref().unwrap().size
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Ram => {
-                    if self.is_initialized_ram() {
+                    if self.ram.is_some() {
                         self.ram.as_ref().unwrap().size
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Swap => {
-                    if self.is_initialized_swap() {
+                    if self.swap.is_some() {
                         self.swap.as_ref().unwrap().size
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Net => {
-                    if self.is_initialized_net() {
+                    if self.net.is_some() {
                         self.cpu.as_ref().unwrap().size
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Disk => {
-                    if self.is_initialized_disk() {
+                    if self.disk.is_some() {
                         self.disk.as_ref().unwrap().size
                     } else {
                         0.0
