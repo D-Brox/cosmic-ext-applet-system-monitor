@@ -44,11 +44,19 @@ jobs:
         id: package
         run: |
           just build-release
-          echo `uname -m`=`pwd`/target/release/cosmic-ext-applet-system-monitor >> $GITHUB_OUTPUT
           just build-deb
-          echo `uname -m`-deb=`pwd`/target/debian/*.deb >> $GITHUB_OUTPUT
           just build-rpm
-          echo `uname -m`-rpm=`pwd`/target/generate-rpm/*.rpm >> $GITHUB_OUTPUT
+          ARCH=`uname -m`
+          TARGET_DIR=`pwd`/target
+
+          cp $TARGET_DIR/release/cosmic-ext-applet-system-monitor ./cosmic-ext-applet-system-monitor-$ARCH
+          strip -s ./cosmic-ext-applet-system-monitor-$ARCH
+          cp $TARGET_DIR/debian/*.deb .
+          cp $TARGET_DIR/generate-rpm/*.rpm .
+          
+          echo `uname -m`=./*-$ARCH >> $GITHUB_OUTPUT
+          echo `uname -m`-deb=./*.deb >> $GITHUB_OUTPUT
+          echo `uname -m`-rpm=./*.rpm >> $GITHUB_OUTPUT
       - name: Publish artifacts and release
         uses: softprops/action-gh-release@v2
         with:
