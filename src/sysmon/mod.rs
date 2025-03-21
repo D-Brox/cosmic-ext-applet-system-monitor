@@ -375,6 +375,13 @@ impl SystemMonitor {
             // vec.push(disk.view_as(ChartView::BarChart, context));
         }
 
+        if vec.is_empty() {
+            vec.push(Text::new(fl!("loading"))
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Center)
+                .into());
+        }
+
         if context.is_horizontal() {
             Row::with_children(vec)
                 .spacing(30)
