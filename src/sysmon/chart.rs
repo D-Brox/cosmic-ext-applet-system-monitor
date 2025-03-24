@@ -16,9 +16,10 @@ impl Chart<Message> for (&SystemMonitor, Vec<f32>, f32, bool) {
     fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, _builder: ChartBuilder<DB>) {}
 
     fn draw_chart<DB: DrawingBackend>(&self, _state: &Self::State, root: DrawingArea<DB, Shift>) {
-        let children = if self.3 {
+        let (monitor, breakpoints, pad, horizontal) = self;
+        let children = if *horizontal {
             root.split_by_breakpoints(
-                self.1
+                breakpoints
                     .iter()
                     .map(|bp| RelativeSize::Width(f64::from(*bp)))
                     .collect::<Vec<_>>(),
@@ -27,54 +28,41 @@ impl Chart<Message> for (&SystemMonitor, Vec<f32>, f32, bool) {
         } else {
             root.split_by_breakpoints(
                 vec![0.0; 0],
-                self.1
+                breakpoints
                     .iter()
                     .map(|bp| RelativeSize::Height(f64::from(*bp)))
                     .collect::<Vec<_>>(),
             )
         };
-        let mut gpu_iter = self.0.gpu.iter();
-        for (child, chart) in children.iter().zip(self.0.charts.iter()) {
+        let mut gpu_iter = monitor.gpu.iter();
+        for (child, chart) in children.iter().zip(monitor.charts.iter()) {
             let mut on = ChartBuilder::on(child);
-            let builder = on.margin(self.2 / 4.0);
+            let builder = on.margin(pad / 4.0);
 
-            match chart {
-                UsedChart::Cpu => match &self.0.cpu {
-                    Some(data) => {
-                        data.draw_chart(builder, self.0.bg_color);
-                    }
-                    _ => (),
-                },
-                UsedChart::Ram => match &self.0.ram {
-                    Some(data) => {
-                        data.draw_chart(builder, self.0.bg_color);
-                    }
-                    _ => (),
-                },
-                UsedChart::Swap => match &self.0.swap {
-                    Some(data) => {
-                        data.draw_chart(builder, self.0.bg_color);
-                    }
-                    _ => (),
-                },
-                UsedChart::Net => match &self.0.net {
-                    Some(data) => {
-                        data.draw_chart(builder, self.0.bg_color);
-                    }
-                    _ => (),
-                },
-                UsedChart::Disk => match &self.0.disk {
-                    Some(data) => {
-                        data.draw_chart(builder, self.0.bg_color);
-                    }
-                    _ => (),
-                },
-                UsedChart::Gpu => match gpu_iter.next() {
-                    Some(data) => {
-                        data.draw_chart(builder, self.0.bg_color);
-                    }
-                    _ => (),
-                },
+            _ = match chart {
+                UsedChart::Cpu => &monitor
+                    .cpu
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Ram => &monitor
+                    .ram
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Swap => &monitor
+                    .swap
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Net => &monitor
+                    .net
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Disk => &monitor
+                    .disk
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Gpu => &gpu_iter
+                    .next()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
             }
         }
     }
@@ -102,7 +90,7 @@ impl SingleChart {
             samples,
             rgb_color: theme_color.clone().as_rgb_color(theme),
             theme_color,
-            aspect_ratio: aspect_ratio,
+            aspect_ratio,
         }
     }
 
@@ -243,15 +231,13 @@ impl DoubleChart {
             .expect("Error: failed to build chart");
         chart.plotting_area().fill(&color).unwrap();
 
-        let scale = if let Some(min_scale) = self.min_scale {
+        let scale = self.min_scale.map_or(1.0, |min_scale| {
             80.0 / self
                 .data_points1
                 .iter()
                 .zip(self.data_points1.iter())
                 .fold(min_scale, |a, (&b, &c)| max(a, max(b, c))) as f64
-        } else {
-            1.0
-        };
+        });
 
         let iter1 = (0..self.samples as i64)
             .zip(self.data_points1.asc_iter())
