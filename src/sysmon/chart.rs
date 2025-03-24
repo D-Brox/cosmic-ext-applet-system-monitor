@@ -87,7 +87,7 @@ impl Chart<Message> for (&SystemMonitor, Vec<f32>, f32, bool) {
 #[derive(Clone)]
 pub(super) struct SingleChart {
     samples: usize,
-    pub size: f32,
+    pub aspect_ratio: f32,
 
     data_points: CircularQueue<i64>,
     theme_color: Color,
@@ -95,7 +95,7 @@ pub(super) struct SingleChart {
 }
 
 impl SingleChart {
-    pub fn new(theme_color: Color, size: f32, samples: usize, theme: &Theme) -> Self {
+    pub fn new(theme_color: Color, aspect_ratio: f32, samples: usize, theme: &Theme) -> Self {
         let mut data_points = CircularQueue::with_capacity(samples);
         for _ in 0..samples {
             data_points.push(0);
@@ -106,7 +106,7 @@ impl SingleChart {
             samples,
             rgb_color: theme_color.clone().as_rgb_color(theme),
             theme_color,
-            size,
+            aspect_ratio: aspect_ratio,
         }
     }
 
@@ -119,8 +119,8 @@ impl SingleChart {
         self.data_points = data_points;
     }
 
-    pub fn update_size(&mut self, size: f32) {
-        self.size = size;
+    pub fn update_aspect_ratio(&mut self, size: f32) {
+        self.aspect_ratio = size;
     }
 
     pub fn update_rgb_color(&mut self, theme: &Theme) {
@@ -161,7 +161,7 @@ impl SingleChart {
 #[derive(Clone)]
 pub(super) struct DoubleChart {
     samples: usize,
-    pub size: f32,
+    pub aspect_ratio: f32,
     min_scale: u64,
 
     data_points1: CircularQueue<u64>,
@@ -177,7 +177,7 @@ impl DoubleChart {
     pub fn new(
         theme_color1: Color,
         theme_color2: Color,
-        size: f32,
+        aspect_ratio: f32,
         samples: usize,
         theme: &Theme,
         min_scale: u64,
@@ -191,7 +191,7 @@ impl DoubleChart {
 
         Self {
             samples,
-            size,
+            aspect_ratio,
             min_scale,
 
             data_points1,
@@ -218,8 +218,8 @@ impl DoubleChart {
         self.data_points2 = data_points2;
     }
 
-    pub fn update_size(&mut self, size: f32) {
-        self.size = size;
+    pub fn update_aspect_ratio(&mut self, aspect_ratio: f32) {
+        self.aspect_ratio = aspect_ratio;
     }
 
     pub fn update_rgb_color(&mut self, theme: &Theme) {
