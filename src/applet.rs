@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-
-use std::time::Duration;
-
 use crate::sysmon::SystemMonitor;
 use cosmic::app::{Core, Task};
+use std::time::Duration;
 
-use cosmic::iced::{Alignment, Subscription};
-use cosmic::widget::row;
+use cosmic::iced::Subscription;
 use cosmic::{cosmic_config, Application, Element, Theme};
+use sysinfo::System;
 
 use crate::config::{config_subscription, ChartConfig, Config};
 
@@ -67,6 +65,10 @@ impl Application for SystemMonitorApplet {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let theme = core.applet.theme().expect("Error: applet theme not found");
+
+        let mut sys = System::new();
+        sys.refresh_cpu_usage(); // otherwise, sys.cpus().len == 0, meaning no bars will be drawn until the first refresh
+
         let app = Self {
             core,
             chart: SystemMonitor::new(&flags.config, &theme),
@@ -78,16 +80,9 @@ impl Application for SystemMonitorApplet {
     }
 
     fn view(&self) -> Element<Self::Message> {
-        let (_, size) = self.core.applet.suggested_size(false);
-        let pad = self.core.applet.suggested_padding(false);
-        let is_horizontal = self.core.applet.is_horizontal();
         self.core
             .applet
-            .autosize_window(
-                row()
-                    .push(self.chart.view(size.into(), pad.into(), is_horizontal))
-                    .align_y(Alignment::Center),
-            )
+            .autosize_window(self.chart.view(&self.core.applet))
             .into()
     }
 
@@ -122,7 +117,9 @@ impl Application for SystemMonitorApplet {
                     self.chart.update_config(&self.config, &self.get_theme());
                 }
             }
-            Message::TickCpu => self.chart.update_cpu(&self.get_theme()),
+            Message::TickCpu => {
+                self.chart.update_cpu(&self.get_theme());
+            }
             Message::TickRam => self.chart.update_ram(&self.get_theme()),
             Message::TickSwap => self.chart.update_swap(&self.get_theme()),
             Message::TickNet => self.chart.update_net(&self.get_theme()),
