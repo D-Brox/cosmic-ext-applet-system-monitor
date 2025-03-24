@@ -30,7 +30,7 @@ pub enum Message {
     TickSwap,
     TickNet,
     TickDisk,
-    // TickVRAM,
+    TickGpu,
 }
 
 #[derive(Clone, Debug)]
@@ -92,29 +92,6 @@ impl Application for SystemMonitorApplet {
     }
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
-        #[allow(unused_macros)]
-        macro_rules! config_set {
-            ($name: ident, $value: expr) => {
-                match &self.config_handler {
-                    Some(config_handler) => {
-                        match paste::paste! { self.config.[<set_ $name>](config_handler, $value) } {
-                            Ok(_) => {}
-                            Err(err) => {
-                                eprintln!("failed to save config {:?}: {}", stringify!($name), err);
-                            }
-                        }
-                    }
-                    None => {
-                        self.config.$name = $value;
-                        eprintln!(
-                            "failed to save config {:?}: no config handler",
-                            stringify!($name),
-                        );
-                    }
-                }
-            };
-        }
-
         match message {
             Message::Config(config) => {
                 if config != self.config {
@@ -127,7 +104,7 @@ impl Application for SystemMonitorApplet {
             Message::TickSwap => self.chart.update_swap(&self.get_theme()),
             Message::TickNet => self.chart.update_net(&self.get_theme()),
             Message::TickDisk => self.chart.update_disk(&self.get_theme()),
-            // Message::TickVRAM => self.chart.update_vram(&self.get_theme()),
+            Message::TickGpu => self.chart.update_gpu(&self.get_theme()),
         }
         Task::none()
     }
@@ -157,12 +134,11 @@ impl Application for SystemMonitorApplet {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickDisk)
                     }
-                    ChartConfig::VRAM(_c) => {
-                        // uninplemented
-                        continue;
-                        // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
-                        // .map(|_| Message::TickVRAM)
+                    ChartConfig::GPU(c) => {
+                        cosmic::iced::time::every(Duration::from_millis(c.update_interval))
+                            .map(|_| Message::TickGpu)
                     }
+                    ChartConfig::VRAM(_c) => continue,
                 }
             };
             subs.push(tick);

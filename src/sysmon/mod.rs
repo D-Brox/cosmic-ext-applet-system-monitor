@@ -2,8 +2,9 @@
 mod chart;
 use chart::{DoubleChart, SingleChart, UsedChart};
 use plotters_iced::ChartWidget;
-// mod gpu;
-// use gpu::Gpus,
+mod gpu;
+use gpu::{GpuData, Gpus};
+
 use crate::{
     applet::Message,
     config::{ChartConfig, Config},
@@ -31,14 +32,15 @@ pub struct SystemMonitor {
     sys: System,
     nets: Networks,
     disks: Disks,
-    // gpus: Gpus,
+    gpus: Gpus,
+
     charts: Vec<UsedChart>,
     cpu: Option<SingleChart>,
     ram: Option<SingleChart>,
     swap: Option<SingleChart>,
     net: Option<DoubleChart>,
     disk: Option<DoubleChart>,
-    // vram: Option<SingleChart>,
+    gpu: Vec<DoubleChart>,
 }
 
 impl SystemMonitor {
@@ -58,14 +60,15 @@ impl SystemMonitor {
             sys: System::new(),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
-            // gpus: Gpus {},
+            gpus: Gpus::new(),
+
             charts: vec![],
             cpu: None,
             ram: None,
             swap: None,
             net: None,
             disk: None,
-            // vram: None,
+            gpu: vec![],
         };
         new_self.update_config(config, theme);
         new_self.update_cpu(theme);
@@ -73,7 +76,7 @@ impl SystemMonitor {
         new_self.update_swap(theme);
         new_self.update_net(theme);
         new_self.update_disk(theme);
-        // new_self.update_vram(theme);
+        new_self.update_gpu(theme);
         new_self.update_size();
         new_self
     }
@@ -83,7 +86,7 @@ impl SystemMonitor {
     pub fn update_cpu(&mut self, theme: &Theme) {
         if let Some(cpu) = &mut self.cpu {
             self.sys.refresh_cpu_usage();
-            let cpu_data = self.sys.global_cpu_usage() as i64;
+            let cpu_data = self.sys.global_cpu_usage() as u64;
 
             cpu.push_data(cpu_data);
             cpu.update_rgb_color(theme);
@@ -96,7 +99,7 @@ impl SystemMonitor {
                 .refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
             let total_ram = self.sys.total_memory() as f64;
             let used_ram = self.sys.used_memory() as f64;
-            let ram_data = ((used_ram / total_ram) * 100.0) as i64;
+            let ram_data = ((used_ram / total_ram) * 100.0) as u64;
 
             ram.push_data(ram_data);
             ram.update_rgb_color(theme);
@@ -108,7 +111,7 @@ impl SystemMonitor {
                 .refresh_memory_specifics(MemoryRefreshKind::nothing().with_swap());
             let total_swap = self.sys.total_swap() as f64;
             let used_swap = self.sys.used_swap() as f64;
-            let ram_swap = ((used_swap / total_swap) * 100.0) as i64;
+            let ram_swap = ((used_swap / total_swap) * 100.0) as u64;
 
             swap.push_data(ram_swap);
             swap.update_rgb_color(theme);
@@ -148,9 +151,22 @@ impl SystemMonitor {
         }
     }
 
-    // pub fn update_vram(&mut self, _theme: &Theme) {
-    //     if let Some(vram) = self.vram {}
-    // }
+    pub fn update_gpu(&mut self, theme: &Theme) {
+        self.gpus.refresh();
+        for (
+            gpu,
+            GpuData {
+                usage,
+                used_vram,
+                total_vram,
+            },
+        ) in self.gpu.iter_mut().zip(self.gpus.data())
+        {
+            let vram_percent = ((used_vram as f64 / total_vram as f64) * 100.0) as u64;
+            gpu.push_data(usage, vram_percent);
+            gpu.update_rgb_color(theme);
+        }
+    }
 
     pub fn update_config(&mut self, config: &Config, theme: &Theme) {
         let mut charts = Vec::new();
@@ -214,7 +230,7 @@ impl SystemMonitor {
                             c.aspect_ratio,
                             c.samples,
                             theme,
-                            10 << 10,
+                            Some(10 << 10),
                         ));
                     }
                 }
@@ -231,35 +247,43 @@ impl SystemMonitor {
                             c.aspect_ratio,
                             c.samples,
                             theme,
-                            1 << 10,
+                            Some(1 << 10),
                         ));
                     }
                 }
+                ChartConfig::GPU(c) => {
+                    if !self.gpu.is_empty() {
+                        for gpu in &mut self.gpu {
+                            charts.push(UsedChart::Gpu);
+                            gpu.update_colors(c.color_usage.clone(), c.color_vram.clone(), theme);
+                            gpu.resize_queue(c.samples);
+                            gpu.update_aspect_ratio(c.aspect_ratio);
+                        }
+                    } else {
+                        for _ in 0..self.gpus.num_gpus() {
+                            charts.push(UsedChart::Gpu);
+                            self.gpu.push(DoubleChart::new(
+                                c.color_usage.clone(),
+                                c.color_vram.clone(),
+                                c.aspect_ratio,
+                                c.samples,
+                                theme,
+                                None,
+                            ))
+                        }
+                    }
+                }
                 ChartConfig::VRAM(_) => (),
-                // ChartConfig::VRAM(c) => {
-                //     charts.push(UsedChart::Vram);
-                // if let Some(vram) = &mut self.vram {
-                //         vram.update_colors(c.color.clone(), theme);
-                //         vram.resize_queue(c.samples);
-                //     } else {
-                //         self.vram = Some(SingleChart::new(
-                //             c.color.clone(),
-                //             c.size,
-                //             c.samples,
-                //             theme,
-                //         ));
-                //     }
-                // },
             }
         }
         self.update_size();
-        println!("{}", self.relative_size);
         self.charts = charts;
     }
 
     fn update_size(&mut self) {
         let mut size = 0.0;
         let mut breakpoints = Vec::new();
+        let mut gpus = self.gpu.iter();
         for chart in &self.charts {
             size += match chart {
                 UsedChart::Cpu => self.cpu.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
@@ -267,6 +291,7 @@ impl SystemMonitor {
                 UsedChart::Swap => self.swap.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
                 UsedChart::Net => self.net.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
                 UsedChart::Disk => self.disk.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
+                UsedChart::Gpu => gpus.next().map_or(0.0, |chart| (chart.aspect_ratio)),
             };
             breakpoints.push(size);
         }
