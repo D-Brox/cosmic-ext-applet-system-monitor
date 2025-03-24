@@ -22,8 +22,10 @@ use sysinfo::{Disks, MemoryRefreshKind, Networks, System};
 use crate::fl;
 
 pub struct SystemMonitor {
+    /// used to calculate the aspect ratio of the entire collection in the panel. This is mereley a cache for the monolithic implementation of [Chart]
     relative_size: f32,
     breakpoints: Vec<f32>,
+    /// background color for all the Charts
     pub bg_color: RGBAColor,
 
     sys: System,
@@ -167,8 +169,12 @@ impl SystemMonitor {
                         cpu.resize_queue(c.samples);
                         cpu.update_aspect_ratio(c.aspect_ratio);
                     } else {
-                        self.cpu =
-                            Some(SingleChart::new(c.color.clone(), c.aspect_ratio, c.samples, theme));
+                        self.cpu = Some(SingleChart::new(
+                            c.color.clone(),
+                            c.aspect_ratio,
+                            c.samples,
+                            theme,
+                        ));
                     }
                 }
                 ChartConfig::RAM(c) => {
@@ -179,8 +185,12 @@ impl SystemMonitor {
                         ram.resize_queue(c.samples);
                         ram.update_aspect_ratio(c.aspect_ratio);
                     } else {
-                        self.ram =
-                            Some(SingleChart::new(c.color.clone(), c.aspect_ratio, c.samples, theme));
+                        self.ram = Some(SingleChart::new(
+                            c.color.clone(),
+                            c.aspect_ratio,
+                            c.samples,
+                            theme,
+                        ));
                     }
                 }
                 ChartConfig::Swap(c) => {
@@ -191,8 +201,12 @@ impl SystemMonitor {
                         swap.resize_queue(c.samples);
                         swap.update_aspect_ratio(c.aspect_ratio);
                     } else {
-                        self.swap =
-                            Some(SingleChart::new(c.color.clone(), c.aspect_ratio, c.samples, theme));
+                        self.swap = Some(SingleChart::new(
+                            c.color.clone(),
+                            c.aspect_ratio,
+                            c.samples,
+                            theme,
+                        ));
                     }
                 }
                 ChartConfig::Net(c) => {
