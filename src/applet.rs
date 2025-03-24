@@ -14,6 +14,7 @@ use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 use crate::{
     components::{
         bar::PercentageBar,
+        gpu::Gpus,
         run::{HistoryChart, SimpleHistoryChart, SuperimposedHistoryChart},
     },
     config::{
@@ -29,11 +30,11 @@ pub struct SystemMonitorApplet {
     config: Config,
     #[allow(dead_code)]
     config_handler: Option<cosmic_config::Config>,
-    // chart: SystemMonitor,
+
     sys: System,
     nets: Networks,
     disks: Disks,
-    // gpus: Gpus,
+    gpus: Gpus,
     /// percentage global cpu used between refreshes
     global_cpu: History<f32>,
     ram: History,
@@ -46,6 +47,10 @@ pub struct SystemMonitorApplet {
     disk_read: History,
     /// amount written between refresh of `sysinfo::Disks`. (DOES NOT STORE RATE)
     disk_write: History,
+    /// amount read between refresh of `sysinfo::Disks`. (DOES NOT STORE RATE)
+    gpu_usage: Vec<History>,
+    /// amount written between refresh of `sysinfo::Disks`. (DOES NOT STORE RATE)
+    vram: Vec<History>,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +60,7 @@ pub enum Message {
     TickMem,
     TickNet,
     TickDisk,
+    TickGpu,
     // TickGpu,
 }
 
@@ -167,33 +173,37 @@ impl Application for SystemMonitorApplet {
     }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        let (mut cpu, mut mem, mut net, mut disk) = Default::default();
+        let (mut cpu, mut mem, mut net, mut disk, mut gpu) = Default::default();
         let sampling = &flags.config.sampling;
         for chart_config in &flags.config.components {
             match chart_config {
-                ComponentConfig::Cpu { .. } => cpu = Some(sampling.cpu.sampling_window),
-                ComponentConfig::Mem { .. } => mem = Some(sampling.mem.sampling_window),
-                ComponentConfig::Net { .. } => net = Some(sampling.net.sampling_window),
-                ComponentConfig::Disk { .. } => disk = Some(sampling.disk.sampling_window), // ComponentConfig::Gpu  => gpu = Some(flags.config.sampling.gpu.sampling_window),
+                ComponentConfig::Cpu(_) => cpu = sampling.cpu.sampling_window,
+                ComponentConfig::Mem(_) => mem = sampling.mem.sampling_window,
+                ComponentConfig::Net(_) => net = sampling.net.sampling_window,
+                ComponentConfig::Disk(_) => disk = sampling.disk.sampling_window,
+                ComponentConfig::Gpu(_) => gpu = sampling.gpu.sampling_window,
             }
         }
-
+        let gpus = Gpus::new();
         let app = Self {
             core,
             config: flags.config,
             config_handler: flags.config_handler,
 
+            global_cpu: History::with_capacity(cpu),
+            ram: History::with_capacity(mem),
+            swap: History::with_capacity(mem),
+            upload: History::with_capacity(net),
+            download: History::with_capacity(net),
+            disk_read: History::with_capacity(disk),
+            disk_write: History::with_capacity(disk),
+            gpu_usage: vec![History::with_capacity(gpu); gpus.num_gpus()],
+            vram: vec![History::with_capacity(gpu); gpus.num_gpus()],
+
             sys: System::new_all(),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
-
-            global_cpu: History::with_capacity(cpu.unwrap_or(0)),
-            ram: History::with_capacity(mem.unwrap_or(0)),
-            swap: History::with_capacity(mem.unwrap_or(0)),
-            upload: History::with_capacity(net.unwrap_or(0)),
-            download: History::with_capacity(net.unwrap_or(0)),
-            disk_read: History::with_capacity(disk.unwrap_or(0)),
-            disk_write: History::with_capacity(disk.unwrap_or(0)),
+            gpus,
         };
 
         (app, Task::none())
@@ -325,7 +335,7 @@ impl Application for SystemMonitorApplet {
 
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
-                        PercentView::RunFront {
+                        PercentView::RunBack {
                             color,
                             aspect_ratio,
                         } => {
@@ -333,7 +343,7 @@ impl Application for SystemMonitorApplet {
                                 SimpleHistoryChart::new(&self.ram, self.sys.total_memory(), *color);
                             self.aspect_ratio_container(ram, *aspect_ratio)
                         }
-                        PercentView::RunBack {
+                        PercentView::RunFront {
                             color,
                             aspect_ratio,
                         } => {
@@ -411,7 +421,112 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect(),
-                // ComponentConfig::Disk (vis) => todo!(),
+                ComponentConfig::Gpu(vis) => self
+                    .gpus
+                    .data()
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(idx, data)| {
+                        let idx = &idx;
+                        vis.iter()
+                            .map(|v| match v {
+                                PercentView::Bar {
+                                    color_left,
+                                    color_right,
+                                    spacing,
+                                    aspect_ratio,
+                                } => {
+                                    let bars = vec![
+                                        self.aspect_ratio_container(
+                                            PercentageBar::from_pair(
+                                                self.is_horizontal(),
+                                                data.usage,
+                                                100,
+                                                *color_left,
+                                            ),
+                                            *aspect_ratio,
+                                        ),
+                                        self.aspect_ratio_container(
+                                            PercentageBar::from_pair(
+                                                self.is_horizontal(),
+                                                data.used_vram,
+                                                data.total_vram,
+                                                *color_right,
+                                            ),
+                                            *aspect_ratio,
+                                        ),
+                                    ];
+                                    self.panel_collection(bars, *spacing, 0.0)
+                                        .apply(container)
+                                        .style(base_background)
+                                }
+                                PercentView::BarLeft {
+                                    color,
+                                    aspect_ratio,
+                                } => {
+                                    let content = PercentageBar::from_pair(
+                                        self.is_horizontal(),
+                                        data.usage,
+                                        100,
+                                        *color,
+                                    );
+                                    self.aspect_ratio_container(content, *aspect_ratio)
+                                }
+                                PercentView::BarRight {
+                                    color,
+                                    aspect_ratio,
+                                } => {
+                                    let content = PercentageBar::from_pair(
+                                        self.is_horizontal(),
+                                        data.used_vram,
+                                        data.total_vram,
+                                        *color,
+                                    );
+                                    self.aspect_ratio_container(content, *aspect_ratio)
+                                }
+                                PercentView::Run {
+                                    aspect_ratio,
+                                    color_back,
+                                    color_front,
+                                } => {
+                                    let usage =
+                                        HistoryChart::new(&self.gpu_usage[*idx], 100, *color_back);
+                                    let vram = HistoryChart::new(
+                                        &self.vram[*idx],
+                                        data.total_vram,
+                                        *color_front,
+                                    );
+
+                                    let content = SuperimposedHistoryChart {
+                                        back: usage,
+                                        front: vram,
+                                    };
+
+                                    self.aspect_ratio_container(content, *aspect_ratio)
+                                }
+                                PercentView::RunBack {
+                                    color,
+                                    aspect_ratio,
+                                } => {
+                                    let usage =
+                                    SimpleHistoryChart::new(&self.gpu_usage[*idx], 100, *color);
+                                    self.aspect_ratio_container(usage, *aspect_ratio)
+                                }
+                                PercentView::RunFront {
+                                    color,
+                                    aspect_ratio,
+                                } => {
+                                    let vram = SimpleHistoryChart::new(
+                                        &self.vram[*idx],
+                                        data.total_vram,
+                                        *color,
+                                    );
+                                    self.aspect_ratio_container(vram, *aspect_ratio)
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .collect(),
             }
             .apply(|elements| {
                 self.panel_collection(elements, self.config.layout.inner_spacing, 0.0)
@@ -435,7 +550,10 @@ impl Application for SystemMonitorApplet {
                 self.download.resize(sampĺing.net.sampling_window);
                 self.disk_read.resize(sampĺing.disk.sampling_window);
                 self.disk_write.resize(sampĺing.disk.sampling_window);
-                // self.gpu.resize(sampĺing.cpu.sampling_window);
+                for i in 0..self.gpus.num_gpus() {
+                    self.gpu_usage[i].resize(sampĺing.cpu.sampling_window);
+                    self.vram[i].resize(sampĺing.cpu.sampling_window);
+                }
             }
             Message::TickCpu => {
                 self.sys.refresh_cpu_all();
@@ -467,7 +585,14 @@ impl Application for SystemMonitorApplet {
                     });
                 self.disk_read.push(read);
                 self.disk_write.push(written);
-            } // Message::TickGpu => todo!(),
+            }
+            Message::TickGpu => {
+                self.gpus.refresh();
+                for (idx,data) in self.gpus.data().iter().enumerate() {
+                    self.gpu_usage[idx].push(data.usage);
+                    self.vram[idx].push(data.used_vram);
+                }
+            }
         }
         Task::none()
     }
@@ -478,26 +603,26 @@ impl Application for SystemMonitorApplet {
         for chart in &self.config.components {
             let tick = {
                 match chart {
-                    ComponentConfig::Cpu { .. } => cosmic::iced::time::every(
-                        Duration::from_millis(sampling.cpu.update_interval),
-                    )
+                    ComponentConfig::Cpu(_) => cosmic::iced::time::every(Duration::from_millis(
+                        sampling.cpu.update_interval,
+                    ))
                     .map(|_| Message::TickCpu),
-                    ComponentConfig::Mem { .. } => cosmic::iced::time::every(
-                        Duration::from_millis(sampling.mem.update_interval),
-                    )
+                    ComponentConfig::Mem(_) => cosmic::iced::time::every(Duration::from_millis(
+                        sampling.mem.update_interval,
+                    ))
                     .map(|_| Message::TickMem),
-                    ComponentConfig::Net { .. } => cosmic::iced::time::every(
-                        Duration::from_millis(sampling.net.update_interval),
-                    )
+                    ComponentConfig::Net(_) => cosmic::iced::time::every(Duration::from_millis(
+                        sampling.net.update_interval,
+                    ))
                     .map(|_| Message::TickNet),
-                    ComponentConfig::Disk { .. } => cosmic::iced::time::every(
-                        Duration::from_millis(sampling.disk.update_interval),
-                    )
+                    ComponentConfig::Disk(_) => cosmic::iced::time::every(Duration::from_millis(
+                        sampling.disk.update_interval,
+                    ))
                     .map(|_| Message::TickDisk),
-                    // ComponentConfig::Gpu { .. } => cosmic::iced::time::every(
-                    //     Duration::from_millis(sampling.gpu.update_interval),
-                    // )
-                    // .map(|_| Message::TickGpu),
+                    ComponentConfig::Gpu(_) => cosmic::iced::time::every(Duration::from_millis(
+                        sampling.gpu.update_interval,
+                    ))
+                    .map(|_| Message::TickGpu),
                 }
             };
             subs.push(tick);

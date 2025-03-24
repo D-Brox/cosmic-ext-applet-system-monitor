@@ -4,6 +4,7 @@ mod applet;
 mod components {
     pub mod bar;
     pub mod run;
+    pub mod gpu;
 }
 mod color;
 mod config;
