@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-ext-applet-system-monitor"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["D-Brox <davidfbg00@gmail.com>"]
 description = "System monitor applet for the COSMIC DE"
@@ -12,8 +12,8 @@ rust-version = "1.80"
 
 [dependencies]
 i18n-embed-fl = "0.9.1"
-# lazy-regex = "3.4.1"
-# nvml-wrapper = "0.10.0"
+lazy-regex = "3.4.1"
+nvml-wrapper = "0.10.0"
 rust-embed = "8.3.0"
 serde = "1"
 sysinfo = "0.34.2"

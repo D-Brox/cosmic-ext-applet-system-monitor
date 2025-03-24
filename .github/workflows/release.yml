@@ -54,9 +54,9 @@ jobs:
           cp $TARGET_DIR/debian/*.deb .
           cp $TARGET_DIR/generate-rpm/*.rpm .
           
-          echo `uname -m`=./*-$ARCH >> $GITHUB_OUTPUT
-          echo `uname -m`-deb=./*.deb >> $GITHUB_OUTPUT
-          echo `uname -m`-rpm=./*.rpm >> $GITHUB_OUTPUT
+          echo $ARCH=./*-$ARCH >> $GITHUB_OUTPUT
+          echo $ARCH-deb=./*.deb >> $GITHUB_OUTPUT
+          echo $ARCH-rpm=./*.rpm >> $GITHUB_OUTPUT
       - name: Publish artifacts and release
         uses: softprops/action-gh-release@v2
         with:

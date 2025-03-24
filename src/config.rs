@@ -139,6 +139,16 @@ pub enum ComponentConfig {
     Mem(Box<[PercentView]>),
     Net(Box<[IoView]>),
     Disk(Box<[IoView]>),
+    Gpu(Box<[PercentView]>)
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Graphics {
+    pub update_interval: u64,
+    pub samples: usize,
+    pub color_usage: Color,
+    pub color_vram: Color,
+    pub aspect_ratio: f32,
 }
 
 pub fn config_subscription() -> Subscription<Message> {
@@ -213,29 +223,29 @@ pub enum CpuView {
 pub enum PercentView {
     #[serde(rename = "RunChart")]
     Run {
-        #[serde(alias = "color_ram")]
+        #[serde(alias = "color_ram", alias = "color_usage")]
         color_back: Color,
-        #[serde(alias = "color_swap")]
+        #[serde(alias = "color_swap", alias = "color_vram")]
         color_front: Color,
         aspect_ratio: f32,
     },
-    #[serde(rename = "RunChartBack", alias = "RunChartRam")]
-    RunFront { color: Color, aspect_ratio: f32 },
-    #[serde(rename = "RunChartFront", alias = "RunChartSwap")]
+    #[serde(rename = "RunChartBack", alias = "RunChartRam",alias = "RunChartUsage")]
     RunBack { color: Color, aspect_ratio: f32 },
+    #[serde(rename = "RunChartFront", alias = "RunChartSwap",alias = "RunChartVram")]
+    RunFront { color: Color, aspect_ratio: f32 },
 
     #[serde(rename = "BarChart")]
     Bar {
-        #[serde(alias = "color_ram")]
+        #[serde(alias = "color_ram", alias = "color_usage")]
         color_left: Color,
-        #[serde(alias = "color_swap")]
+        #[serde(alias = "color_swap", alias = "color_vram")]
         color_right: Color,
         spacing: f32,
         aspect_ratio: f32,
     },
-    #[serde(alias = "BarChartRam")]
+    #[serde(alias = "BarChartRam", alias = "BarChartUsage")]
     BarLeft { color: Color, aspect_ratio: f32 },
-    #[serde(alias = "BarChartSwap")]
+    #[serde(alias = "BarChartSwap", alias = "BarChartVram")]
     BarRight { color: Color, aspect_ratio: f32 },
 }
 
@@ -248,7 +258,7 @@ impl Default for Config {
                 ComponentConfig::default_mem(),
                 ComponentConfig::default_disk(),
                 ComponentConfig::default_net(),
-                // ComponentConfig::default_gpu(),
+                ComponentConfig::default_gpu(),
             ]
             .into(),
             sampling: SamplingConfig::default(),
@@ -355,24 +365,24 @@ impl ComponentConfig {
         )
     }
 
-    // fn default_gpu() -> Self {
-    //     let color_back = Color::accent_warm_grey;
-    //     let color_front = Color::accent_indigo;
-    //     ComponentConfig::Mem(
-    //         [
-    //             PercentView::Run {
-    //                 color_back,
-    //                 color_front,
-    //                 aspect_ratio: 1.5,
-    //             },
-    //             PercentView::Bar {
-    //                 color_back,
-    //                 color_front,
-    //                 bar_aspect_ratio: 0.5,
-    //                 spacing: 2.5,
-    //             },
-    //         ]
-    //         .into(),
-    //     )
-    // }
+    fn default_gpu() -> Self {
+        let color_usage = Color::accent_warm_grey;
+        let color_vram = Color::accent_indigo;
+        ComponentConfig::Gpu(
+            [
+                PercentView::Run {
+                    color_back:color_usage,
+                    color_front:color_vram,
+                    aspect_ratio: 1.5,
+                },
+                PercentView::Bar {
+                    color_left:color_usage,
+                    color_right:color_vram,
+                    aspect_ratio: 0.5,
+                    spacing: 2.5,
+                },
+            ]
+            .into(),
+        )
+    }
 }
