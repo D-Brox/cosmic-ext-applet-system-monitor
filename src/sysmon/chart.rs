@@ -141,7 +141,7 @@ impl SingleChart {
             .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
             .expect("Error: failed to build chart");
 
-        chart.plotting_area().fill(&color).unwrap();
+        chart.plotting_area().fill(&color).expect("Error: failed to fill chart backgournd");
         let iter = (0..self.samples as i64)
             .zip(self.data_points.asc_iter())
             .map(|x| (x.0, *x.1));
