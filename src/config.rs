@@ -27,39 +27,39 @@ impl Default for Config {
                 ChartConfig::CPU(Generic {
                     update_interval: 1000,
                     color: Color::accent_blue,
-                    size: 1.5,
+                    aspect_ratio: 1.5,
                     samples: 60,
                 }),
                 ChartConfig::RAM(Generic {
                     update_interval: 2000,
                     color: Color::accent_green,
-                    size: 1.5,
+                    aspect_ratio: 1.5,
                     samples: 30,
                 }),
                 ChartConfig::Swap(Generic {
                     update_interval: 5000,
                     color: Color::accent_purple,
-                    size: 1.5,
+                    aspect_ratio: 1.5,
                     samples: 12,
                 }),
                 ChartConfig::Net(Network {
                     update_interval: 1000,
                     color_up: Color::accent_yellow,
                     color_down: Color::accent_red,
-                    size: 1.5,
+                    aspect_ratio: 1.5,
                     samples: 60,
                 }),
                 ChartConfig::Disk(Disk {
                     update_interval: 2000,
                     color_read: Color::accent_orange,
                     color_write: Color::accent_pink,
-                    size: 1.5,
+                    aspect_ratio: 1.5,
                     samples: 30,
                 }),
                 ChartConfig::VRAM(Generic {
                     update_interval: 2000,
                     color: Color::accent_indigo,
-                    size: 1.5,
+                    aspect_ratio: 1.5,
                     samples: 30,
                 }),
             ],
@@ -90,7 +90,7 @@ pub struct Generic {
     pub color: Color,
 
     /// The **ratio** of width to height of the graph.
-    pub size: f32,
+    pub aspect_ratio: f32,
 
 }
 
@@ -109,7 +109,7 @@ pub struct Network {
     pub color_down: Color,
 
     /// The **ratio** of width to height of the graph.
-    pub size: f32,
+    pub aspect_ratio: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -127,7 +127,7 @@ pub struct Disk {
     pub color_write: Color,
 
     /// The **ratio** of width to height of the graph.
-    pub size: f32,
+    pub aspect_ratio: f32,
 }
 
 pub fn config_subscription() -> Subscription<Message> {

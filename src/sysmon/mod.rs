@@ -165,10 +165,10 @@ impl SystemMonitor {
                         let cpu = self.cpu.as_mut().expect("Error: uninitialized CPU chart");
                         cpu.update_colors(c.color.clone(), theme);
                         cpu.resize_queue(c.samples);
-                        cpu.update_size(c.size);
+                        cpu.update_aspect_ratio(c.aspect_ratio);
                     } else {
                         self.cpu =
-                            Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
+                            Some(SingleChart::new(c.color.clone(), c.aspect_ratio, c.samples, theme));
                     }
                 }
                 ChartConfig::RAM(c) => {
@@ -177,10 +177,10 @@ impl SystemMonitor {
                         let ram = self.ram.as_mut().expect("Error: uninitialized RAM chart");
                         ram.update_colors(c.color.clone(), theme);
                         ram.resize_queue(c.samples);
-                        ram.update_size(c.size);
+                        ram.update_aspect_ratio(c.aspect_ratio);
                     } else {
                         self.ram =
-                            Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
+                            Some(SingleChart::new(c.color.clone(), c.aspect_ratio, c.samples, theme));
                     }
                 }
                 ChartConfig::Swap(c) => {
@@ -189,10 +189,10 @@ impl SystemMonitor {
                         let swap = self.swap.as_mut().expect("Error: uninitialized swap chart");
                         swap.update_colors(c.color.clone(), theme);
                         swap.resize_queue(c.samples);
-                        swap.update_size(c.size);
+                        swap.update_aspect_ratio(c.aspect_ratio);
                     } else {
                         self.swap =
-                            Some(SingleChart::new(c.color.clone(), c.size, c.samples, theme));
+                            Some(SingleChart::new(c.color.clone(), c.aspect_ratio, c.samples, theme));
                     }
                 }
                 ChartConfig::Net(c) => {
@@ -201,12 +201,12 @@ impl SystemMonitor {
                         let net = self.net.as_mut().expect("Error: uninitialized swap chart");
                         net.update_colors(c.color_up.clone(), c.color_down.clone(), theme);
                         net.resize_queue(c.samples);
-                        net.update_size(c.size);
+                        net.update_aspect_ratio(c.aspect_ratio);
                     } else {
                         self.net = Some(DoubleChart::new(
                             c.color_up.clone(),
                             c.color_down.clone(),
-                            c.size,
+                            c.aspect_ratio,
                             c.samples,
                             theme,
                             10 << 10,
@@ -219,12 +219,12 @@ impl SystemMonitor {
                         let disk = self.disk.as_mut().expect("Error: uninitialized swap chart");
                         disk.update_colors(c.color_write.clone(), c.color_read.clone(), theme);
                         disk.resize_queue(c.samples);
-                        disk.update_size(c.size);
+                        disk.update_aspect_ratio(c.aspect_ratio);
                     } else {
                         self.disk = Some(DoubleChart::new(
                             c.color_write.clone(),
                             c.color_read.clone(),
-                            c.size,
+                            c.aspect_ratio,
                             c.samples,
                             theme,
                             1 << 10,
@@ -261,35 +261,35 @@ impl SystemMonitor {
             size += match chart {
                 UsedChart::Cpu => {
                     if self.cpu.is_some() {
-                        self.cpu.as_ref().unwrap().size
+                        self.cpu.as_ref().unwrap().aspect_ratio
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Ram => {
                     if self.ram.is_some() {
-                        self.ram.as_ref().unwrap().size
+                        self.ram.as_ref().unwrap().aspect_ratio
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Swap => {
                     if self.swap.is_some() {
-                        self.swap.as_ref().unwrap().size
+                        self.swap.as_ref().unwrap().aspect_ratio
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Net => {
                     if self.net.is_some() {
-                        self.cpu.as_ref().unwrap().size
+                        self.cpu.as_ref().unwrap().aspect_ratio
                     } else {
                         0.0
                     }
                 }
                 UsedChart::Disk => {
                     if self.disk.is_some() {
-                        self.disk.as_ref().unwrap().size
+                        self.disk.as_ref().unwrap().aspect_ratio
                     } else {
                         0.0
                     }
