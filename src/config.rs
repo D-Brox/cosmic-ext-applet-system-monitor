@@ -80,27 +80,53 @@ pub enum ChartConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Generic {
+    /// amount of time (in milliseconds) between new data
     pub update_interval: u64,
+
+    /// size of the history kept and shown in the run chart
     pub samples: usize,
+
+    /// The [Color] to use for this color this graph line.
     pub color: Color,
+
+    /// The **ratio** of width to height of the graph.
     pub size: f32,
+
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Network {
+    /// amount of time (in milliseconds) between new data
     pub update_interval: u64,
+
+    /// size of the history kept and shown in the run chart
     pub samples: usize,
+
+    /// The `cosmic::pallette` color to represent upload rate
     pub color_up: Color,
+
+    /// The `cosmic::pallette` color to represent download rate
     pub color_down: Color,
+
+    /// The **ratio** of width to height of the graph.
     pub size: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Disk {
+    /// amount of time (in milliseconds) between new data
     pub update_interval: u64,
+
+    /// size of the history kept and shown in the run chart
     pub samples: usize,
+
+    /// The `cosmic::pallette` color to represent disk read rate
     pub color_read: Color,
+
+    /// The `cosmic::pallette` color to represent disk write rate
     pub color_write: Color,
+
+    /// The **ratio** of width to height of the graph.
     pub size: f32,
 }
 
