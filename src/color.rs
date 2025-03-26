@@ -7,6 +7,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[allow(non_camel_case_types)]
+/// Enum that bundles [Theme] dependent colors with ordinary RGB colors
+///
+/// All fieldless variants are mapped into the field of [CosmicPaletteInner](cosmic::cosmic_theme::CosmicPaletteInner) with the same name.
+///
+/// Any RGB color can be created from using the [Color::rgb] containing a hexcode
 pub enum Color {
     gray_1,
     gray_2,
