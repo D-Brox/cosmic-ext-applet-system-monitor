@@ -30,7 +30,7 @@ pub enum Message {
     TickSwap,
     TickNet,
     TickDisk,
-    // TickVRAM,
+    TickVRAM,
 }
 
 #[derive(Clone, Debug)]
@@ -127,7 +127,7 @@ impl Application for SystemMonitorApplet {
             Message::TickSwap => self.chart.update_swap(&self.get_theme()),
             Message::TickNet => self.chart.update_net(&self.get_theme()),
             Message::TickDisk => self.chart.update_disk(&self.get_theme()),
-            // Message::TickVRAM => self.chart.update_vram(&self.get_theme()),
+            Message::TickVRAM => self.chart.update_vram(&self.get_theme()),
         }
         Task::none()
     }
@@ -157,11 +157,9 @@ impl Application for SystemMonitorApplet {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickDisk)
                     }
-                    ChartConfig::VRAM(_c) => {
-                        // uninplemented
-                        continue;
-                        // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
-                        // .map(|_| Message::TickVRAM)
+                    ChartConfig::VRAM(c) => {
+                        cosmic::iced::time::every(Duration::from_millis(c.update_interval))
+                            .map(|_| Message::TickVRAM)
                     }
                 }
             };

@@ -39,46 +39,42 @@ impl Chart<Message> for (&SystemMonitor, Vec<f32>, f32, bool) {
             let builder = on.margin(self.2 / 4.0);
 
             match chart {
-                UsedChart::Cpu => {
-                    match &self.0.cpu {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => ()
+                UsedChart::Cpu => match &self.0.cpu {
+                    Some(data) => {
+                        data.draw_chart(builder, self.0.bg_color);
                     }
-                }
-                UsedChart::Ram => {
-                    match &self.0.ram {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
+                    _ => (),
+                },
+                UsedChart::Ram => match &self.0.ram {
+                    Some(data) => {
+                        data.draw_chart(builder, self.0.bg_color);
                     }
-                }
-                UsedChart::Swap => {
-                    match &self.0.swap {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
+                    _ => (),
+                },
+                UsedChart::Swap => match &self.0.swap {
+                    Some(data) => {
+                        data.draw_chart(builder, self.0.bg_color);
                     }
-                }
-                UsedChart::Net => {
-                    match &self.0.net {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
+                    _ => (),
+                },
+                UsedChart::Net => match &self.0.net {
+                    Some(data) => {
+                        data.draw_chart(builder, self.0.bg_color);
                     }
-                }
-                UsedChart::Disk => {
-                    match &self.0.disk {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
+                    _ => (),
+                },
+                UsedChart::Disk => match &self.0.disk {
+                    Some(data) => {
+                        data.draw_chart(builder, self.0.bg_color);
                     }
-                }
+                    _ => (),
+                },
+                UsedChart::Vram => match &self.0.vram {
+                    Some(data) => {
+                        data.draw_chart(builder, self.0.bg_color);
+                    }
+                    _ => (),
+                },
             }
         }
     }
@@ -106,7 +102,7 @@ impl SingleChart {
             samples,
             rgb_color: theme_color.clone().as_rgb_color(theme),
             theme_color,
-            aspect_ratio: aspect_ratio,
+            aspect_ratio,
         }
     }
 
@@ -141,7 +137,10 @@ impl SingleChart {
             .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
             .expect("Error: failed to build chart");
 
-        chart.plotting_area().fill(&color).expect("Error: failed to fill chart backgournd");
+        chart
+            .plotting_area()
+            .fill(&color)
+            .expect("Error: failed to fill chart backgournd");
         let iter = (0..self.samples as i64)
             .zip(self.data_points.asc_iter())
             .map(|x| (x.0, *x.1));
@@ -289,5 +288,5 @@ pub enum UsedChart {
     Swap,
     Net,
     Disk,
-    // Vram,
+    Vram,
 }

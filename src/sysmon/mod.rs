@@ -31,6 +31,7 @@ pub struct SystemMonitor {
     sys: System,
     nets: Networks,
     disks: Disks,
+    gpu: Option<Box<dyn gfxinfo::Gpu>>,
     // gpus: Gpus,
     charts: Vec<UsedChart>,
     cpu: Option<SingleChart>,
@@ -38,7 +39,7 @@ pub struct SystemMonitor {
     swap: Option<SingleChart>,
     net: Option<DoubleChart>,
     disk: Option<DoubleChart>,
-    // vram: Option<SingleChart>,
+    vram: Option<SingleChart>,
 }
 
 impl SystemMonitor {
@@ -58,6 +59,7 @@ impl SystemMonitor {
             sys: System::new(),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
+            gpu: gfxinfo::active_gpu().ok(),
             // gpus: Gpus {},
             charts: vec![],
             cpu: None,
@@ -65,7 +67,7 @@ impl SystemMonitor {
             swap: None,
             net: None,
             disk: None,
-            // vram: None,
+            vram: None,
         };
         new_self.update_config(config, theme);
         new_self.update_cpu(theme);
@@ -73,7 +75,7 @@ impl SystemMonitor {
         new_self.update_swap(theme);
         new_self.update_net(theme);
         new_self.update_disk(theme);
-        // new_self.update_vram(theme);
+        new_self.update_vram(theme);
         new_self.update_size();
         new_self
     }
@@ -148,9 +150,15 @@ impl SystemMonitor {
         }
     }
 
-    // pub fn update_vram(&mut self, _theme: &Theme) {
-    //     if let Some(vram) = self.vram {}
-    // }
+    pub fn update_vram(&mut self, _theme: &Theme) {
+        if let Some(vram) = &mut self.vram {
+            let Some(gpu) = &self.gpu else { return };
+            let info = gpu.info();
+            let total = info.total_vram() as f64;
+            let used = info.used_vram() as f64;
+            vram.push_data(((used / total) * 100.0) as i64);
+        }
+    }
 
     pub fn update_config(&mut self, config: &Config, theme: &Theme) {
         let mut charts = Vec::new();
@@ -235,21 +243,21 @@ impl SystemMonitor {
                         ));
                     }
                 }
-                ChartConfig::VRAM(_) => (),
-                // ChartConfig::VRAM(c) => {
-                //     charts.push(UsedChart::Vram);
-                // if let Some(vram) = &mut self.vram {
-                //         vram.update_colors(c.color.clone(), theme);
-                //         vram.resize_queue(c.samples);
-                //     } else {
-                //         self.vram = Some(SingleChart::new(
-                //             c.color.clone(),
-                //             c.size,
-                //             c.samples,
-                //             theme,
-                //         ));
-                //     }
-                // },
+                ChartConfig::VRAM(c) => {
+                    charts.push(UsedChart::Vram);
+                    if let Some(vram) = &mut self.vram {
+                        vram.update_colors(c.color.clone(), theme);
+                        vram.resize_queue(c.samples);
+                        vram.update_aspect_ratio(c.aspect_ratio);
+                    } else {
+                        self.vram = Some(SingleChart::new(
+                            c.color.clone(),
+                            c.aspect_ratio,
+                            c.samples,
+                            theme,
+                        ));
+                    }
+                }
             }
         }
         self.update_size();
@@ -267,6 +275,7 @@ impl SystemMonitor {
                 UsedChart::Swap => self.swap.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
                 UsedChart::Net => self.net.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
                 UsedChart::Disk => self.disk.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
+                UsedChart::Vram => self.vram.as_ref().map_or(0.0, |chart| (chart.aspect_ratio)),
             };
             breakpoints.push(size);
         }
