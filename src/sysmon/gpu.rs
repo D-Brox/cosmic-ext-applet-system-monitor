@@ -1,5 +1,5 @@
-use lazy_regex::{lazy_regex, Lazy, Regex};
-use nvml_wrapper::{error::NvmlError, Nvml};
+use lazy_regex::{Lazy, Regex, lazy_regex};
+use nvml_wrapper::{Device, Nvml, error::NvmlError};
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
@@ -26,64 +26,63 @@ struct Gpu {
 }
 
 enum GpuType {
-    PrayAndHope {
-        device: nvml_wrapper::Device<'static>,
-    }, // Nvidia
-    PlugAndPlay {
-        sysfs_path: PathBuf,
-    }, // Anything else
+    PrayAndHope { device: Device<'static> }, // Nvidia
+    PlugAndPlay { sysfs_path: PathBuf },     // Anything else
 }
 
 impl Gpus {
     pub fn new() -> Self {
         let gpus = read_dir("/sys/class/drm")
             .map(|dir_entries| {
-                dir_entries.filter_map(|dir_entry| {
-                    // If at any point this fails, we just skip the entry
+                dir_entries
+                    .filter_map(|dir_entry| {
+                        // If at any point this fails, we just skip the entry
 
-                    // Check if it's a card or a display output
-                    let entry = dir_entry.ok()?;
-                    let sysfs_path = entry.path().join("device");
-                    let _ = RE_CARDS.captures(sysfs_path.to_str().unwrap())?;
+                        // Check if it's a card or a display output
+                        let entry = dir_entry.ok()?;
+                        let sysfs_path = entry.path().join("device");
+                        let _ = RE_CARDS.captures(sysfs_path.to_str().unwrap())?;
 
-                    // Next get the uevent info of the card if it exists
-                    let device_uevent_path = sysfs_path.join("uevent");
-                    let uevent = std::fs::read_to_string(device_uevent_path)
-                        .map(|uevent_content| {
-                            uevent_content
-                                .lines()
-                                .map(|line| {
-                                    line.split_once('=')
-                                        .map(|(a, b)| (a.to_string(), b.to_string()))
-                                        .expect("Malformed uevent line")
-                                })
-                                .collect::<HashMap<_, _>>()
-                        })
-                        .ok()?;
+                        // Next get the uevent info of the card if it exists
+                        let device_uevent_path = sysfs_path.join("uevent");
+                        let uevent = std::fs::read_to_string(device_uevent_path)
+                            .map(|content| {
+                                content
+                                    .lines()
+                                    .map(|line| {
+                                        line.split_once('=')
+                                            .map(|(a, b)| (a.to_string(), b.to_string()))
+                                            .expect("Malformed uevent line")
+                                    })
+                                    .collect::<HashMap<_, _>>()
+                            })
+                            .ok()?;
 
-                    // Find vendor, since for Nvidia we need to use nvml.
-                    // For this, we test the vendor file, with the PCI_ID in uevent as backup.
-                    // Nvidia is a pain, so driver is probably needed as backup too.
-                    let device_vendor_path = sysfs_path.join("vendor");
-                    let vendor = std::fs::read_to_string(device_vendor_path)
-                        .ok()
-                        .and_then(|vendor_content| {
-                            u16::from_str_radix(&vendor_content.trim_start_matches("0x"), 16).ok()
-                        })
-                        .or(uevent.get("PCI_ID").and_then(|id| {
-                            id.split_once(":")
-                                .and_then(|p| u16::from_str_radix(p.0, 16).ok())
-                        }));
-                    let driver = uevent.get("DRIVER").map(|s| s.as_str());
+                        // Find vendor, since for Nvidia we need to use nvml.
+                        // For this, we test the vendor file, with the PCI_ID in uevent as backup.
+                        // Nvidia is a pain, so driver is probably needed as backup too.
+                        let device_vendor_path = sysfs_path.join("vendor");
+                        let vendor = std::fs::read_to_string(device_vendor_path)
+                            .ok()
+                            .and_then(|content| {
+                                u16::from_str_radix(&content.trim_start_matches("0x"), 16).ok()
+                            })
+                            .or(uevent.get("PCI_ID").and_then(|id| {
+                                id.split_once(":")
+                                    .and_then(|p| u16::from_str_radix(p.0, 16).ok())
+                            }));
+                        let driver = uevent.get("DRIVER").map(|s| s.as_str());
 
-                    if vendor == Some(NV_VENDOR_ID) || driver == Some("nvidia") {
-                        let pci_slot = uevent.get("PCI_SLOT_NAME").cloned()?;
-                        Gpu::new_nvidia(pci_slot)
-                    } else {
-                        Gpu::new(sysfs_path)
-                    }
-                }).collect::<Vec<_>>()
-            }).unwrap_or(vec![]);
+                        if vendor == Some(NV_VENDOR_ID) || driver == Some("nvidia") {
+                            let pci_slot = uevent.get("PCI_SLOT_NAME").cloned()?;
+                            Gpu::new_nvidia(pci_slot)
+                        } else {
+                            Gpu::new(sysfs_path)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or(vec![]);
         Self { inner: gpus }
     }
 

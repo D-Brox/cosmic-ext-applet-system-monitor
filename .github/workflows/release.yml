@@ -17,15 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - aarch64-unknown-linux-gnu
-        - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-gnu
         include:
-        - target: aarch64-unknown-linux-gnu
-          os: ubuntu-24.04-arm
-          target_rustflags: ''
-        - target: x86_64-unknown-linux-gnu
-          os: ubuntu-latest
-          target_rustflags: ''
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            target_rustflags: ""
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            target_rustflags: ""
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
@@ -46,15 +46,19 @@ jobs:
           just build-release
           just build-deb
           just build-rpm
-          ARCH=`uname -m`
-          TARGET_DIR=`pwd`/target
 
-          cp $TARGET_DIR/release/cosmic-ext-applet-system-monitor ./cosmic-ext-applet-system-monitor-$ARCH
-          strip -s ./cosmic-ext-applet-system-monitor-$ARCH
-          cp $TARGET_DIR/debian/*.deb .
-          cp $TARGET_DIR/generate-rpm/*.rpm .
-          
-          echo $ARCH=./*-$ARCH >> $GITHUB_OUTPUT
+          NAME="cosmic-ext-applet-system-monitor"
+          ARCH=`uname -m`
+
+          mkdir ./$NAME
+          cp ./target/release/$NAME ./res/*.desktop ./res/*.metainfo.xml ./res/icons/hicolor/scalable/apps/*.svg ./res/install.sh  ./$NAME/
+          strip -s ./$NAME/$NAME
+          tar -czvf $NAME-$ARCH.tar.gz $NAME
+
+          cp ./target/debian/*.deb ./
+          cp ./target/generate-rpm/*.rpm ./
+
+          echo $ARCH=./*.tar.gz >> $GITHUB_OUTPUT
           echo $ARCH-deb=./*.deb >> $GITHUB_OUTPUT
           echo $ARCH-rpm=./*.rpm >> $GITHUB_OUTPUT
       - name: Publish artifacts and release
@@ -64,10 +68,10 @@ jobs:
           files: |
             ${{ steps.package.outputs.x86_64 }}
             ${{ steps.package.outputs.aarch64 }}
-            
+
             ${{ steps.package.outputs.x86_64-deb }}
             ${{ steps.package.outputs.aarch64-deb }}
-            
+
             ${{ steps.package.outputs.x86_64-rpm }}
             ${{ steps.package.outputs.aarch64-rpm }}
           prerelease: false
@@ -77,29 +81,28 @@ jobs:
     runs-on: ubuntu-latest
 
     needs:
-    - build
+      - build
     steps:
-    - name: Download Release Archives
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: >-
-        gh release download
-        --repo D-Brox/cosmic-ext-applet-system-monitor
-        --pattern '*'
-        --dir release
-        ${{ github.ref_name }}
+      - name: Download Release Archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release download
+          --repo D-Brox/cosmic-ext-applet-system-monitor
+          --pattern '*'
+          --dir release
+          ${{ github.ref_name }}
 
-    - name: Create Checksums
-      run: |
-        cd release
-        shasum -a 256 * > ../SHA256SUMS
+      - name: Create Checksums
+        run: |
+          cd release
+          shasum -a 256 * > ../SHA256SUMS
 
-    - name: Publish Checksums
-      uses: softprops/action-gh-release@v2.2.1
-      with:
-        draft: false
-        files: SHA256SUMS
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+      - name: Publish Checksums
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          draft: false
+          files: SHA256SUMS
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
