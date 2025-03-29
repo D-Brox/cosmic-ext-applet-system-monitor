@@ -8,7 +8,7 @@ readme = "README.md"
 license = "GPL-3.0"
 homepage = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor"
 repository = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor.git"
-rust-version = "1.80"
+rust-version = "1.85"
 
 [dependencies]
 i18n-embed-fl = "0.9.1"
@@ -30,19 +30,35 @@ features = ["fluent-system", "desktop-requester"]
 [package.metadata.deb]
 license-file = "LICENSE"
 assets = [
-    ["target/release/cosmic-ext-applet-system-monitor", "usr/bin/", "755"],
-    ["res/dev.DBrox.CosmicSystemMonitor.desktop", "usr/share/applications/", "644"],
-    ["res/dev.DBrox.CosmicSystemMonitor.metainfo.xml", "usr/share/metainfo/", "644"],
-    ["res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    [
+        "target/release/cosmic-ext-applet-system-monitor",
+        "usr/bin/",
+        "755",
+    ],
+    [
+        "res/dev.DBrox.CosmicSystemMonitor.desktop",
+        "usr/share/applications/",
+        "644",
+    ],
+    [
+        "res/dev.DBrox.CosmicSystemMonitor.metainfo.xml",
+        "usr/share/metainfo/",
+        "644",
+    ],
+    [
+        "res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg",
+        "usr/share/icons/hicolor/scalable/apps/",
+        "644",
+    ],
 ]
-depends = ["libc6","libfontconfig1", "libfreetype6","libxkbcommon0"]
+depends = ["libc6", "libfontconfig1", "libfreetype6", "libxkbcommon0"]
 
 [package.metadata.generate-rpm]
 assets = [
     { source = "target/release/cosmic-ext-applet-system-monitor", dest = "/usr/bin/", mode = "755" },
     { source = "LICENSE", dest = "/usr/share/doc/cosmic-ext-applet-system-monitor/LICENSE", doc = true, mode = "644" },
     { source = "res/*.desktop", dest = "/usr/share/applications/", mode = "644" },
-    { source = "res/icons/hicolor/scalable/apps/*.svg", dest = "/usr/share/icons/scalable/apps/", mode = "644"},
+    { source = "res/icons/hicolor/scalable/apps/*.svg", dest = "/usr/share/icons/scalable/apps/", mode = "644" },
 ]
 
 [package.metadata.generate-rpm.requires]
