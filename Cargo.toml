@@ -12,7 +12,6 @@ rust-version = "1.85"
 
 [dependencies]
 circular-queue = "0.2.7"
-glob = "0.3.2"
 i18n-embed-fl = "0.9.1"
 lazy-regex = "3.4.1"
 nvml-wrapper = "0.10.0"
@@ -22,7 +21,7 @@ plotters-iced = { git = "https://github.com/D-Brox/plotters-cosmic-iced.git", de
 # plotters-iced = { path = "../plotters", default-features = false }
 rust-embed = "8.3.0"
 serde = "1.0.209"
-sysinfo = "0.33.1"
+sysinfo = "0.34.1"
 
 [features]
 default = ["wgpu"]
