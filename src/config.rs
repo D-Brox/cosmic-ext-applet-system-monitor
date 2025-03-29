@@ -56,9 +56,10 @@ impl Default for Config {
                     aspect_ratio: 1.5,
                     samples: 30,
                 }),
-                ChartConfig::VRAM(Generic {
-                    update_interval: 2000,
-                    color: Color::accent_indigo,
+                ChartConfig::GPU(Graphics {
+                    update_interval: 500,
+                    color_usage: Color::accent_warm_grey,
+                    color_vram: Color::accent_indigo,
                     aspect_ratio: 1.5,
                     samples: 30,
                 }),
@@ -71,10 +72,16 @@ impl Default for Config {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ChartConfig {
     CPU(Generic),
+
+    // Ram and Swap will be merged on next config version
     RAM(Generic),
     Swap(Generic),
+
     Net(Network),
     Disk(Disk),
+
+    GPU(Graphics),
+    // VRAM is deprecated, will be  removed on the next config version
     VRAM(Generic),
 }
 
@@ -91,7 +98,6 @@ pub struct Generic {
 
     /// The **ratio** of width to height of the graph.
     pub aspect_ratio: f32,
-
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -127,6 +133,15 @@ pub struct Disk {
     pub color_write: Color,
 
     /// The **ratio** of width to height of the graph.
+    pub aspect_ratio: f32,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Graphics {
+    pub update_interval: u64,
+    pub samples: usize,
+    pub color_usage: Color,
+    pub color_vram: Color,
     pub aspect_ratio: f32,
 }
 

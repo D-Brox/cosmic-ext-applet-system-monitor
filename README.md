@@ -5,14 +5,16 @@ A highly configurable system resource monitor for the COSMIC DE
 ![screenshot of the applet](./res/screenshot.png)
 
 
-## Dependencies
+## Install
+
+Just grab the `.deb`, `.rpm` or tarball from the [Releases](https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/latest) page.
+
+## Building from source
+
+Install following the build dependencies (or equivalent packages in non debian-based distros):
 
 - libfontconfig-dev
 - libxkbcommon-dev
-
-Or equivalent packages in non-debian based distros.
-
-## Install
 
 Clone the repo and run the commands corresponding to your distro:
 
@@ -45,18 +47,19 @@ just install-local
 - [x] Memory usage (RAM and swap)
 - [x] Network chart (upload/download)
 - [x] Disk chart (write/read)
-- [ ] GPU VRAM chart (help needed)
+- [x] GPU chart (usage/VRAM)
 - [x] Displayed charts config
 - [x] Sampling configs
 - [x] Chart theming
 - [x] Vertical charts (for left/right panels)
+- [ ] Other view modes for the info
 - [ ] Popup (general system info)
 
 ## Configuring
 
-You can configure the charts displayed by editing `~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v1/charts`. Only charts in this config will be displayed. `VRAM` will be ignored until it is implemented.
+You can configure the charts displayed by editing `~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v1/charts`. Only charts in this config will be displayed.
 
-The fields `update_interval`, `samples` and `size` are the sampling time in milliseconds, the total number of samples displayed and the size relative to the panel height (top/bottom panels), respectively.
+The fields `update_interval`, `samples` and `aspect_ratio` are the sampling time in milliseconds, the total number of samples displayed and the size relative to the height/width in horiontal/vertical panels, respectively.
 
 You can use colors defined in [CosmicPaletteInner](https://pop-os.github.io/libcosmic/cosmic/cosmic_theme/struct.CosmicPaletteInner.html), as well as `rgb("")` with a hexcode.
 
@@ -95,12 +98,13 @@ Example config where the CPU, RAM, Swap, Net and Disk charts are displayed, in t
          color_write: accent_pink,
          size: 1.5,
      )),
-    // VRAM((
-    //     update_interval: 1000,
-    //     samples: 60,
-    //     color: accent_indigo,
-    //     size: 1.5,
-    // )),
+    GPU((
+        update_interval: 1000,
+        samples: 60,
+        color_usage: accent_warm_grey,
+        color_vram: accent_indigo,
+        size: 1.5,
+    )),
 ]
 ```
 
