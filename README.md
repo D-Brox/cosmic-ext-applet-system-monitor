@@ -64,8 +64,6 @@ Resource monitoring:
 - [ ] Text views
 - [ ] Popup (general system info)
 
-
-
 ## Contributing
 
 Contributions are welcome
