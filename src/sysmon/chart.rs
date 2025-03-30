@@ -235,7 +235,7 @@ impl DoubleChart {
             80.0 / self
                 .data_points1
                 .iter()
-                .zip(self.data_points1.iter())
+                .zip(self.data_points2.iter())
                 .fold(min_scale, |a, (&b, &c)| max(a, max(b, c))) as f64
         });
 
