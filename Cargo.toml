@@ -13,7 +13,6 @@ rust-version = "1.85"
 [dependencies]
 i18n-embed-fl = "0.9.1"
 lazy-regex = "3.4.1"
-nvml-wrapper = "0.10.0"
 rust-embed = "8.3.0"
 serde = "1"
 sysinfo = "0.34.2"
@@ -26,6 +25,10 @@ features = ["applet", "tokio", "wayland","wgpu"]
 [dependencies.i18n-embed]
 version = "0.15"
 features = ["fluent-system", "desktop-requester"]
+
+[dependencies.nvml-wrapper]  
+git = "https://github.com/rust-nvml/nvml-wrapper"  
+rev = "572095f6" 
 
 [package.metadata.deb]
 license-file = "LICENSE"
