@@ -16,9 +16,10 @@ impl Chart<Message> for (&SystemMonitor, Vec<f32>, f32, bool) {
     fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, _builder: ChartBuilder<DB>) {}
 
     fn draw_chart<DB: DrawingBackend>(&self, _state: &Self::State, root: DrawingArea<DB, Shift>) {
-        let children = if self.3 {
+        let (monitor, breakpoints, pad, horizontal) = self;
+        let children = if *horizontal {
             root.split_by_breakpoints(
-                self.1
+                breakpoints
                     .iter()
                     .map(|bp| RelativeSize::Width(f64::from(*bp)))
                     .collect::<Vec<_>>(),
@@ -27,58 +28,41 @@ impl Chart<Message> for (&SystemMonitor, Vec<f32>, f32, bool) {
         } else {
             root.split_by_breakpoints(
                 vec![0.0; 0],
-                self.1
+                breakpoints
                     .iter()
                     .map(|bp| RelativeSize::Height(f64::from(*bp)))
                     .collect::<Vec<_>>(),
             )
         };
-
-        for (child, chart) in children.iter().zip(self.0.charts.iter()) {
+        let mut gpu_iter = monitor.gpu.iter();
+        for (child, chart) in children.iter().zip(monitor.charts.iter()) {
             let mut on = ChartBuilder::on(child);
-            let builder = on.margin(self.2 / 4.0);
+            let builder = on.margin(pad / 4.0);
 
-            match chart {
-                UsedChart::Cpu => {
-                    match &self.0.cpu {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => ()
-                    }
-                }
-                UsedChart::Ram => {
-                    match &self.0.ram {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
-                    }
-                }
-                UsedChart::Swap => {
-                    match &self.0.swap {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
-                    }
-                }
-                UsedChart::Net => {
-                    match &self.0.net {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
-                    }
-                }
-                UsedChart::Disk => {
-                    match &self.0.disk {
-                        Some(data) => {
-                            data.draw_chart(builder, self.0.bg_color);
-                        }
-                        _ => (),
-                    }
-                }
+            _ = match chart {
+                UsedChart::Cpu => &monitor
+                    .cpu
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Ram => &monitor
+                    .ram
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Swap => &monitor
+                    .swap
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Net => &monitor
+                    .net
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Disk => &monitor
+                    .disk
+                    .as_ref()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
+                UsedChart::Gpu => &gpu_iter
+                    .next()
+                    .map(|data| data.draw_chart(builder, monitor.bg_color)),
             }
         }
     }
@@ -89,7 +73,7 @@ pub(super) struct SingleChart {
     samples: usize,
     pub aspect_ratio: f32,
 
-    data_points: CircularQueue<i64>,
+    data_points: CircularQueue<u64>,
     theme_color: Color,
     rgb_color: RGBColor,
 }
@@ -106,7 +90,7 @@ impl SingleChart {
             samples,
             rgb_color: theme_color.clone().as_rgb_color(theme),
             theme_color,
-            aspect_ratio: aspect_ratio,
+            aspect_ratio,
         }
     }
 
@@ -132,17 +116,20 @@ impl SingleChart {
         self.update_rgb_color(theme);
     }
 
-    pub fn push_data(&mut self, value: i64) {
+    pub fn push_data(&mut self, value: u64) {
         self.data_points.push(value);
     }
 
     fn draw_chart<DB: DrawingBackend>(&self, builder: &mut ChartBuilder<DB>, color: RGBAColor) {
         let mut chart = builder
-            .build_cartesian_2d(0..self.samples as i64, 0..100_i64)
+            .build_cartesian_2d(0..self.samples as u64, 0..100_u64)
             .expect("Error: failed to build chart");
 
-        chart.plotting_area().fill(&color).expect("Error: failed to fill chart backgournd");
-        let iter = (0..self.samples as i64)
+        chart
+            .plotting_area()
+            .fill(&color)
+            .expect("Error: failed to fill chart backgournd");
+        let iter = (0..self.samples as u64)
             .zip(self.data_points.asc_iter())
             .map(|x| (x.0, *x.1));
 
@@ -162,7 +149,7 @@ impl SingleChart {
 pub(super) struct DoubleChart {
     samples: usize,
     pub aspect_ratio: f32,
-    min_scale: u64,
+    min_scale: Option<u64>,
 
     data_points1: CircularQueue<u64>,
     theme_color1: Color,
@@ -180,7 +167,7 @@ impl DoubleChart {
         aspect_ratio: f32,
         samples: usize,
         theme: &Theme,
-        min_scale: u64,
+        min_scale: Option<u64>,
     ) -> Self {
         let mut data_points1 = CircularQueue::with_capacity(samples);
         let mut data_points2 = CircularQueue::with_capacity(samples);
@@ -244,27 +231,28 @@ impl DoubleChart {
             .expect("Error: failed to build chart");
         chart.plotting_area().fill(&color).unwrap();
 
-        let max = self
-            .data_points1
-            .iter()
-            .zip(self.data_points2.iter())
-            .fold(self.min_scale, |a, (&b, &c)| max(a, max(b, c)));
-        let scale = 80.0 / max as f64;
+        let scale = self.min_scale.map_or(1.0, |min_scale| {
+            80.0 / self
+                .data_points1
+                .iter()
+                .zip(self.data_points2.iter())
+                .fold(min_scale, |a, (&b, &c)| max(a, max(b, c))) as f64
+        });
 
         let iter1 = (0..self.samples as i64)
-            .zip(self.data_points2.asc_iter())
-            .map(|x| (x.0, (*x.1 as f64 * scale) as i64));
-
-        let iter2 = (0..self.samples as i64)
             .zip(self.data_points1.asc_iter())
             .map(|x| (x.0, (*x.1 as f64 * scale) as i64));
 
+        let iter2 = (0..self.samples as i64)
+            .zip(self.data_points2.asc_iter())
+            .map(|x| (x.0, (*x.1 as f64 * scale) as i64));
+
         chart
-            .draw_series(AreaSeries::new(iter1.clone(), 0, self.rgb_color1.mix(0.5)))
+            .draw_series(AreaSeries::new(iter1.clone(), 0, self.rgb_color1.mix(0.4)))
             .expect("Error: failed to draw data series");
 
         chart
-            .draw_series(AreaSeries::new(iter2.clone(), 0, self.rgb_color2.mix(0.5)))
+            .draw_series(AreaSeries::new(iter2.clone(), 0, self.rgb_color2.mix(0.6)))
             .expect("Error: failed to draw data series");
 
         chart
@@ -289,5 +277,5 @@ pub enum UsedChart {
     Swap,
     Net,
     Disk,
-    // Vram,
+    Gpu,
 }
