@@ -39,10 +39,7 @@ pub struct Flags {
 
 impl SystemMonitorApplet {
     fn get_theme(&self) -> Theme {
-        self.core
-            .applet
-            .theme()
-            .expect("Error: applet theme not found")
+        self.core.applet.theme().unwrap_or_default()
     }
 }
 
