@@ -1,17 +1,25 @@
+use std::ops::Deref;
+
+use cosmic::cosmic_theme::palette::rgb::Rgb;
+use cosmic::cosmic_theme::palette::Alpha;
+use cosmic::theme::CosmicColor;
 use cosmic::{
-    cosmic_theme::palette::{encoding::srgb::Srgb, rgb::Rgb, rgb::Rgba, Srgba},
+    cosmic_theme::palette::{encoding::srgb::Srgb, rgb::Rgba},
     Theme,
 };
-use plotters::style::RGBColor;
+// use palette::rgb::Rgb;
+// use palette::Alpha;
+use plotters::style::{RGBAColor, RGBColor};
+use plotters_iced::plotters_backend;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[allow(non_camel_case_types)]
 /// Enum that bundles [Theme] dependent colors with ordinary RGB colors
 ///
 /// All fieldless variants are mapped into the field of [CosmicPaletteInner](cosmic::cosmic_theme::CosmicPaletteInner) with the same name.
 ///
-/// Any RGB color can be created from using the [Color::rgb] containing a hexcode
+/// Any RGB color can be created from using the [ColorSelection::rgb] containing a hexcode
 pub enum Color {
     gray_1,
     gray_2,
@@ -46,16 +54,28 @@ pub enum Color {
     accent_pink,
     accent_indigo,
     rgb(String),
+    CosmicColor(CosmicColor),
+}
+
+pub fn plot_color(cc: CosmicColor) -> RGBAColor {
+    let Alpha {
+        color: Rgb {
+            red, green, blue, ..
+        },
+        alpha,
+    } = cc.into_format::<u8, f64>();
+
+    RGBAColor(red, green, blue, alpha)
 }
 
 impl Color {
+    // todo remove
     pub fn as_rgb_color(&self, theme: &Theme) -> RGBColor {
-        let accent_color = theme.cosmic().accent_color();
-        let palette = &theme.cosmic().palette;
-        color_to_rgb(self.as_srgba(theme).color)
+        let rgb = self.as_cosmic_color(theme).color.into_format::<u8>();
+        RGBColor(rgb.red, rgb.green, rgb.blue)
     }
 
-    pub fn as_srgba(&self, theme: &Theme) -> Srgba {
+    pub fn as_cosmic_color(&self, theme: &Theme) -> CosmicColor {
         let accent_color = theme.cosmic().accent_color();
         let palette = &theme.cosmic().palette;
         match self {
@@ -95,11 +115,8 @@ impl Color {
                 .parse::<Rgba<Srgb, u8>>()
                 .map(Rgba::into_format)
                 .unwrap_or(accent_color),
+            Color::CosmicColor(cc) => *cc,
         }
+        .into()
     }
-}
-
-pub fn color_to_rgb(color: Rgb<Srgb, f32>) -> RGBColor {
-    let rgb = color.into_format::<u8>();
-    RGBColor(rgb.red, rgb.green, rgb.blue)
 }

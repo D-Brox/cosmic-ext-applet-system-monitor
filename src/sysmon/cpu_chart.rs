@@ -1,5 +1,10 @@
+use crate::color::plot_color;
+use crate::helpers::base_background;
+use crate::sysmon::monitor_item::MonitorItem;
 use circular_queue::CircularQueue;
+use cosmic::cosmic_theme::palette::WithAlpha;
 use cosmic::iced_widget::container;
+use cosmic::theme::CosmicColor;
 use cosmic::{applet, Also, Apply, Element, Theme};
 use plotters::backend::DrawingBackend;
 use plotters::chart::ChartBuilder;
@@ -8,44 +13,30 @@ use plotters_iced::{Chart, ChartWidget};
 use sysinfo::Cpu;
 
 use crate::applet::Message;
-use crate::config::CpuView;
+use crate::config::{self, CpuView};
 use crate::sysmon::bar_chart::{percentage_histogram, BarConfig, PercentageBar};
-use crate::sysmon::chart::base_background;
-use crate::sysmon::viewable::MonitorItem;
 
-/// CpuChart exists because CPU monitoring has a view style not covered by SingleChart: Viewing the usage of each core
+use super::SystemMonitor;
+
+/// `CpuChart` exists because CPU monitoring has a view style not covered by `SingleChart`: Viewing the usage of each core
 #[derive(Debug)]
-pub struct CpuChart {
+pub struct CpuData {
     data_points: CircularQueue<i64>,
-    visualization: CpuView,
-    theme_color: crate::color::Color,
-    rgb_color: RGBColor,
-    pub size: f32,
+    visualization: Vec<CpuView>,
+    color: CosmicColor,
     // cpus: &'static [Cpu]
     latest_per_core: Box<[f32]>,
 }
 
-impl CpuChart {
+impl CpuData {
     pub fn update_latest_per_core(&mut self, cpus: &[Cpu]) {
         self.latest_per_core = cpus.iter().map(Cpu::cpu_usage).collect();
     }
 }
 
-impl CpuChart {
-    pub fn resize_queue(&mut self, samples: usize) {
-        let mut data_points = CircularQueue::with_capacity(samples);
-        for data in self.data_points.asc_iter() {
-            data_points.push(*data);
-        }
-        self.data_points = data_points;
-    }
-
-    pub fn update_colors(&mut self, color: crate::color::Color, theme: &Theme) {
-        self.theme_color = color;
-    }
-
-    pub fn update_size(&mut self, size: f32) {
-        self.size = size;
+impl CpuData {
+    pub fn update_colors(&mut self, color: CosmicColor) {
+        self.color = color;
     }
 
     pub fn push_data(&mut self, value: i64) {
@@ -53,35 +44,10 @@ impl CpuChart {
     }
 }
 
-impl CpuChart {
-    pub fn new(
-        visualization: CpuView,
-        theme_color: crate::color::Color,
-        history_size: usize,
-        size: f32,
-        theme: &Theme,
-        cpus: &[Cpu],
-    ) -> Self {
-        let mut data_points = CircularQueue::with_capacity(history_size);
-        for _ in 0..history_size {
-            data_points.push(0);
-        }
-        let latest_per_core = cpus.iter().map(Cpu::cpu_usage).collect();
-        Self {
-            data_points,
-            visualization,
-            theme_color: theme_color.clone(),
-            rgb_color: theme_color.as_rgb_color(theme),
-            size,
-            latest_per_core,
-        }
-    }
-}
-
-impl Chart<Message> for CpuChart {
+impl Chart<Message> for CpuData {
     type State = ();
 
-    fn build_chart<DB: DrawingBackend>(&self, state: &Self::State, mut builder: ChartBuilder<DB>) {
+    fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, mut builder: ChartBuilder<DB>) {
         let mut chart = builder
             .build_cartesian_2d(0..self.data_points.len() as i64, 0..100_i64)
             .expect("Error: failed to build chart");
@@ -93,46 +59,60 @@ impl Chart<Message> for CpuChart {
             .map(|x| (x.0, *x.1));
 
         chart
-            .draw_series(AreaSeries::new(iter.clone(), 0, self.rgb_color.mix(0.5)))
+            .draw_series(AreaSeries::new(
+                iter.clone(),
+                0,
+                plot_color(self.color.with_alpha(0.5)),
+            ))
             .expect("Error: failed to draw data series");
         chart
             .draw_series(LineSeries::new(
                 iter,
-                ShapeStyle::from(self.rgb_color).stroke_width(1),
+                ShapeStyle::from(plot_color(self.color)).stroke_width(1),
             ))
             .expect("Error: failed to draw data series");
     }
 }
 
-impl MonitorItem<CpuView> for CpuChart {
-    fn view_as_configured(&self, context: &applet::Context) -> Element<Message> {
-        self.view_as(self.visualization, context)
+impl MonitorItem for CpuData {
+    type View = CpuView;
+    type ConfigStruct = (config::Cpu, usize);
+
+    fn new(c: (config::Cpu, usize), theme: &Theme) -> Self {
+        let (c, cpu_count) = c;
+        let mut data_points = CircularQueue::with_capacity(c.samples);
+        for _ in 0..c.samples {
+            data_points.push(0);
+        }
+        Self {
+            data_points,
+            visualization: c.visualization,
+            color: c.color.as_cosmic_color(theme),
+            latest_per_core: vec![0.0; cpu_count].into(),
+        }
     }
 
-    fn view_as(&self, chart_view: CpuView, context: &applet::Context) -> Element<Message> {
+    fn view_single(&self, chart_view: &CpuView, context: &applet::Context) -> Element<Message> {
         let (suggested_width, suggested_height) = context.suggested_size(false);
 
-        let theme = &context.theme().unwrap_or_default();
-
         match chart_view {
-            CpuView::GlobalUsageRunChart => {
-                ChartWidget::new(self)
-                    .width(suggested_width.into())
-                    .height(suggested_height.into())
-                    .apply(container)
-                    .style(base_background)
-                    .into()
-            }
+            CpuView::GlobalUsageRunChart => ChartWidget::new(self)
+                .width(suggested_width.into())
+                .height(suggested_height.into())
+                .apply(container)
+                .style(base_background)
+                .into(),
             CpuView::PerCoreUsageHistogram => {
                 // let cpu_values: Box<[_]> = self.cpus.iter().map(Cpu::cpu_usage).collect();
 
                 percentage_histogram(
                     self.latest_per_core.clone(),
-                    BarConfig::default().also(|bc| bc.full_length = context.suggested_size(false).1.into()),
-                    self.theme_color.as_srgba(theme),
+                    BarConfig::default()
+                        .also(|bc| bc.full_length = context.suggested_size(false).1.into()),
+                    self.color,
                 )
-                    .style(base_background)
-                    .into()
+                .style(base_background)
+                .into()
             }
             CpuView::GlobalUsageBarChart => {
                 PercentageBar::new(
@@ -141,12 +121,28 @@ impl MonitorItem<CpuView> for CpuChart {
                     *self.data_points.iter().next().unwrap() as f32,
                     suggested_width,
                     suggested_height,
-                    self.theme_color.as_srgba(theme),
+                    self.color,
                 )
-                    .apply(container)
-                    .style(base_background)
-                    .into()
+                .apply(container)
+                .style(base_background)
+                .into()
             }
         }
+    }
+
+    fn view_order(&self) -> &[CpuView] {
+        self.visualization.as_slice()
+    }
+
+    fn resize_queue(&mut self, samples: usize) {
+        let mut data_points = CircularQueue::with_capacity(samples);
+        for data in self.data_points.asc_iter() {
+            data_points.push(*data);
+        }
+        self.data_points = data_points;
+    }
+
+    fn update_aspect_ratio(&mut self, aspect_ratio: f32) {
+        // N/A
     }
 }

@@ -3,6 +3,7 @@
 mod applet;
 mod color;
 mod config;
+mod helpers;
 mod localization;
 mod sysmon;
 

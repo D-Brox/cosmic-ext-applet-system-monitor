@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use cosmic::iced::Subscription;
 use cosmic::{cosmic_config, Application, Element, Theme};
-use sysinfo::System;
 
 use crate::config::{config_subscription, ChartConfig, Config};
 
@@ -50,7 +49,7 @@ impl Application for SystemMonitorApplet {
 
     type Message = Message;
 
-    const APP_ID: &'static str = ID;
+    const APP_ID: &'static str = ID; // todo inline ID, moving config_subscription to impl SystemMonitorApplet
 
     fn core(&self) -> &Core {
         &self.core
@@ -61,14 +60,11 @@ impl Application for SystemMonitorApplet {
     }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        let theme = core.applet.theme().expect("Error: applet theme not found");
-
-        let mut sys = System::new();
-        sys.refresh_cpu_usage(); // otherwise, sys.cpus().len == 0, meaning no bars will be drawn until the first refresh
+        let theme = core.applet.theme().unwrap_or_default();
 
         let app = Self {
             core,
-            chart: SystemMonitor::new(&flags.config, &theme),
+            chart: SystemMonitor::new(flags.config.clone(), &theme),
             config: flags.config,
             config_handler: flags.config_handler,
         };
@@ -110,18 +106,18 @@ impl Application for SystemMonitorApplet {
         match message {
             Message::Config(config) => {
                 if config != self.config {
-                    self.config = config;
-                    self.chart.update_config(&self.config, &self.get_theme());
+                    self.config = config.clone();
+                    self.chart.update_config(config, &self.get_theme());
                 }
             }
             Message::TickCpu => {
-                self.chart.update_cpu(&self.get_theme());
+                self.chart.update_cpu();
             }
-            Message::TickRam => self.chart.update_ram(&self.get_theme()),
-            Message::TickSwap => self.chart.update_swap(&self.get_theme()),
-            Message::TickNet => self.chart.update_net(&self.get_theme()),
-            Message::TickDisk => self.chart.update_disk(&self.get_theme()),
-            // Message::TickVRAM => self.chart.update_vram(&self.get_theme()),
+            Message::TickRam => self.chart.update_ram(),
+            Message::TickSwap => self.chart.update_swap(),
+            Message::TickNet => self.chart.update_net(),
+            Message::TickDisk => self.chart.update_disk(),
+            // Message::TickVRAM => self.chart.update_vram(),
         }
         Task::none()
     }

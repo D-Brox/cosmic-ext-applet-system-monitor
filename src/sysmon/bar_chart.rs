@@ -1,10 +1,10 @@
 use cosmic::cosmic_theme::palette::Srgba;
+use cosmic::theme::CosmicColor;
 use cosmic::{
     iced::{
         self,
         alignment::{Alignment, Horizontal, Vertical},
-        core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size}
-        ,
+        core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size},
     },
     widget::{container, Column, Container, Row, Widget},
     Element, Renderer, Theme,
@@ -56,14 +56,18 @@ impl Default for BarConfig {
     }
 }
 
-pub fn percentage_histogram<'a>(mut values: Box<[f32]>, config: BarConfig, color: Srgba) -> Container<'a, Message, Theme> {
+pub fn percentage_histogram<'a>(
+    mut values: Box<[f32]>,
+    config: BarConfig,
+    color: CosmicColor,
+) -> Container<'a, Message, Theme> {
     let full_length = if let Length::Fixed(config_length) = config.full_length {
         config_length
-    } else {50.0};
-
+    } else {
+        50.0
+    };
 
     let static_dimension = full_length * config.width_fraction;
-
 
     if let Some(sort_method) = config.sort_method {
         match sort_method {
@@ -72,31 +76,22 @@ pub fn percentage_histogram<'a>(mut values: Box<[f32]>, config: BarConfig, color
         }
     }
 
-    let inner: Element<Message> =
-        match config.orientation {
-            Orientation::PointingUp => {
-                Row::with_children(values.iter().map(|&val| {
-                    VerticalPercentageBar::new(
-                        val,
-                        full_length,
-                        static_dimension,
-                        color,
-                    )
-                        .into()
-                }))
-                    .height(full_length)
-                    .align_y(Vertical::Bottom)
-                    .spacing(config.spacing)
-                    .into()
-            }
-            Orientation::PointingRight => Column::with_children(values.iter().map(|&val| {
-                HorizontalPercentageBar::new(val, full_length, static_dimension, color).into()
-            }))
-                .width(full_length)
-                .align_x(Horizontal::Left)
-                .spacing(config.spacing)
-                .into(),
-        };
+    let inner: Element<Message> = match config.orientation {
+        Orientation::PointingUp => Row::with_children(values.iter().map(|&val| {
+            VerticalPercentageBar::new(val, full_length, static_dimension, color).into()
+        }))
+        .height(full_length)
+        .align_y(Vertical::Bottom)
+        .spacing(config.spacing)
+        .into(),
+        Orientation::PointingRight => Column::with_children(values.iter().map(|&val| {
+            HorizontalPercentageBar::new(val, full_length, static_dimension, color).into()
+        }))
+        .width(full_length)
+        .align_x(Horizontal::Left)
+        .spacing(config.spacing)
+        .into(),
+    };
 
     let outer = cosmic::widget::container(inner).style(|_| container::Style {
         ..container::Style::default()
@@ -114,17 +109,12 @@ impl PercentageBar {
         value: f32,
         width: impl Into<Length>,
         height: impl Into<Length>,
-        theme_color: Srgba,
+        color: CosmicColor,
     ) -> Self {
         if is_horizontal {
-            Self::Vertical(VerticalPercentageBar::new(
-                value,
-                height,
-                width,
-                theme_color,
-            ))
+            Self::Vertical(VerticalPercentageBar::new(value, height, width, color))
         } else {
-            Self::Horizontal(HorizontalPercentageBar::new(value, width, height, theme_color))
+            Self::Horizontal(HorizontalPercentageBar::new(value, width, height, color))
         }
     }
 }
@@ -191,13 +181,12 @@ impl<'a> Widget<Message, Theme, Renderer> for PercentageBar {
     }
 }
 
-
 #[allow(missing_debug_implementations)]
 pub struct VerticalPercentageBar {
     percentage: f32,
     width: Length,
     varying_length_max: Length,
-    theme_color: Srgba,
+    color: Srgba,
 }
 
 impl<'a> VerticalPercentageBar {
@@ -205,13 +194,13 @@ impl<'a> VerticalPercentageBar {
         value: f32,
         height: impl Into<Length>,
         width: impl Into<Length>,
-        theme_color: Srgba,
+        color: Srgba,
     ) -> Self {
         VerticalPercentageBar {
             percentage: value.clamp(0.0, 100.0),
             width: width.into(),
             varying_length_max: height.into(),
-            theme_color,
+            color,
         }
     }
 }
@@ -240,7 +229,7 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
         &self,
         _state: &Tree,
         renderer: &mut Renderer,
-        theme: &Theme,
+        _theme: &Theme,
         _style: &Style,
         layout: Layout<'_>,
         _cursor: mouse::Cursor,
@@ -262,7 +251,7 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
                 bounds: rect,
                 ..renderer::Quad::default()
             },
-            iced::Color::from(self.theme_color),
+            iced::Color::from(self.color),
         );
     }
 }
@@ -277,14 +266,14 @@ pub struct HorizontalPercentageBar {
     value: f32,
     bar_thickness: Length,
     varying_length_max: Length,
-    color: Srgba
+    color: Srgba,
 }
 impl HorizontalPercentageBar {
     pub fn new(
         value: f32,
         varying_length_max: impl Into<Length>,
         static_length: impl Into<Length>,
-        color: impl Into<Srgba>
+        color: impl Into<Srgba>,
     ) -> Self {
         let color = color.into();
         Self {
@@ -343,7 +332,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
     }
 }
 
-impl<'a> From<HorizontalPercentageBar> for Element<'a, Message> {
+impl From<HorizontalPercentageBar> for Element<'_, Message> {
     fn from(value: HorizontalPercentageBar) -> Self {
         Element::new(value)
     }
