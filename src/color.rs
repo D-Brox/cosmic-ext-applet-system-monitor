@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use cosmic::cosmic_theme::palette::rgb::Rgb;
 use cosmic::cosmic_theme::palette::Alpha;
 use cosmic::theme::CosmicColor;
@@ -10,7 +8,6 @@ use cosmic::{
 // use palette::rgb::Rgb;
 // use palette::Alpha;
 use plotters::style::{RGBAColor, RGBColor};
-use plotters_iced::plotters_backend;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -57,7 +54,7 @@ pub enum Color {
     CosmicColor(CosmicColor),
 }
 
-pub fn plot_color(cc: CosmicColor) -> RGBAColor {
+pub fn plotters_color(cc: CosmicColor) -> RGBAColor {
     let Alpha {
         color: Rgb {
             red, green, blue, ..
@@ -76,8 +73,8 @@ impl Color {
     }
 
     pub fn as_cosmic_color(&self, theme: &Theme) -> CosmicColor {
-        let accent_color = theme.cosmic().accent_color();
-        let palette = &theme.cosmic().palette;
+        let cosmic_theme = &theme.cosmic();
+        let palette = &cosmic_theme.palette;
         match self {
             Color::gray_1 => palette.gray_1,
             Color::gray_2 => palette.gray_2,
@@ -111,12 +108,15 @@ impl Color {
             Color::accent_purple => palette.accent_purple,
             Color::accent_pink => palette.accent_pink,
             Color::accent_indigo => palette.accent_indigo,
-            Color::rgb(s) => s
-                .parse::<Rgba<Srgb, u8>>()
-                .map(Rgba::into_format)
-                .unwrap_or(accent_color),
+            Color::rgb(s) => {
+                println!("using custom color: {s}");
+                s.parse::<Rgba<Srgb, u8>>()
+                    .map(Rgba::into_format)
+                    .inspect_err(|e| eprintln!("failed to parse into color. {e}"))
+                    .unwrap_or(cosmic_theme.accent_color())
+            }
             Color::CosmicColor(cc) => *cc,
         }
-        .into()
+            .into()
     }
 }

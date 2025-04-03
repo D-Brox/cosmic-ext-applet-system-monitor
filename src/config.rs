@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::{
-    cosmic_config,
-    cosmic_config::{cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry},
-    iced::Subscription,
-};
-
-use serde::{Deserialize, Serialize};
-
 use crate::{
     applet::{Message, ID},
     color::Color,
 };
+use cosmic::{
+    cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry},
+    iced::Subscription,
+};
+use serde::{Deserialize, Serialize};
 
-pub const CONFIG_VERSION: u64 = 1;
+pub const CONFIG_VERSION: u64 = 2;
 
 #[derive(Clone, CosmicConfigEntry, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
@@ -24,6 +21,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             charts: vec![
+                /*
                 ChartConfig::CPU(Cpu {
                     update_interval: 1000,
                     color: Color::accent_blue,
@@ -33,20 +31,10 @@ impl Default for Config {
                         CpuView::PerCoreUsageHistogram,
                     ],
                 }),
-                ChartConfig::RAM(Generic {
-                    update_interval: 2000,
-                    color: Color::accent_green,
-                    aspect_ratio: 1.5,
-                    samples: 30,
-                    visualization: vec![ChartView::RunChart, ChartView::BarChart],
-                }),
-                ChartConfig::Swap(Generic {
-                    update_interval: 5000,
-                    color: Color::accent_purple,
-                    aspect_ratio: 1.5,
-                    samples: 12,
-                    visualization: vec![ChartView::RunChart, ChartView::BarChart],
-                }),
+                */
+                ChartConfig::Ram(Ram::default()),
+                ChartConfig::Swap(Swap::default()),
+                /*
                 ChartConfig::Net(Network {
                     update_interval: 1000,
                     color_up: Color::accent_yellow,
@@ -70,6 +58,7 @@ impl Default for Config {
                     samples: 30,
                     visualization: vec![ChartView::RunChart],
                 }),
+                */
             ],
         }
     }
@@ -86,29 +75,24 @@ pub struct Cpu {
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ChartConfig {
-    CPU(Cpu),
-    RAM(Generic),
-    Swap(Generic),
-    Net(Network),
-    Disk(Disk),
-    VRAM(Generic),
+    Ram(Ram),
+    Swap(Swap),
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Generic {
-    /// amount of time (in milliseconds) between new data
+pub struct Ram {
     pub update_interval: u64,
-
-    /// size of the history kept and shown in the run chart
-    pub samples: usize,
-
-    /// The [Color] to use for this color this graph line.
+    pub history_size: u8,
+    pub vis: Box<[SingleView]>,
     pub color: Color,
+}
 
-    /// The **ratio** of width to height of the graph.
-    pub aspect_ratio: f32,
-
-    pub visualization: Vec<ChartView>,
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Swap {
+    pub update_interval: u64,
+    pub history_size: u8,
+    pub vis: Box<[SingleView]>,
+    pub color: Color,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -151,40 +135,6 @@ pub struct Disk {
     pub visualization: Vec<DoubleChartView>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct DoubleDataConfig {
-    pub update_interval: u64,
-    pub samples: usize,
-    pub color1: Color,
-    pub color2: Color,
-    pub aspect_ratio: f32,
-    pub visualization: Vec<DoubleChartView>,
-}
-
-impl From<Disk> for DoubleDataConfig {
-    fn from(c: Disk) -> Self {
-        Self {
-            update_interval: c.update_interval,
-            samples: c.samples,
-            color1: c.color_read,
-            color2: c.color_write,
-            aspect_ratio: c.aspect_ratio,
-            visualization: c.visualization,
-        }
-    }
-}
-impl From<Network> for DoubleDataConfig {
-    fn from(c: Network) -> Self {
-        Self {
-            update_interval: c.update_interval,
-            samples: c.samples,
-            color1: c.color_up,
-            color2: c.color_down,
-            aspect_ratio: c.aspect_ratio,
-            visualization: c.visualization,
-        }
-    }
-}
 pub fn config_subscription() -> Subscription<Message> {
     struct ConfigSubscription;
     cosmic_config::config_subscription(
@@ -192,21 +142,21 @@ pub fn config_subscription() -> Subscription<Message> {
         ID.into(),
         CONFIG_VERSION,
     )
-    .map(|update| {
-        if !update.errors.is_empty() {
-            eprintln!(
-                "errors loading config {:?}: {:?}",
-                update.keys, update.errors
-            );
-        }
-        Message::Config(update.config)
-    })
+        .map(|update| {
+            if !update.errors.is_empty() {
+                eprintln!(
+                    "errors loading config {:?}: {:?}",
+                    update.keys, update.errors
+                );
+            }
+            Message::Config(update.config)
+        })
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum ChartView {
-    RunChart,
-    BarChart,
+pub enum SingleView {
+    Bar { aspect_ratio: f32 },
+    Run { aspect_ratio: f32 },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -220,4 +170,37 @@ pub enum CpuView {
     GlobalUsageRunChart,
     PerCoreUsageHistogram,
     GlobalUsageBarChart,
+}
+
+impl Default for Ram {
+    fn default() -> Self {
+        println!("using RAM's default config");
+        Ram {
+            update_interval: 2000,
+            color: Color::accent_green,
+            history_size: 30,
+            vis: [
+                SingleView::Run { aspect_ratio: 2.0 },
+                SingleView::Bar { aspect_ratio: 0.5 },
+            ]
+                .into(),
+        }
+    }
+}
+
+impl Default for Swap {
+    fn default() -> Self {
+        println!("using SWAP's default config");
+
+        Swap {
+            update_interval: 5000,
+            color: Color::accent_purple,
+            history_size: 12,
+            vis: [
+                SingleView::Run { aspect_ratio: 1.5 },
+                SingleView::Bar { aspect_ratio: 0.5 },
+            ]
+                .into(),
+        }
+    }
 }

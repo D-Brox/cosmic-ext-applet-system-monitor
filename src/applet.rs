@@ -60,11 +60,9 @@ impl Application for SystemMonitorApplet {
     }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        let theme = core.applet.theme().unwrap_or_default();
-
         let app = Self {
             core,
-            chart: SystemMonitor::new(flags.config.clone(), &theme),
+            chart: SystemMonitor::new(flags.config.clone()),
             config: flags.config,
             config_handler: flags.config_handler,
         };
@@ -127,11 +125,13 @@ impl Application for SystemMonitorApplet {
         for chart in &self.config.charts {
             let tick = {
                 match chart {
+                    /*
                     ChartConfig::CPU(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickCpu)
                     }
-                    ChartConfig::RAM(c) => {
+                    */
+                    ChartConfig::Ram(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickRam)
                     }
@@ -139,6 +139,7 @@ impl Application for SystemMonitorApplet {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickSwap)
                     }
+                    /*
                     ChartConfig::Net(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickNet)
@@ -153,6 +154,7 @@ impl Application for SystemMonitorApplet {
                         // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                         // .map(|_| Message::TickVRAM)
                     }
+                    */
                 }
             };
             subs.push(tick);

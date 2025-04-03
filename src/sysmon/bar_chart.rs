@@ -1,27 +1,28 @@
-use cosmic::cosmic_theme::palette::Srgba;
-use cosmic::theme::CosmicColor;
+use crate::applet::Message;
+use cosmic::cosmic_theme::palette::WithAlpha;
 use cosmic::{
     iced::{
         self,
-        alignment::{Alignment, Horizontal, Vertical},
         core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size},
+        Length::Fill,
     },
-    widget::{container, Column, Container, Row, Widget},
+    theme::CosmicColor,
+    widget::Widget,
     Element, Renderer, Theme,
 };
 use renderer::Style;
 
-use crate::applet::Message;
-
 #[derive(Clone, Copy)]
 pub enum SortMethod {
     Descending,
+    #[allow(dead_code)]
     Ascending,
 }
 
 #[derive(Clone)]
 pub enum Orientation {
     PointingUp,
+    #[allow(dead_code)]
     PointingRight, // todo more
 }
 /*impl Orientation {
@@ -34,7 +35,7 @@ pub enum Orientation {
     }
 }*/
 
-#[derive(Clone)]
+/*#[derive(Clone)]
 pub struct BarConfig {
     pub orientation: Orientation, // todo replace with ~core.applet.Anchor~
     /// The length in the direction the bar varies it's length
@@ -55,66 +56,66 @@ impl Default for BarConfig {
         }
     }
 }
-
-pub fn percentage_histogram<'a>(
-    mut values: Box<[f32]>,
-    config: BarConfig,
-    color: CosmicColor,
-) -> Container<'a, Message, Theme> {
-    let full_length = if let Length::Fixed(config_length) = config.full_length {
-        config_length
-    } else {
-        50.0
-    };
-
-    let static_dimension = full_length * config.width_fraction;
-
-    if let Some(sort_method) = config.sort_method {
-        match sort_method {
-            SortMethod::Descending => values.sort_by(|a, b| b.partial_cmp(a).unwrap()),
-            SortMethod::Ascending => values.sort_by(|a, b| a.partial_cmp(b).unwrap()),
-        }
-    }
-
-    let inner: Element<Message> = match config.orientation {
-        Orientation::PointingUp => Row::with_children(values.iter().map(|&val| {
-            VerticalPercentageBar::new(val, full_length, static_dimension, color).into()
-        }))
-        .height(full_length)
-        .align_y(Vertical::Bottom)
-        .spacing(config.spacing)
-        .into(),
-        Orientation::PointingRight => Column::with_children(values.iter().map(|&val| {
-            HorizontalPercentageBar::new(val, full_length, static_dimension, color).into()
-        }))
-        .width(full_length)
-        .align_x(Horizontal::Left)
-        .spacing(config.spacing)
-        .into(),
-    };
-
-    let outer = cosmic::widget::container(inner).style(|_| container::Style {
-        ..container::Style::default()
-    });
-    outer
-}
+*/
+// pub fn percentage_histogram<'a>(
+//     mut values: Box<[f32]>,
+//     config: BarConfig,
+//     color: CosmicColor,
+// ) -> Container<'a, Message, Theme> {
+//     let full_length = if let Length::Fixed(config_length) = config.full_length {
+//         config_length
+//     } else {
+//         50.0
+//     };
+//
+//     let static_dimension = full_length * config.width_fraction;
+//
+//     if let Some(sort_method) = config.sort_method {
+//         match sort_method {
+//             SortMethod::Descending => values.sort_by(|a, b| b.partial_cmp(a).unwrap()),
+//             SortMethod::Ascending => values.sort_by(|a, b| a.partial_cmp(b).unwrap()),
+//         }
+//     }
+//
+//     let inner: Element<Message> = match config.orientation {
+//         Orientation::PointingUp => Row::with_children(values.iter().map(|&val| {
+//             VerticalPercentageBar::new(val, color)
+//                 .apply(container)
+//                 .width(static_dimension)
+//                 .apply(Element::new)
+//         }))
+//             .height(full_length)
+//             .align_y(Vertical::Bottom)
+//             .spacing(config.spacing)
+//             .into(),
+//         Orientation::PointingRight => Column::with_children(values.iter().map(|&val| {
+//             HorizontalPercentageBar::new(val, color)
+//                 .apply(container)
+//                 .height(static_dimension)
+//                 .apply(Element::new)
+//         }))
+//             .width(full_length)
+//             .align_x(Horizontal::Left)
+//             .spacing(config.spacing)
+//             .into(),
+//     };
+//
+//     let outer = cosmic::widget::container(inner).style(|_| container::Style {
+//         ..container::Style::default()
+//     });
+//     outer
+// }
 
 pub enum PercentageBar {
     Vertical(VerticalPercentageBar),
     Horizontal(HorizontalPercentageBar),
 }
 impl PercentageBar {
-    pub(crate) fn new(
-        is_horizontal: bool,
-        value: f32,
-        width: impl Into<Length>,
-        height: impl Into<Length>,
-        color: CosmicColor,
-    ) -> Self {
+    pub(crate) fn new(is_horizontal: bool, value: f32, color: CosmicColor) -> Self {
         if is_horizontal {
-            Self::Vertical(VerticalPercentageBar::new(value, height, width, color))
+            Self::Vertical(VerticalPercentageBar::new(value, color))
         } else {
-            Self::Horizontal(HorizontalPercentageBar::new(value, width, height, color))
+            Self::Horizontal(HorizontalPercentageBar::new(value, color))
         }
     }
 }
@@ -184,22 +185,13 @@ impl<'a> Widget<Message, Theme, Renderer> for PercentageBar {
 #[allow(missing_debug_implementations)]
 pub struct VerticalPercentageBar {
     percentage: f32,
-    width: Length,
-    varying_length_max: Length,
-    color: Srgba,
+    color: CosmicColor,
 }
 
 impl<'a> VerticalPercentageBar {
-    pub fn new(
-        value: f32,
-        height: impl Into<Length>,
-        width: impl Into<Length>,
-        color: Srgba,
-    ) -> Self {
+    pub fn new(value: f32, color: CosmicColor) -> Self {
         VerticalPercentageBar {
             percentage: value.clamp(0.0, 100.0),
-            width: width.into(),
-            varying_length_max: height.into(),
             color,
         }
     }
@@ -207,10 +199,7 @@ impl<'a> VerticalPercentageBar {
 
 impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
     fn size(&self) -> Size<Length> {
-        Size {
-            width: self.width,
-            height: self.varying_length_max,
-        }
+        Size::new(Fill, Fill)
     }
 
     fn layout(
@@ -238,20 +227,40 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
         if self.percentage <= 0.0 {
             return;
         }
-        let outer = &layout.bounds();
-        let fill_height = self.percentage / 100.0 * outer.height;
-        let rect = Rectangle {
-            y: outer.y + outer.height - fill_height,
+        let outer_rect = &layout.bounds();
+        let fill_height = self.percentage / 100.0 * outer_rect.height;
+        let fill_rect = Rectangle {
+            y: outer_rect.y + outer_rect.height - fill_height,
             height: fill_height,
-            ..*outer
+            ..*outer_rect
         };
+
+        let edge_line_thickness = 0.01 * outer_rect.height;
+
+
+        // line
         iced::core::Renderer::fill_quad(
             renderer,
             renderer::Quad {
-                bounds: rect,
+                bounds: Rectangle {
+                    y: fill_rect.y - edge_line_thickness,
+                    height: edge_line_thickness,
+                    ..*outer_rect
+                },
                 ..renderer::Quad::default()
             },
             iced::Color::from(self.color),
+        );
+
+        // fill below line
+        iced::core::Renderer::fill_quad(
+            renderer,
+            renderer::Quad {
+                bounds: fill_rect,
+                ..renderer::Quad::default()
+            },
+            // make the fill more transparent
+            iced::Color::from(self.color.with_alpha(self.color.alpha / 2.0)),
         );
     }
 }
@@ -263,23 +272,14 @@ impl<'a> From<VerticalPercentageBar> for Element<'a, Message> {
 }
 
 pub struct HorizontalPercentageBar {
-    value: f32,
-    bar_thickness: Length,
-    varying_length_max: Length,
-    color: Srgba,
+    percentage: f32,
+    color: CosmicColor,
 }
 impl HorizontalPercentageBar {
-    pub fn new(
-        value: f32,
-        varying_length_max: impl Into<Length>,
-        static_length: impl Into<Length>,
-        color: impl Into<Srgba>,
-    ) -> Self {
+    pub fn new(value: f32, color: impl Into<CosmicColor>) -> Self {
         let color = color.into();
         Self {
-            value: value.clamp(0.0, 100.0),
-            bar_thickness: static_length.into(),
-            varying_length_max: varying_length_max.into(),
+            percentage: value.clamp(0.0, 100.0),
             color,
         }
     }
@@ -287,14 +287,7 @@ impl HorizontalPercentageBar {
 
 impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
     fn size(&self) -> Size<Length> {
-        let Length::Fixed(max_length) = self.varying_length_max else {
-            unimplemented!()
-        };
-
-        Size::<Length> {
-            width: (max_length * self.value / 100.).into(),
-            height: self.bar_thickness,
-        }
+        Size::new(Fill, Fill)
     }
 
     fn layout(
@@ -303,17 +296,15 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
         _renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let Size { width, height } = Widget::<Message, Theme, Renderer>::size(self);
-        layout::atomic(limits, width, height).align(
-            Alignment::Start,
-            Alignment::Center,
-            limits.max(),
-        )
+        let Size { width, height } = Widget::size(self);
+
+        let layout = layout::atomic(limits, width, height);
+        layout
     }
 
     fn draw(
         &self,
-        _tree: &Tree,
+        _state: &Tree,
         renderer: &mut Renderer,
         _theme: &Theme,
         _style: &Style,
@@ -321,13 +312,39 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
+        if self.percentage <= 0.0 {
+            return;
+        }
+        let outer_rect = &layout.bounds();
+        let fill_width = self.percentage / 100.0 * outer_rect.height;
+        let fill_rect = Rectangle {
+            x: outer_rect.x + outer_rect.width - fill_width,
+            width: fill_width,
+            ..*outer_rect
+        };
+
+        let edge_line_thickness = 0.01 * outer_rect.height;
+
         iced::core::Renderer::fill_quad(
             renderer,
             renderer::Quad {
-                bounds: layout.bounds(),
+                bounds: Rectangle {
+                    x: fill_rect.x,
+                    width: edge_line_thickness,
+                    ..*outer_rect
+                },
                 ..renderer::Quad::default()
             },
             iced::Color::from(self.color),
+        );
+        iced::core::Renderer::fill_quad(
+            renderer,
+            renderer::Quad {
+                bounds: fill_rect,
+                ..renderer::Quad::default()
+            },
+            // make the fill more transparent
+            iced::Color::from(self.color.with_alpha(self.color.alpha / 2.0)),
         );
     }
 }
