@@ -102,10 +102,9 @@ impl Configurable for SingleData {
             return; // no changes to make
         }
 
-        let mut temp = CircularQueue::<i64>::with_capacity(new_size);
-        std::mem::swap(&mut self.history, &mut temp);
-        // temp now contains the old history
-        let data = temp.into_vec();
+        let new = HistoryStruct::with_capacity(new_size);
+        let old = std::mem::replace(self, new);
+        let data = old.into_vec();
 
         for (_, value) in (0..new_size).zip(data).rev() {
             // todo test this this correct
