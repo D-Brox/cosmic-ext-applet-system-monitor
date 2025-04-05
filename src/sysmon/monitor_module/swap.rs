@@ -1,14 +1,16 @@
 use crate::{
     config::{SingleView, Swap as SwapConfig},
     sysmon::{
-        monitor_module::{init_data_points, Module, Refresh, SingleData},
+        monitor_module::{init_data_points, Module, Refresh},
         SourceCollection,
     },
 };
 use std::marker::PhantomData;
 use sysinfo::MemoryRefreshKind;
 
-pub type SwapModule = Module<SingleData, SwapConfig, SingleView>;
+use super::{Configurable, History, SingleModule};
+
+pub type SwapModule = SingleModule<SwapConfig>;
 
 impl Refresh for SwapModule {
     fn tick(&mut self, source: &mut SourceCollection) {
@@ -19,7 +21,7 @@ impl Refresh for SwapModule {
         let used_swap = source.sys.used_swap() as f64;
         let percentage = ((used_swap / total_swap) * 100.0) as i64;
 
-        self.data.history.push(percentage);
+        self.data.push(percentage);
     }
 }
 
@@ -28,8 +30,19 @@ impl From<SwapConfig> for SwapModule {
         Self {
             data: init_data_points(c.history_size).into(),
             vis: c.vis,
-            color: c.color,
             config: PhantomData,
         }
+    }
+}
+
+impl Configurable for SwapModule {
+    type Config = SwapConfig;
+
+    fn configure(&mut self, config: impl Into<SwapConfig>) {
+        let SwapConfig {
+            history_size, vis, ..
+        } = config.into();
+        self.data.configure(history_size);
+        self.vis = vis;
     }
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod bar_chart;
-mod chart;
 mod cpu_chart;
 mod monitor_module;
 
@@ -18,6 +17,8 @@ use cosmic::widget::Text;
 
 use cosmic::iced::alignment;
 use cosmic::{applet, Element, Theme};
+use monitor_module::Configurable;
+use monitor_module::ViewableModule as _;
 use monitor_module::{RamModule, SwapModule};
 use sysinfo::{Disks, Networks, System};
 
@@ -120,11 +121,11 @@ impl SystemMonitor {
             .into_iter()
             .map(|chart| match chart {
                 ChartConfig::Ram(c) => {
-                    self.ram.configure(c.history_size, c.vis, c.color);
+                    self.ram.configure(c);
                     UsedChart::Ram
                 }
                 ChartConfig::Swap(c) => {
-                    self.ram.configure(c.history_size, c.vis, c.color);
+                    self.swap.configure(c);
                     UsedChart::Swap
                 }
             })

@@ -1,12 +1,11 @@
-use crate::applet::Message;
-use cosmic::cosmic_theme::palette::WithAlpha;
+use crate::{applet::Message, color::Color};
 use cosmic::{
+    cosmic_theme::palette::WithAlpha,
     iced::{
         self,
         core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size},
         Length::Fill,
     },
-    theme::CosmicColor,
     widget::Widget,
     Element, Renderer, Theme,
 };
@@ -111,7 +110,7 @@ pub enum PercentageBar {
     Horizontal(HorizontalPercentageBar),
 }
 impl PercentageBar {
-    pub(crate) fn new(is_horizontal: bool, value: f32, color: CosmicColor) -> Self {
+    pub(crate) fn new(is_horizontal: bool, value: f32, color: Color) -> Self {
         if is_horizontal {
             Self::Vertical(VerticalPercentageBar::new(value, color))
         } else {
@@ -120,16 +119,7 @@ impl PercentageBar {
     }
 }
 
-/*impl Deref for PercentageBar {
-    type Target = dyn Widget<Message, Theme, Renderer>;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            PercentageBar::Vertical(v) => v,
-            PercentageBar::Horizontal(h) => h
-        }
-    }
-}*/
+const HELLO: &str = "Hello, world!";
 
 impl From<PercentageBar> for Element<'_, Message> {
     fn from(value: PercentageBar) -> Self {
@@ -185,11 +175,11 @@ impl<'a> Widget<Message, Theme, Renderer> for PercentageBar {
 #[allow(missing_debug_implementations)]
 pub struct VerticalPercentageBar {
     percentage: f32,
-    color: CosmicColor,
+    color: Color,
 }
 
 impl<'a> VerticalPercentageBar {
-    pub fn new(value: f32, color: CosmicColor) -> Self {
+    pub fn new(value: f32, color: Color) -> Self {
         VerticalPercentageBar {
             percentage: value.clamp(0.0, 100.0),
             color,
@@ -218,7 +208,7 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
         &self,
         _state: &Tree,
         renderer: &mut Renderer,
-        _theme: &Theme,
+        theme: &Theme,
         _style: &Style,
         layout: Layout<'_>,
         _cursor: mouse::Cursor,
@@ -237,8 +227,8 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
 
         let edge_line_thickness = 0.01 * outer_rect.height;
 
-
         // line
+        let line_color = self.color.as_cosmic_color(theme);
         iced::core::Renderer::fill_quad(
             renderer,
             renderer::Quad {
@@ -249,7 +239,7 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
                 },
                 ..renderer::Quad::default()
             },
-            iced::Color::from(self.color),
+            iced::Color::from(line_color),
         );
 
         // fill below line
@@ -260,7 +250,7 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
                 ..renderer::Quad::default()
             },
             // make the fill more transparent
-            iced::Color::from(self.color.with_alpha(self.color.alpha / 2.0)),
+            iced::Color::from(line_color.with_alpha(line_color.alpha / 2.0)),
         );
     }
 }
@@ -273,11 +263,10 @@ impl<'a> From<VerticalPercentageBar> for Element<'a, Message> {
 
 pub struct HorizontalPercentageBar {
     percentage: f32,
-    color: CosmicColor,
+    color: Color,
 }
 impl HorizontalPercentageBar {
-    pub fn new(value: f32, color: impl Into<CosmicColor>) -> Self {
-        let color = color.into();
+    pub fn new(value: f32, color: Color) -> Self {
         Self {
             percentage: value.clamp(0.0, 100.0),
             color,
@@ -306,7 +295,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
         &self,
         _state: &Tree,
         renderer: &mut Renderer,
-        _theme: &Theme,
+        theme: &Theme,
         _style: &Style,
         layout: Layout<'_>,
         _cursor: mouse::Cursor,
@@ -325,6 +314,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
 
         let edge_line_thickness = 0.01 * outer_rect.height;
 
+        let line_color = self.color.as_cosmic_color(theme);
         iced::core::Renderer::fill_quad(
             renderer,
             renderer::Quad {
@@ -335,7 +325,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
                 },
                 ..renderer::Quad::default()
             },
-            iced::Color::from(self.color),
+            iced::Color::from(line_color),
         );
         iced::core::Renderer::fill_quad(
             renderer,
@@ -344,7 +334,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
                 ..renderer::Quad::default()
             },
             // make the fill more transparent
-            iced::Color::from(self.color.with_alpha(self.color.alpha / 2.0)),
+            iced::Color::from(line_color.with_alpha(line_color.alpha / 2.0)),
         );
     }
 }

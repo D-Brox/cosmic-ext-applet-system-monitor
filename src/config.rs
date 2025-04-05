@@ -14,6 +14,7 @@ pub const CONFIG_VERSION: u64 = 2;
 
 #[derive(Clone, CosmicConfigEntry, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
+    // todo radius goes here? should it be different for each view-type?
     pub charts: Vec<ChartConfig>,
 }
 
@@ -84,7 +85,6 @@ pub struct Ram {
     pub update_interval: u64,
     pub history_size: u8,
     pub vis: Box<[SingleView]>,
-    pub color: Color,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -92,7 +92,6 @@ pub struct Swap {
     pub update_interval: u64,
     pub history_size: u8,
     pub vis: Box<[SingleView]>,
-    pub color: Color,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -112,7 +111,7 @@ pub struct Network {
     /// The **ratio** of width to height of the graph.
     pub aspect_ratio: f32,
 
-    pub visualization: Vec<DoubleChartView>,
+    pub visualization: Vec<DoubleView>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -132,7 +131,7 @@ pub struct Disk {
     /// The **ratio** of width to height of the graph.
     pub aspect_ratio: f32,
 
-    pub visualization: Vec<DoubleChartView>,
+    pub visualization: Vec<DoubleView>,
 }
 
 pub fn config_subscription() -> Subscription<Message> {
@@ -142,26 +141,27 @@ pub fn config_subscription() -> Subscription<Message> {
         ID.into(),
         CONFIG_VERSION,
     )
-        .map(|update| {
-            if !update.errors.is_empty() {
-                eprintln!(
-                    "errors loading config {:?}: {:?}",
-                    update.keys, update.errors
-                );
-            }
-            Message::Config(update.config)
-        })
+    .map(|update| {
+        if !update.errors.is_empty() {
+            eprintln!(
+                "errors loading config {:?}: {:?}",
+                update.keys, update.errors
+            );
+        }
+        Message::Config(update.config)
+    })
 }
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum SingleView {
-    Bar { aspect_ratio: f32 },
-    Run { aspect_ratio: f32 },
+    // todo radius goes inside these?
+    Bar { aspect_ratio: f32, color: Color },
+    Run { aspect_ratio: f32, color: Color },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum DoubleChartView {
-    SuperimposedRunChart,
+pub enum DoubleView {
+    SuperimposedRunChart { aspect_ratio: f32 },
     // SeperateRunCharts,
 }
 
@@ -175,15 +175,21 @@ pub enum CpuView {
 impl Default for Ram {
     fn default() -> Self {
         println!("using RAM's default config");
+        let color = Color::accent_green;
         Ram {
             update_interval: 2000,
-            color: Color::accent_green,
             history_size: 30,
             vis: [
-                SingleView::Run { aspect_ratio: 2.0 },
-                SingleView::Bar { aspect_ratio: 0.5 },
+                SingleView::Run {
+                    aspect_ratio: 2.0,
+                    color,
+                },
+                SingleView::Bar {
+                    aspect_ratio: 0.5,
+                    color,
+                },
             ]
-                .into(),
+            .into(),
         }
     }
 }
@@ -191,16 +197,22 @@ impl Default for Ram {
 impl Default for Swap {
     fn default() -> Self {
         println!("using SWAP's default config");
+        let color = Color::accent_purple;
 
         Swap {
             update_interval: 5000,
-            color: Color::accent_purple,
             history_size: 12,
             vis: [
-                SingleView::Run { aspect_ratio: 1.5 },
-                SingleView::Bar { aspect_ratio: 0.5 },
+                SingleView::Run {
+                    aspect_ratio: 1.5,
+                    color,
+                },
+                SingleView::Bar {
+                    aspect_ratio: 0.5,
+                    color,
+                },
             ]
-                .into(),
+            .into(),
         }
     }
 }

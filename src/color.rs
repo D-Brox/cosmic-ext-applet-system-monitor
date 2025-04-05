@@ -1,16 +1,13 @@
 use cosmic::cosmic_theme::palette::rgb::Rgb;
 use cosmic::cosmic_theme::palette::Alpha;
 use cosmic::theme::CosmicColor;
-use cosmic::{
-    cosmic_theme::palette::{encoding::srgb::Srgb, rgb::Rgba},
-    Theme,
-};
+use cosmic::Theme;
 // use palette::rgb::Rgb;
 // use palette::Alpha;
 use plotters::style::{RGBAColor, RGBColor};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[allow(non_camel_case_types)]
 /// Enum that bundles [Theme] dependent colors with ordinary RGB colors
 ///
@@ -50,7 +47,7 @@ pub enum Color {
     accent_purple,
     accent_pink,
     accent_indigo,
-    rgb(String),
+    // rgb(String),
     CosmicColor(CosmicColor),
 }
 
@@ -108,15 +105,15 @@ impl Color {
             Color::accent_purple => palette.accent_purple,
             Color::accent_pink => palette.accent_pink,
             Color::accent_indigo => palette.accent_indigo,
-            Color::rgb(s) => {
-                println!("using custom color: {s}");
-                s.parse::<Rgba<Srgb, u8>>()
-                    .map(Rgba::into_format)
-                    .inspect_err(|e| eprintln!("failed to parse into color. {e}"))
-                    .unwrap_or(cosmic_theme.accent_color())
-            }
+            // Color::rgb(s) => {
+            //     println!("using custom color: {s}");
+            //     s.parse::<Rgba<Srgb, u8>>()
+            //         .map(Rgba::into_format)
+            //         .inspect_err(|e| eprintln!("failed to parse into color. {e}"))
+            //         .unwrap_or(cosmic_theme.accent_color())
+            // }
             Color::CosmicColor(cc) => *cc,
         }
-            .into()
+        .into()
     }
 }

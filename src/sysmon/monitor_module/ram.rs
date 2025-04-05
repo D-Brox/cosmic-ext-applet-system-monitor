@@ -1,14 +1,16 @@
 use crate::{
     config::{Ram as RamConfig, SingleView},
     sysmon::{
-        monitor_module::{init_data_points, Module, Refresh, SingleData},
+        monitor_module::{init_data_points, Module, Refresh},
         SourceCollection,
     },
 };
 use std::marker::PhantomData;
 use sysinfo::MemoryRefreshKind;
 
-pub type RamData = SingleData;
+use super::{Configurable, History, SingleModule};
+
+pub type RamData = History;
 
 impl Refresh for RamModule {
     fn tick(&mut self, source: &mut SourceCollection) {
@@ -18,7 +20,7 @@ impl Refresh for RamModule {
         let total_ram = source.sys.total_memory() as f64;
         let used_ram = source.sys.used_memory() as f64;
         let percentage = ((used_ram / total_ram) * 100.0) as i64;
-        self.data.history.push(percentage);
+        self.data.push(percentage);
     }
 }
 
@@ -27,22 +29,30 @@ impl From<RamConfig> for RamModule {
         Self {
             data: init_data_points(c.history_size).into(),
             vis: c.vis,
-            color: c.color,
             config: PhantomData,
         }
     }
 }
 
-pub type RamModule = Module<RamData, RamConfig, SingleView>;
+pub type RamModule = SingleModule<RamConfig>;
 
-impl From<RamConfig> for (usize, Box<[SingleView]>, crate::color::Color) {
+impl From<RamConfig> for (usize, Box<[SingleView]>) {
     fn from(config: RamConfig) -> Self {
         let RamConfig {
-            history_size,
-            vis,
-            color,
-            ..
+            history_size, vis, ..
         } = config;
-        (history_size.into(), vis, color)
+        (history_size.into(), vis)
+    }
+}
+
+impl Configurable for RamModule {
+    type Config = RamConfig;
+
+    fn configure(&mut self, config: impl Into<RamConfig>) {
+        let RamConfig {
+            history_size, vis, ..
+        } = config.into();
+        self.data.configure(history_size);
+        self.vis = vis;
     }
 }

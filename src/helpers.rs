@@ -27,6 +27,10 @@ pub fn collection<'a>(
     }
 }
 
+pub enum SpaceableCollectionWidget {
+    
+}
+
 pub fn base_background(theme: &Theme) -> container::Style {
     container::Style {
         background: Some(iced::Color::from(theme.cosmic().primary.base).into()),
