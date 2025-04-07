@@ -139,22 +139,21 @@ impl Application for SystemMonitorApplet {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickSwap)
                     }
-                    /*
                     ChartConfig::Net(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickNet)
-                    }
-                    ChartConfig::Disk(c) => {
-                        cosmic::iced::time::every(Duration::from_millis(c.update_interval))
-                            .map(|_| Message::TickDisk)
-                    }
-                    ChartConfig::VRAM(_c) => {
-                        // uninplemented
-                        continue;
-                        // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
-                        // .map(|_| Message::TickVRAM)
-                    }
-                    */
+                    } /*
+                      ChartConfig::Disk(c) => {
+                          cosmic::iced::time::every(Duration::from_millis(c.update_interval))
+                              .map(|_| Message::TickDisk)
+                      }
+                      ChartConfig::VRAM(_c) => {
+                          // uninplemented
+                          continue;
+                          // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
+                          // .map(|_| Message::TickVRAM)
+                      }
+                      */
                 }
             };
             subs.push(tick);

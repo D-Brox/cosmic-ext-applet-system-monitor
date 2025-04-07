@@ -1,7 +1,7 @@
+mod net;
 mod ram;
 mod swap;
 
-use crate::color::Color;
 use crate::config::DoubleView;
 use crate::sysmon::bar_chart::PercentageBar;
 use crate::{
@@ -20,11 +20,13 @@ use circular_queue::CircularQueue;
 use plotters::series::{AreaSeries, LineSeries};
 use plotters::style::ShapeStyle;
 
+pub use net::NetModule;
 pub use ram::RamModule;
 pub use swap::SwapModule;
 
 pub type History = CircularQueue<i64>;
 pub type SingleModule<C> = Module<History, Box<[SingleView]>, C>;
+pub type DoubleModule<C> = Module<DoubleData, Box<[DoubleView]>, C>;
 
 pub trait ViewableModule {
     fn view<'a>(
@@ -93,7 +95,10 @@ pub fn init_data_points(size: impl Into<usize>) -> History {
     data_points
 }
 
-impl<D: Borrow<History>> Chart<Message> for (&D, CosmicColor) {
+impl<D> Chart<Message> for (&D, CosmicColor)
+where
+    D: Borrow<History>,
+{
     type State = ();
 
     fn build_chart<DB: plotters::prelude::DrawingBackend>(
@@ -214,12 +219,12 @@ pub struct DoubleData {
     history2: History,
 }
 impl Configurable for DoubleData {
-    type Config = (usize, usize);
+    type Config = usize;
 
     fn configure(&mut self, config: impl Into<Self::Config>) {
-        let (c1, c2) = config.into();
-        self.history1.configure(c1);
-        self.history2.configure(c2);
+        let c = config.into();
+        self.history1.configure(c);
+        self.history2.configure(c);
     }
 }
 
@@ -237,6 +242,7 @@ impl<C> ViewableModule for SingleModule<C> {
         )
     }
 }
+
 impl<C> SingleModule<C> {
     fn view_single(&self, v: &SingleView, context: &applet::Context) -> Element<Message> {
         let theme = &context.theme().unwrap_or_default();
@@ -271,5 +277,61 @@ impl<C> SingleModule<C> {
         .style(|t| style::Container::primary(t.cosmic())) // todo make styling good. try apply rounding in Renderer::fill_quad
         // .style(base_background)
         .apply(Element::new)
+    }
+}
+
+impl<C> ViewableModule for DoubleModule<C> {
+    fn view<'a>(
+        &'a self,
+        context: &'a applet::Context,
+        spacing: impl Into<Pixels>,
+    ) -> Element<'a, Message> {
+        crate::helpers::collection(
+            context,
+            self.vis.iter().map(|v| self.view_single(v, context)),
+            spacing,
+            0.0,
+        )
+    }
+}
+
+impl<C> DoubleModule<C> {
+    fn view_single(&self, v: &DoubleView, context: &applet::Context) -> Element<Message> {
+        let theme = &context.theme().unwrap_or_default();
+        match *v {
+            DoubleView::SuperimposedRunChart {
+                color_up,
+                color_down,
+                aspect_ratio,
+            } => {
+                let Size { width, height } = get_sized_aspect_ratio(context, aspect_ratio);
+                let chart_object = (
+                    &self.data,
+                    color_up.as_cosmic_color(theme),
+                    color_down.as_cosmic_color(theme),
+                );
+
+                plotters_iced::ChartWidget::new(chart_object)
+                    .apply(container)
+                    .width(width)
+                    .height(height)
+            }
+        }
+        .style(|t: &cosmic::Theme| style::Container::primary(t.cosmic())) // todo make styling good. try apply rounding in Renderer::fill_quad
+        // .style(base_background)
+        .apply(Element::new)
+    }
+}
+
+impl Chart<Message> for (&DoubleData, CosmicColor, CosmicColor) {
+    type State = ();
+
+    fn build_chart<DB: plotters::prelude::DrawingBackend>(
+        &self,
+        _state: &Self::State,
+        builder: plotters::prelude::ChartBuilder<DB>,
+    ) {
+        
+        todo!()
     }
 }

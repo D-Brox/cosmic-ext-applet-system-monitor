@@ -19,7 +19,7 @@ clean-vendor:
 clean-dist: clean clean-vendor
 
 # Runs `cargo fmt`
-fmt: 
+fmt:
     cargo fmt
 
 # Runs a clippy check
@@ -32,6 +32,9 @@ check-json: (check '--message-format=json')
 # Run with args
 run *args:
     cargo run {{args}}
+    
+erase-all-configs:
+    rm ~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v*/charts
 
 # Run with debug logs
 run-logs *args:

@@ -1,7 +1,7 @@
 use crate::{
     config::{Ram as RamConfig, SingleView},
     sysmon::{
-        monitor_module::{init_data_points, Module, Refresh},
+        monitor_module::{init_data_points, Refresh},
         SourceCollection,
     },
 };
@@ -27,7 +27,7 @@ impl Refresh for RamModule {
 impl From<RamConfig> for RamModule {
     fn from(c: RamConfig) -> Self {
         Self {
-            data: init_data_points(c.history_size).into(),
+            data: init_data_points(c.history_size),
             vis: c.vis,
             config: PhantomData,
         }

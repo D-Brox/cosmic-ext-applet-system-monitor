@@ -19,7 +19,7 @@ use cosmic::iced::alignment;
 use cosmic::{applet, Element, Theme};
 use monitor_module::Configurable;
 use monitor_module::ViewableModule as _;
-use monitor_module::{RamModule, SwapModule};
+use monitor_module::{NetModule, RamModule, SwapModule};
 use sysinfo::{Disks, Networks, System};
 
 // use crate::sysmon::cpu_chart::CpuData;
@@ -41,7 +41,7 @@ pub struct SystemMonitor {
     // cpu: CpuModule,
     ram: RamModule,
     swap: SwapModule,
-    // net: NetModule,
+    net: NetModule,
     // disk: DiskModule,
 
     // vram: VramModule,
@@ -49,7 +49,7 @@ pub struct SystemMonitor {
 
 impl SystemMonitor {
     pub fn new(config: Config) -> Self {
-        let (mut ram, mut swap) = Default::default();
+        let (mut ram, mut swap, mut net) = Default::default();
         let charts: Box<[_]> = config
             .charts
             .into_iter()
@@ -61,6 +61,10 @@ impl SystemMonitor {
                 ChartConfig::Swap(c) => {
                     swap = Some(c);
                     UsedChart::Swap
+                }
+                ChartConfig::Net(c) => {
+                    net = Some(c);
+                    UsedChart::Net
                 }
             })
             .collect();
@@ -76,7 +80,7 @@ impl SystemMonitor {
             // cpu: None,
             ram: RamModule::from(ram.unwrap_or_default()),
             swap: SwapModule::from(swap.unwrap_or_default()),
-            // net: None,
+            net: NetModule::from(net.unwrap_or_default()),
             // disk: None,
             // vram: None,
         };
@@ -128,6 +132,10 @@ impl SystemMonitor {
                     self.swap.configure(c);
                     UsedChart::Swap
                 }
+                ChartConfig::Net(c) => {
+                    self.net.configure(c);
+                    UsedChart::Net
+                }
             })
             .collect();
     }
@@ -140,7 +148,7 @@ impl SystemMonitor {
             vec.push(match item {
                 UsedChart::Ram => self.ram.view(context, spacing),
                 UsedChart::Swap => self.swap.view(context, spacing),
-                _ => unimplemented!(),
+                UsedChart::Net => self.net.view(context, spacing),
             });
         }
         if vec.is_empty() {
@@ -157,10 +165,10 @@ impl SystemMonitor {
 
 #[derive(Clone)]
 pub enum UsedChart {
-    Cpu,
+    // Cpu,
     Ram,
     Swap,
     Net,
-    Disk,
+    // Disk,
     // Vram,
 }

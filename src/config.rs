@@ -35,31 +35,31 @@ impl Default for Config {
                 */
                 ChartConfig::Ram(Ram::default()),
                 ChartConfig::Swap(Swap::default()),
-                /*
-                ChartConfig::Net(Network {
-                    update_interval: 1000,
-                    color_up: Color::accent_yellow,
-                    color_down: Color::accent_red,
-                    aspect_ratio: 1.5,
-                    samples: 60,
-                    visualization: vec![DoubleChartView::SuperimposedRunChart],
-                }),
-                ChartConfig::Disk(Disk {
-                    update_interval: 2000,
-                    color_read: Color::accent_orange,
-                    color_write: Color::accent_pink,
-                    aspect_ratio: 1.5,
-                    samples: 30,
-                    visualization: vec![DoubleChartView::SuperimposedRunChart],
-                }),
-                ChartConfig::VRAM(Generic {
-                    update_interval: 2000,
-                    color: Color::accent_indigo,
-                    aspect_ratio: 1.5,
-                    samples: 30,
-                    visualization: vec![ChartView::RunChart],
-                }),
-                */
+                ChartConfig::Net(Network::default()), /*
+                                                      ChartConfig::Net(Network {
+                                                          update_interval: 1000,
+                                                          color_up: Color::accent_yellow,
+                                                          color_down: Color::accent_red,
+                                                          aspect_ratio: 1.5,
+                                                          samples: 60,
+                                                          visualization: vec![DoubleChartView::SuperimposedRunChart],
+                                                      }),
+                                                      ChartConfig::Disk(Disk {
+                                                          update_interval: 2000,
+                                                          color_read: Color::accent_orange,
+                                                          color_write: Color::accent_pink,
+                                                          aspect_ratio: 1.5,
+                                                          samples: 30,
+                                                          visualization: vec![DoubleChartView::SuperimposedRunChart],
+                                                      }),
+                                                      ChartConfig::VRAM(Generic {
+                                                          update_interval: 2000,
+                                                          color: Color::accent_indigo,
+                                                          aspect_ratio: 1.5,
+                                                          samples: 30,
+                                                          visualization: vec![ChartView::RunChart],
+                                                      }),
+                                                      */
             ],
         }
     }
@@ -78,6 +78,7 @@ pub struct Cpu {
 pub enum ChartConfig {
     Ram(Ram),
     Swap(Swap),
+    Net(Network),
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -100,18 +101,9 @@ pub struct Network {
     pub update_interval: u64,
 
     /// size of the history kept and shown in the run chart
-    pub samples: usize,
+    pub history_size: usize,
 
-    /// The `cosmic::pallette` color to represent upload rate
-    pub color_up: Color,
-
-    /// The `cosmic::pallette` color to represent download rate
-    pub color_down: Color,
-
-    /// The **ratio** of width to height of the graph.
-    pub aspect_ratio: f32,
-
-    pub visualization: Vec<DoubleView>,
+    pub vis: Box<[DoubleView]>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -161,7 +153,14 @@ pub enum SingleView {
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum DoubleView {
-    SuperimposedRunChart { aspect_ratio: f32 },
+    SuperimposedRunChart {
+        /// The `cosmic::pallette` color to represent upload rate
+        color_up: Color,
+        /// The `cosmic::pallette` color to represent download rate
+        color_down: Color,
+        /// The **ratio** of width to height of the graph.
+        aspect_ratio: f32,
+    },
     // SeperateRunCharts,
 }
 
@@ -212,6 +211,21 @@ impl Default for Swap {
                     color,
                 },
             ]
+            .into(),
+        }
+    }
+}
+
+impl Default for Network {
+    fn default() -> Self {
+        Network {
+            update_interval: 1000,
+            history_size: 60,
+            vis: [DoubleView::SuperimposedRunChart {
+                color_up: Color::accent_yellow,
+                color_down: Color::accent_red,
+                aspect_ratio: 1.5,
+            }]
             .into(),
         }
     }

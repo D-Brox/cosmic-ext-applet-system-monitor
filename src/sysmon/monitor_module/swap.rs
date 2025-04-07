@@ -1,14 +1,14 @@
 use crate::{
-    config::{SingleView, Swap as SwapConfig},
+    config::Swap as SwapConfig,
     sysmon::{
-        monitor_module::{init_data_points, Module, Refresh},
+        monitor_module::{init_data_points, Refresh},
         SourceCollection,
     },
 };
 use std::marker::PhantomData;
 use sysinfo::MemoryRefreshKind;
 
-use super::{Configurable, History, SingleModule};
+use super::{Configurable, SingleModule};
 
 pub type SwapModule = SingleModule<SwapConfig>;
 
