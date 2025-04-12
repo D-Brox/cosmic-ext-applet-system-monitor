@@ -1,10 +1,10 @@
+use std::borrow::Borrow;
+
 use cosmic::cosmic_theme::palette::rgb::Rgb;
 use cosmic::cosmic_theme::palette::Alpha;
 use cosmic::theme::CosmicColor;
 use cosmic::Theme;
-// use palette::rgb::Rgb;
-// use palette::Alpha;
-use plotters::style::{RGBAColor, RGBColor};
+use plotters::style::RGBAColor;
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -64,13 +64,16 @@ pub fn plotters_color(cc: CosmicColor) -> RGBAColor {
 
 impl Color {
     // todo remove
-    pub fn as_rgb_color(&self, theme: &Theme) -> RGBColor {
-        let rgb = self.as_cosmic_color(theme).color.into_format::<u8>();
-        RGBColor(rgb.red, rgb.green, rgb.blue)
+    pub fn as_rgba_color(&self, theme: impl Borrow<Theme>) -> RGBAColor {
+        let theme = theme.borrow();
+        let cosmic_color = self.as_cosmic_color(theme);
+
+        let rgb = cosmic_color.color.into_format::<u8>();
+        RGBAColor(rgb.red, rgb.green, rgb.blue, cosmic_color.alpha as f64)
     }
 
-    pub fn as_cosmic_color(&self, theme: &Theme) -> CosmicColor {
-        let cosmic_theme = &theme.cosmic();
+    pub fn as_cosmic_color(&self, theme: impl Borrow<Theme>) -> CosmicColor {
+        let cosmic_theme = theme.borrow().cosmic();
         let palette = &cosmic_theme.palette;
         match self {
             Color::gray_1 => palette.gray_1,

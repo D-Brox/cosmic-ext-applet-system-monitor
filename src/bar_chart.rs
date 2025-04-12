@@ -11,100 +11,6 @@ use cosmic::{
 };
 use renderer::Style;
 
-#[derive(Clone, Copy)]
-pub enum SortMethod {
-    Descending,
-    #[allow(dead_code)]
-    Ascending,
-}
-
-#[derive(Clone)]
-pub enum Orientation {
-    PointingUp,
-    #[allow(dead_code)]
-    PointingRight, // todo more
-}
-/*impl Orientation {
-    pub(crate) fn default_for(anchor: PanelAnchor) -> Orientation {
-        match anchor {
-            PanelAnchor::Left => Orientation::PointingRight,
-            PanelAnchor::Right => Orientation::PointingRight,
-            PanelAnchor::Top | PanelAnchor::Bottom => Orientation::PointingUp,
-        }
-    }
-}*/
-
-/*#[derive(Clone)]
-pub struct BarConfig {
-    pub orientation: Orientation, // todo replace with ~core.applet.Anchor~
-    /// The length in the direction the bar varies it's length
-    pub full_length: Length,
-    pub width_fraction: f32,
-    pub spacing: f32,
-    pub sort_method: Option<SortMethod>,
-}
-
-impl Default for BarConfig {
-    fn default() -> Self {
-        Self {
-            orientation: Orientation::PointingUp,
-            full_length: Length::Fill,
-            width_fraction: 0.25,
-            spacing: 1.0,
-            sort_method: Some(SortMethod::Descending),
-        }
-    }
-}
-*/
-// pub fn percentage_histogram<'a>(
-//     mut values: Box<[f32]>,
-//     config: BarConfig,
-//     color: CosmicColor,
-// ) -> Container<'a, Message, Theme> {
-//     let full_length = if let Length::Fixed(config_length) = config.full_length {
-//         config_length
-//     } else {
-//         50.0
-//     };
-//
-//     let static_dimension = full_length * config.width_fraction;
-//
-//     if let Some(sort_method) = config.sort_method {
-//         match sort_method {
-//             SortMethod::Descending => values.sort_by(|a, b| b.partial_cmp(a).unwrap()),
-//             SortMethod::Ascending => values.sort_by(|a, b| a.partial_cmp(b).unwrap()),
-//         }
-//     }
-//
-//     let inner: Element<Message> = match config.orientation {
-//         Orientation::PointingUp => Row::with_children(values.iter().map(|&val| {
-//             VerticalPercentageBar::new(val, color)
-//                 .apply(container)
-//                 .width(static_dimension)
-//                 .apply(Element::new)
-//         }))
-//             .height(full_length)
-//             .align_y(Vertical::Bottom)
-//             .spacing(config.spacing)
-//             .into(),
-//         Orientation::PointingRight => Column::with_children(values.iter().map(|&val| {
-//             HorizontalPercentageBar::new(val, color)
-//                 .apply(container)
-//                 .height(static_dimension)
-//                 .apply(Element::new)
-//         }))
-//             .width(full_length)
-//             .align_x(Horizontal::Left)
-//             .spacing(config.spacing)
-//             .into(),
-//     };
-//
-//     let outer = cosmic::widget::container(inner).style(|_| container::Style {
-//         ..container::Style::default()
-//     });
-//     outer
-// }
-
 pub enum PercentageBar {
     Vertical(VerticalPercentageBar),
     Horizontal(HorizontalPercentageBar),
@@ -118,8 +24,6 @@ impl PercentageBar {
         }
     }
 }
-
-const HELLO: &str = "Hello, world!";
 
 impl From<PercentageBar> for Element<'_, Message> {
     fn from(value: PercentageBar) -> Self {

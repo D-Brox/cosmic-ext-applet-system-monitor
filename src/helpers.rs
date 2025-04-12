@@ -1,7 +1,7 @@
-use crate::applet::Message;
+use crate::applet::{History, Message};
 use cosmic::{
-    applet, iced,
-    iced::{Alignment::Center, Length, Length::Fixed, Size},
+    applet,
+    iced::{self, Alignment::Center, Size},
     widget::{container, Column, Row},
     Element, Theme,
 };
@@ -27,10 +27,6 @@ pub fn collection<'a>(
     }
 }
 
-pub enum SpaceableCollectionWidget {
-    
-}
-
 pub fn base_background(theme: &Theme) -> container::Style {
     container::Style {
         background: Some(iced::Color::from(theme.cosmic().primary.base).into()),
@@ -38,18 +34,29 @@ pub fn base_background(theme: &Theme) -> container::Style {
     }
 }
 
-pub fn get_sized_aspect_ratio(context: &applet::Context, aspect_ratio: f32) -> Size<Length> {
+pub fn get_sized_aspect_ratio(context: &applet::Context, aspect_ratio: f32) -> Size {
     let (suggested_width, suggested_height) = context.suggested_size(false);
 
     if context.is_horizontal() {
         Size {
-            width: Fixed(suggested_height as f32 * aspect_ratio),
-            height: Fixed(suggested_height as f32),
+            width: suggested_height as f32 * aspect_ratio,
+            height: suggested_height as f32,
         }
     } else {
         Size {
-            width: Fixed(suggested_width as f32),
-            height: Fixed(suggested_width as f32 * aspect_ratio),
+            width: suggested_width as f32,
+            height: suggested_width as f32 * aspect_ratio,
         }
     }
+}
+
+pub fn init_history_with_default<T: Default>(size: impl Into<usize>) -> History<T> {
+    let size = size.into();
+    let mut history = History::<T>::with_capacity(size);
+
+    for _ in 0..size {
+        history.push(Default::default());
+    }
+
+    history
 }

@@ -5,7 +5,9 @@ mod color;
 mod config;
 mod helpers;
 mod localization;
-mod sysmon;
+// mod sysmon;
+mod bar_chart;
+mod run_chart;
 
 use applet::{Flags, SystemMonitorApplet, ID};
 use config::{Config, CONFIG_VERSION};

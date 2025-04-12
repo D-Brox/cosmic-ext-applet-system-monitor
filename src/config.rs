@@ -15,12 +15,20 @@ pub const CONFIG_VERSION: u64 = 2;
 #[derive(Clone, CosmicConfigEntry, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
     // todo radius goes here? should it be different for each view-type?
+    pub padding: PaddingOption,
     pub charts: Vec<ChartConfig>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum PaddingOption {
+    Suggested,
+    Custom(f32),
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
+            padding: PaddingOption::Suggested,
             charts: vec![
                 /*
                 ChartConfig::CPU(Cpu {
@@ -35,31 +43,9 @@ impl Default for Config {
                 */
                 ChartConfig::Ram(Ram::default()),
                 ChartConfig::Swap(Swap::default()),
-                ChartConfig::Net(Network::default()), /*
-                                                      ChartConfig::Net(Network {
-                                                          update_interval: 1000,
-                                                          color_up: Color::accent_yellow,
-                                                          color_down: Color::accent_red,
-                                                          aspect_ratio: 1.5,
-                                                          samples: 60,
-                                                          visualization: vec![DoubleChartView::SuperimposedRunChart],
-                                                      }),
-                                                      ChartConfig::Disk(Disk {
-                                                          update_interval: 2000,
-                                                          color_read: Color::accent_orange,
-                                                          color_write: Color::accent_pink,
-                                                          aspect_ratio: 1.5,
-                                                          samples: 30,
-                                                          visualization: vec![DoubleChartView::SuperimposedRunChart],
-                                                      }),
-                                                      ChartConfig::VRAM(Generic {
-                                                          update_interval: 2000,
-                                                          color: Color::accent_indigo,
-                                                          aspect_ratio: 1.5,
-                                                          samples: 30,
-                                                          visualization: vec![ChartView::RunChart],
-                                                      }),
-                                                      */
+                ChartConfig::Net(Network::default()),
+                ChartConfig::Disk(Disk::default()),
+                // ChartConfig::VRAM(VRAM::default()),
             ],
         }
     }
@@ -79,6 +65,7 @@ pub enum ChartConfig {
     Ram(Ram),
     Swap(Swap),
     Net(Network),
+    Disk(Disk),
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -112,18 +99,12 @@ pub struct Disk {
     pub update_interval: u64,
 
     /// size of the history kept and shown in the run chart
-    pub samples: usize,
-
-    /// The `cosmic::pallette` color to represent disk read rate
-    pub color_read: Color,
-
-    /// The `cosmic::pallette` color to represent disk write rate
-    pub color_write: Color,
+    pub history_size: usize,
 
     /// The **ratio** of width to height of the graph.
     pub aspect_ratio: f32,
 
-    pub visualization: Vec<DoubleView>,
+    pub vis: Vec<DoubleView>,
 }
 
 pub fn config_subscription() -> Subscription<Message> {
@@ -155,10 +136,18 @@ pub enum SingleView {
 pub enum DoubleView {
     SuperimposedRunChart {
         /// The `cosmic::pallette` color to represent upload rate
-        color_up: Color,
+        color_send: Color,
         /// The `cosmic::pallette` color to represent download rate
-        color_down: Color,
+        color_receive: Color,
         /// The **ratio** of width to height of the graph.
+        aspect_ratio: f32,
+    },
+    SingleRunA {
+        color: Color,
+        aspect_ratio: f32,
+    },
+    SingleRunB {
+        color: Color,
         aspect_ratio: f32,
     },
     // SeperateRunCharts,
@@ -222,8 +211,24 @@ impl Default for Network {
             update_interval: 1000,
             history_size: 60,
             vis: [DoubleView::SuperimposedRunChart {
-                color_up: Color::accent_yellow,
-                color_down: Color::accent_red,
+                color_send: Color::accent_yellow,
+                color_receive: Color::accent_red,
+                aspect_ratio: 1.5,
+            }]
+            .into(),
+        }
+    }
+}
+
+impl Default for Disk {
+    fn default() -> Self {
+        Disk {
+            update_interval: 2000,
+            history_size: 30,
+            aspect_ratio: 1.5,
+            vis: [DoubleView::SuperimposedRunChart {
+                color_send: Color::accent_orange,
+                color_receive: Color::accent_pink,
                 aspect_ratio: 1.5,
             }]
             .into(),
