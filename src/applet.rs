@@ -1,22 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::helpers::{
-    base_background, get_sized_aspect_ratio, init_history_with_default, panel_collection,
-};
-use crate::run_chart::{HistoryChart, SuperimposedHistoryChart};
-// use crate::sysmon::bar_chart::VerticalPercentageBar;
-// use crate::sysmon::SystemMonitor;
+
 use circular_queue::CircularQueue;
-use cosmic::app::{Core, Task};
-use cosmic::iced_core::padding;
-use cosmic::widget::container;
+use cosmic::{
+    app::{Core, Task},
+    cosmic_config,
+    iced::{Padding, Size, Subscription},
+    iced_core::padding,
+    iced_winit::winit::dpi::Pixel,
+    widget::container,
+    Application, Apply as _, Element, Theme,
+};
 use plotters_iced::ChartWidget;
 use std::time::Duration;
 use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 
-use crate::bar_chart::{SortMethod, VerticalPercentageBar};
-use crate::config::{config_subscription, ChartConfig, Config, CpuView, DoubleView, SingleView};
-use cosmic::iced::{Size, Subscription};
-use cosmic::{cosmic_config, Application, Apply as _, Element, Theme};
+use crate::{
+    bar_chart::{SortMethod, VerticalPercentageBar},
+    config::{config_subscription, ComponentConfig, Config, CpuView, DoubleView, SingleView},
+    helpers::{
+        base_background, get_sized_aspect_ratio, init_history_with_default, panel_collection,
+    },
+    run_chart::{HistoryChart, SuperimposedHistoryChart},
+};
 
 pub type History<T = u64> = CircularQueue<T>;
 
@@ -73,7 +78,32 @@ impl SystemMonitorApplet {
     }
 
     fn size_aspect_ratio(&self, aspect_ratio: f32) -> Size {
-        get_sized_aspect_ratio(&self.core.applet, aspect_ratio)
+        let (bounds_width, bounds_height) = self.core.applet.suggested_window_size();
+        let padding = self.padding();
+
+        if self.core.applet.is_horizontal() {
+            let height = bounds_height.get() as f32 - padding.vertical();
+            Size {
+                width: height * aspect_ratio,
+                height,
+            }
+        } else {
+            let width = bounds_width.get() as f32 - padding.horizontal();
+            Size {
+                width,
+                height: width * aspect_ratio,
+            }
+        }
+    }
+
+    fn padding(&self) -> Padding {
+        match self.config.padding {
+            crate::config::PaddingOption::Suggested => {
+                self.core.applet.suggested_padding(false).into()
+            }
+            crate::config::PaddingOption::Custom(p) => p,
+        }
+        .into()
     }
 }
 
@@ -96,13 +126,13 @@ impl Application for SystemMonitorApplet {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let (mut cpu, mut ram, mut swap, mut net, mut disk) = Default::default();
-        for chart_config in &flags.config.charts {
+        for chart_config in &flags.config.components {
             match chart_config {
-                ChartConfig::Cpu(c) => cpu = Some(c.history_size),
-                ChartConfig::Ram(c) => ram = Some(c.history_size),
-                ChartConfig::Swap(c) => swap = Some(c.history_size),
-                ChartConfig::Net(c) => net = Some(c.history_size),
-                ChartConfig::Disk(c) => disk = Some(c.history_size),
+                ComponentConfig::Cpu(c) => cpu = Some(c.history_size),
+                ComponentConfig::Ram(c) => ram = Some(c.history_size),
+                ComponentConfig::Swap(c) => swap = Some(c.history_size),
+                ComponentConfig::Net(c) => net = Some(c.history_size),
+                ComponentConfig::Disk(c) => disk = Some(c.history_size),
             }
         }
 
@@ -129,9 +159,9 @@ impl Application for SystemMonitorApplet {
 
     fn view(&self) -> Element<Message> {
         const INTRA_ITEM_SPACING: u16 = 5;
-        let item_iter = self.config.charts.iter().map(|module| {
+        let item_iter = self.config.components.iter().map(|module| {
             match module {
-                ChartConfig::Cpu(c) => c
+                ComponentConfig::Cpu(c) => c
                     .vis
                     .iter()
                     .map(|v| match v {
@@ -204,7 +234,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect::<Vec<_>>(),
-                ChartConfig::Ram(c) => c
+                ComponentConfig::Ram(c) => c
                     .vis
                     .iter()
                     .map(|v| match v {
@@ -246,7 +276,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect(),
-                ChartConfig::Swap(c) => c
+                ComponentConfig::Swap(c) => c
                     .vis
                     .iter()
                     .map(|v| match v {
@@ -283,7 +313,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect(),
-                ChartConfig::Net(c) => c
+                ComponentConfig::Net(c) => c
                     .vis
                     .iter()
                     .map(|v| {
@@ -356,7 +386,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect(),
-                ChartConfig::Disk(c) => c
+                ComponentConfig::Disk(c) => c
                     .vis
                     .iter()
                     .map(|v| match v {
@@ -428,11 +458,21 @@ impl Application for SystemMonitorApplet {
                     .collect(),
             }
             .apply(|elements| {
-                panel_collection(&self.core.applet, elements, INTRA_ITEM_SPACING, 0.0)
+                panel_collection(
+                    &self.core.applet,
+                    elements,
+                    self.config.spacing_within_component,
+                    0.0,
+                )
             })
         });
 
-        let items = panel_collection(&self.core.applet, item_iter, 30, 0.0);
+        let items = panel_collection(
+            &self.core.applet,
+            item_iter,
+            self.config.spacing_between_components,
+            self.padding(),
+        );
 
         self.core.applet.autosize_window(items).into()
     }
@@ -505,26 +545,26 @@ impl Application for SystemMonitorApplet {
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let mut subs = Vec::new();
-        for chart in &self.config.charts {
+        for chart in &self.config.components {
             let tick = {
                 match chart {
-                    ChartConfig::Cpu(c) => {
+                    ComponentConfig::Cpu(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickCpu)
                     }
-                    ChartConfig::Ram(c) => {
+                    ComponentConfig::Ram(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickRam)
                     }
-                    ChartConfig::Swap(c) => {
+                    ComponentConfig::Swap(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickSwap)
                     }
-                    ChartConfig::Net(c) => {
+                    ComponentConfig::Net(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickNet)
                     }
-                    ChartConfig::Disk(c) => {
+                    ComponentConfig::Disk(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickDisk)
                     } /*

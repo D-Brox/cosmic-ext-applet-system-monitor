@@ -1,7 +1,5 @@
 use std::borrow::Borrow;
 
-use cosmic::cosmic_theme::palette::rgb::Rgb;
-use cosmic::cosmic_theme::palette::Alpha;
 use cosmic::theme::CosmicColor;
 use cosmic::Theme;
 use plotters::style::RGBAColor;

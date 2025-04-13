@@ -1,7 +1,8 @@
 use crate::applet::{History, Message};
 use cosmic::{
     applet,
-    iced::{self, Alignment::Center, Size},
+    iced::{self, Alignment::Center, Padding, Size},
+    iced_core::Pixels,
     widget::{container, Column, Row},
     Element, Theme,
 };
@@ -9,8 +10,8 @@ use cosmic::{
 pub fn panel_collection<'a>(
     context: &'_ cosmic::applet::Context,
     elements: impl IntoIterator<Item = Element<'a, Message>>,
-    spacing: impl Into<cosmic::iced_core::Pixels>,
-    padding: f32,
+    spacing: impl Into<Pixels>,
+    padding: impl Into<Padding>,
 ) -> Element<'a, Message> {
     if context.is_horizontal() {
         Row::with_children(elements)

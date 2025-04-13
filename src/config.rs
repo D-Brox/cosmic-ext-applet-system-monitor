@@ -17,7 +17,9 @@ pub const CONFIG_VERSION: u64 = 2;
 pub struct Config {
     // todo radius goes here? should it be different for each view-type?
     pub padding: PaddingOption,
-    pub charts: Vec<ChartConfig>,
+    pub components: Box<[ComponentConfig]>,
+    pub spacing_between_components: f32,
+    pub spacing_within_component: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -26,32 +28,19 @@ pub enum PaddingOption {
     Custom(f32),
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            padding: PaddingOption::Suggested,
-            charts: vec![
-                ChartConfig::Cpu(Cpu::default()),
-                ChartConfig::Ram(Ram::default()),
-                ChartConfig::Swap(Swap::default()),
-                ChartConfig::Net(Network::default()),
-                ChartConfig::Disk(Disk::default()),
-                // ChartConfig::VRAM(VRAM::default()),
-            ],
-        }
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Cpu {
+    /// amount of time (in milliseconds) between new data
     pub update_interval: u64,
+
+    /// size of the history kept and shown in the run chart
     pub history_size: usize,
     pub vis: Box<[CpuView]>,
 }
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub enum ChartConfig {
+pub enum ComponentConfig {
     Cpu(Cpu),
     Ram(Ram),
     Swap(Swap),
@@ -61,15 +50,21 @@ pub enum ChartConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Ram {
+    /// amount of time (in milliseconds) between new data
     pub update_interval: u64,
-    pub history_size: u8,
+
+    /// size of the history kept and shown in the run chart
+    pub history_size: usize,
     pub vis: Box<[SingleView]>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Swap {
+    /// amount of time (in milliseconds) between new data
     pub update_interval: u64,
-    pub history_size: u8,
+
+    /// size of the history kept and shown in the run chart
+    pub history_size: usize,
     pub vis: Box<[SingleView]>,
 }
 
@@ -80,7 +75,6 @@ pub struct Network {
 
     /// size of the history kept and shown in the run chart
     pub history_size: usize,
-
     pub vis: Box<[DoubleView]>,
 }
 
@@ -91,10 +85,6 @@ pub struct Disk {
 
     /// size of the history kept and shown in the run chart
     pub history_size: usize,
-
-    /// The **ratio** of width to height of the graph.
-    pub aspect_ratio: f32,
-
     pub vis: Vec<DoubleView>,
 }
 
@@ -157,6 +147,25 @@ pub enum CpuView {
         aspect_ratio: f32,
         color: Color,
     },
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            padding: PaddingOption::Suggested,
+            spacing_between_components: 15.0,
+            spacing_within_component: 5.0,
+            components: [
+                ComponentConfig::Cpu(Cpu::default()),
+                ComponentConfig::Ram(Ram::default()),
+                ComponentConfig::Swap(Swap::default()),
+                ComponentConfig::Net(Network::default()),
+                ComponentConfig::Disk(Disk::default()),
+                // ChartConfig::VRAM(VRAM::default()),
+            ]
+            .into(),
+        }
+    }
 }
 
 impl Default for Cpu {
@@ -252,7 +261,6 @@ impl Default for Disk {
         Disk {
             update_interval: 2000,
             history_size: 30,
-            aspect_ratio: 1.5,
             vis: [DoubleView::SuperimposedRunChart {
                 color_out: Color::accent_orange,
                 color_in: Color::accent_pink,
