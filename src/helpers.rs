@@ -6,7 +6,7 @@ use cosmic::{
     Element, Theme,
 };
 
-pub fn collection<'a>(
+pub fn panel_collection<'a>(
     context: &'_ cosmic::applet::Context,
     elements: impl IntoIterator<Item = Element<'a, Message>>,
     spacing: impl Into<cosmic::iced_core::Pixels>,

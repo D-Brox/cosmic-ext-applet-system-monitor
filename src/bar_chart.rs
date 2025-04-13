@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::{applet::Message, color::Color};
 use cosmic::{
     cosmic_theme::palette::WithAlpha,
@@ -10,6 +12,19 @@ use cosmic::{
     Element, Renderer, Theme,
 };
 use renderer::Style;
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum SortMethod {
+    Descending,
+}
+impl SortMethod {
+    pub fn method(&self) -> impl FnMut(&f32, &f32) -> Ordering {
+        match self {
+            SortMethod::Descending => |a: &f32, b: &f32| b.partial_cmp(a).unwrap_or(Ordering::Equal),
+        }
+    }
+}
 
 pub enum PercentageBar {
     Vertical(VerticalPercentageBar),
@@ -88,6 +103,11 @@ impl<'a> VerticalPercentageBar {
             percentage: value.clamp(0.0, 100.0),
             color,
         }
+    }
+
+    pub fn from_pair<T: Into<f32>>(max: T, current: T, color: Color) -> Self {
+        let value = current.into() / max.into() * 100.0;
+        Self::new(value, color)
     }
 }
 

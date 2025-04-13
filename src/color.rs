@@ -51,17 +51,6 @@ pub enum Color {
     CosmicColor(CosmicColor),
 }
 
-pub fn plotters_color(cc: CosmicColor) -> RGBAColor {
-    let Alpha {
-        color: Rgb {
-            red, green, blue, ..
-        },
-        alpha,
-    } = cc.into_format::<u8, f64>();
-
-    RGBAColor(red, green, blue, alpha)
-}
-
 impl Color {
     // todo remove
     pub fn as_rgba_color(&self, theme: impl Borrow<Theme>) -> RGBAColor {

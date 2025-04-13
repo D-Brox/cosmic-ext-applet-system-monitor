@@ -14,17 +14,11 @@ pub struct HistoryChart<'a, T = u64> {
     pub color: RGBAColor,
 }
 
-impl<'a, T> HistoryChart<'a, T>
-where
-    T: Ord + Default,
-{
-    pub fn auto_max(history: &'a History<T>, color: RGBAColor) -> HistoryChart<'a, T>
-    where
-        T: Clone,
-    {
+impl<'a> HistoryChart<'a, u64> {
+    pub fn auto_max(history: &'a History, color: RGBAColor) -> HistoryChart<'a> {
         HistoryChart {
             history,
-            max: history.iter().max().map_or(T::default(), |t| t.clone()),
+            max: *history.iter().max().unwrap_or(&0),
             color,
         }
     }
@@ -45,6 +39,31 @@ impl Chart<Message> for HistoryChart<'_> {
 
         chart
             .draw_series(AreaSeries::new(iter.clone(), 0, self.color.mix(0.5)))
+            .expect("Error: failed to draw data series");
+        chart
+            .draw_series(LineSeries::new(
+                iter,
+                ShapeStyle::from(self.color).stroke_width(1),
+            ))
+            .expect("Error: failed to draw data series");
+    }
+}
+impl Chart<Message> for HistoryChart<'_, f32> {
+    type State = ();
+
+    fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, mut builder: ChartBuilder<DB>) {
+        let mut chart = builder
+            .build_cartesian_2d(0..self.history.len() as u64, 0.0..self.max)
+            .expect("Error: failed to build chart");
+
+        // fill background moved to the ChartWidget that contains this chart
+
+        let iter = (0..self.history.len() as u64)
+            .zip(self.history.asc_iter())
+            .map(|(x, y)| (x, *y));
+
+        chart
+            .draw_series(AreaSeries::new(iter.clone(), 0.0, self.color.mix(0.5)))
             .expect("Error: failed to draw data series");
         chart
             .draw_series(LineSeries::new(

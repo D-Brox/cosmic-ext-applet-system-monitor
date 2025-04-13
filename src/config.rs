@@ -2,6 +2,7 @@
 
 use crate::{
     applet::{Message, ID},
+    bar_chart::SortMethod,
     color::Color,
 };
 use cosmic::{
@@ -30,17 +31,7 @@ impl Default for Config {
         Self {
             padding: PaddingOption::Suggested,
             charts: vec![
-                /*
-                ChartConfig::CPU(Cpu {
-                    update_interval: 1000,
-                    color: Color::accent_blue,
-                    samples: 60,
-                    visualization: vec![
-                        CpuView::GlobalUsageRunChart,
-                        CpuView::PerCoreUsageHistogram,
-                    ],
-                }),
-                */
+                ChartConfig::Cpu(Cpu::default()),
                 ChartConfig::Ram(Ram::default()),
                 ChartConfig::Swap(Swap::default()),
                 ChartConfig::Net(Network::default()),
@@ -54,14 +45,14 @@ impl Default for Config {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Cpu {
     pub update_interval: u64,
-    pub samples: usize,
-    pub color: Color,
-    pub visualization: Vec<CpuView>,
+    pub history_size: usize,
+    pub vis: Box<[CpuView]>,
 }
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ChartConfig {
+    Cpu(Cpu),
     Ram(Ram),
     Swap(Swap),
     Net(Network),
@@ -133,31 +124,67 @@ pub enum SingleView {
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
+/// Typically used for input-output pair
 pub enum DoubleView {
     SuperimposedRunChart {
-        /// The `cosmic::pallette` color to represent upload rate
-        color_send: Color,
-        /// The `cosmic::pallette` color to represent download rate
-        color_receive: Color,
+        /// The `cosmic::pallette` color to represent the relevant input (e.g. input = disk read rate, net download rate)
+        color_in: Color,
+        /// The `cosmic::pallette` color to represent the relevant output (e.g. output = disk write rate, net upload rate)
+        color_out: Color,
         /// The **ratio** of width to height of the graph.
         aspect_ratio: f32,
     },
-    SingleRunA {
-        color: Color,
-        aspect_ratio: f32,
-    },
-    SingleRunB {
-        color: Color,
-        aspect_ratio: f32,
-    },
+    /// If this is a view for some IO, A is for the system input (e.g. input = disk read rate, net download rate)
+    SingleRunA { color: Color, aspect_ratio: f32 },
+    /// If IO, B is the system output (e.g. output = disk write rate, net upload rate)
+    SingleRunB { color: Color, aspect_ratio: f32 },
     // SeperateRunCharts,
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CpuView {
-    GlobalUsageRunChart,
-    PerCoreUsageHistogram,
-    GlobalUsageBarChart,
+    GlobalUsageRunChart {
+        aspect_ratio: f32,
+        color: Color,
+    },
+    PerCoreUsageHistogram {
+        per_core_aspect_ratio: f32,
+        color: Color,
+        spacing: f32,
+        sorting: Option<SortMethod>,
+    },
+    GlobalUsageBarChart {
+        aspect_ratio: f32,
+        color: Color,
+    },
+}
+
+impl Default for Cpu {
+    fn default() -> Self {
+        let color = Color::accent_blue;
+
+        Cpu {
+            update_interval: 1000,
+            history_size: 60,
+            vis: [
+                CpuView::GlobalUsageRunChart {
+                    aspect_ratio: 3.0,
+                    color,
+                },
+                CpuView::PerCoreUsageHistogram {
+                    per_core_aspect_ratio: 0.25,
+                    color,
+                    spacing: 3.0,
+                    sorting: Some(SortMethod::Descending),
+                },
+                CpuView::GlobalUsageBarChart {
+                    aspect_ratio: 0.5,
+                    color,
+                },
+            ]
+            .into(),
+        }
+    }
 }
 
 impl Default for Ram {
@@ -211,8 +238,8 @@ impl Default for Network {
             update_interval: 1000,
             history_size: 60,
             vis: [DoubleView::SuperimposedRunChart {
-                color_send: Color::accent_yellow,
-                color_receive: Color::accent_red,
+                color_out: Color::accent_yellow,
+                color_in: Color::accent_red,
                 aspect_ratio: 1.5,
             }]
             .into(),
@@ -227,8 +254,8 @@ impl Default for Disk {
             history_size: 30,
             aspect_ratio: 1.5,
             vis: [DoubleView::SuperimposedRunChart {
-                color_send: Color::accent_orange,
-                color_receive: Color::accent_pink,
+                color_out: Color::accent_orange,
+                color_in: Color::accent_pink,
                 aspect_ratio: 1.5,
             }]
             .into(),

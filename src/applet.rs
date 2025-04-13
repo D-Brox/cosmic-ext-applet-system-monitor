@@ -1,23 +1,20 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::helpers::{
-    base_background, collection, get_sized_aspect_ratio, init_history_with_default,
+    base_background, get_sized_aspect_ratio, init_history_with_default, panel_collection,
 };
 use crate::run_chart::{HistoryChart, SuperimposedHistoryChart};
 // use crate::sysmon::bar_chart::VerticalPercentageBar;
-// SPDX-License-Identifier: GPL-3.0-only
 // use crate::sysmon::SystemMonitor;
 use circular_queue::CircularQueue;
 use cosmic::app::{Core, Task};
-use cosmic::iced::Length::Fixed;
 use cosmic::iced_core::padding;
-// use cosmic::cosmic_theme::palette::named::WHITE;
-// use cosmic::widget::aspect_ratio::aspect_ratio_container;
 use cosmic::widget::container;
 use plotters_iced::ChartWidget;
 use std::time::Duration;
-use sysinfo::{Disk, Disks, MemoryRefreshKind, Networks, System};
+use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 
-use crate::bar_chart::VerticalPercentageBar;
-use crate::config::{config_subscription, ChartConfig, Config, DoubleView, SingleView};
+use crate::bar_chart::{SortMethod, VerticalPercentageBar};
+use crate::config::{config_subscription, ChartConfig, Config, CpuView, DoubleView, SingleView};
 use cosmic::iced::{Size, Subscription};
 use cosmic::{cosmic_config, Application, Apply as _, Element, Theme};
 
@@ -35,16 +32,18 @@ pub struct SystemMonitorApplet {
     nets: Networks,
     disks: Disks,
     // gpus: Gpus,
-    /// global usage usage, range [0-100]
-    // global_cpu: History<f32>,
+    /// percentage global cpu used between refreshes
+    global_cpu: History<f32>,
     ram: History,
     swap: History,
+    /// amount uploaded between refresh of sysinfo::Nets. (DEOS NOT STORE RATE)
     upload: History,
+    /// amount downloaded between refresh of sysinfo::Nets. (DEOS NOT STORE RATE)
     download: History,
+    /// amount read between refresh of sysinfo::Disks. (DEOS NOT STORE RATE)
     disk_read: History,
+    /// amount written between refresh of sysinfo::Disks. (DEOS NOT STORE RATE)
     disk_write: History,
-    // disk_read: History,
-    // disk_write: History,
 }
 
 #[derive(Debug, Clone)]
@@ -72,6 +71,10 @@ impl SystemMonitorApplet {
     fn swap_percentage(&self) -> f32 {
         self.sys.used_swap() as f32 / self.sys.total_swap() as f32 * 100.0
     }
+
+    fn size_aspect_ratio(&self, aspect_ratio: f32) -> Size {
+        get_sized_aspect_ratio(&self.core.applet, aspect_ratio)
+    }
 }
 
 impl Application for SystemMonitorApplet {
@@ -81,7 +84,7 @@ impl Application for SystemMonitorApplet {
 
     type Message = Message;
 
-    const APP_ID: &'static str = ID; // todo inline ID, moving config_subscription to impl SystemMonitorApplet
+    const APP_ID: &'static str = ID;
 
     fn core(&self) -> &Core {
         &self.core
@@ -92,10 +95,10 @@ impl Application for SystemMonitorApplet {
     }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        let (mut ram, mut swap, mut net, mut disk) = Default::default();
+        let (mut cpu, mut ram, mut swap, mut net, mut disk) = Default::default();
         for chart_config in &flags.config.charts {
             match chart_config {
-                // ChartConfig::Cpu()
+                ChartConfig::Cpu(c) => cpu = Some(c.history_size),
                 ChartConfig::Ram(c) => ram = Some(c.history_size),
                 ChartConfig::Swap(c) => swap = Some(c.history_size),
                 ChartConfig::Net(c) => net = Some(c.history_size),
@@ -108,11 +111,11 @@ impl Application for SystemMonitorApplet {
             config: flags.config,
             config_handler: flags.config_handler,
 
-            sys: System::new(),
+            sys: System::new_all(),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
 
-            // global_cpu: init_history_with_default(0),
+            global_cpu: init_history_with_default(cpu.unwrap_or(0)),
             ram: init_history_with_default(ram.unwrap_or(0)),
             swap: init_history_with_default(swap.unwrap_or(0)),
             upload: init_history_with_default(net.unwrap_or(0)),
@@ -128,6 +131,79 @@ impl Application for SystemMonitorApplet {
         const INTRA_ITEM_SPACING: u16 = 5;
         let item_iter = self.config.charts.iter().map(|module| {
             match module {
+                ChartConfig::Cpu(c) => c
+                    .vis
+                    .iter()
+                    .map(|v| match v {
+                        CpuView::GlobalUsageBarChart {
+                            aspect_ratio,
+                            color,
+                        } => {
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
+
+                            VerticalPercentageBar::new(self.sys.global_cpu_usage(), *color)
+                                .apply(container)
+                                .style(base_background)
+                                .width(width)
+                                .height(height)
+                                .apply(Element::new)
+                        }
+                        CpuView::PerCoreUsageHistogram {
+                            per_core_aspect_ratio: aspect_ratio,
+                            color,
+                            spacing,
+                            sorting,
+                        } => {
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
+
+                            let mut cpus: Vec<_> =
+                                self.sys.cpus().iter().map(Cpu::cpu_usage).collect();
+
+                            if let Some(method) = sorting {
+                                match method {
+                                    SortMethod::Descending => {
+                                        cpus.sort_by(|a, b| b.partial_cmp(&a).unwrap());
+                                    }
+                                }
+                                cpus.sort_by(method.method())
+                            }
+
+                            let bars: Vec<_> = cpus
+                                .into_iter()
+                                .map(|usage| {
+                                    VerticalPercentageBar::new(usage, *color)
+                                        .apply(container)
+                                        .width(width)
+                                        .height(height)
+                                        .apply(Element::new)
+                                })
+                                .collect();
+
+                            panel_collection(&self.core.applet, bars, *spacing, 0.0)
+                                .apply(container)
+                                .style(base_background)
+                                .into()
+                        }
+                        CpuView::GlobalUsageRunChart {
+                            aspect_ratio,
+                            color,
+                        } => {
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
+                            let chart = HistoryChart {
+                                history: &self.global_cpu,
+                                max: 100.0,
+                                color: color.as_rgba_color(self.get_theme()),
+                            };
+
+                            ChartWidget::new(chart)
+                                .apply(container)
+                                .style(base_background)
+                                .width(width)
+                                .height(height)
+                                .apply(Element::new)
+                        }
+                    })
+                    .collect::<Vec<_>>(),
                 ChartConfig::Ram(c) => c
                     .vis
                     .iter()
@@ -136,8 +212,7 @@ impl Application for SystemMonitorApplet {
                             aspect_ratio,
                             color,
                         } => {
-                            let Size { width, height } =
-                                get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                             VerticalPercentageBar::new(
                                 self.sys.used_memory() as f32 / self.sys.total_memory() as f32
@@ -155,8 +230,7 @@ impl Application for SystemMonitorApplet {
                             aspect_ratio,
                             color,
                         } => {
-                            let Size { width, height } =
-                                get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
                             let chart = HistoryChart {
                                 history: &self.ram,
                                 max: self.sys.total_memory(),
@@ -164,16 +238,14 @@ impl Application for SystemMonitorApplet {
                             };
 
                             ChartWidget::new(chart)
-                                .width(Fixed(width))
-                                .height(Fixed(height))
                                 .apply(container)
                                 .style(base_background)
-                                // .width(width)
-                                // .height(height)
+                                .width(width)
+                                .height(height)
                                 .apply(Element::new)
                         }
                     })
-                    .collect::<Vec<_>>(),
+                    .collect(),
                 ChartConfig::Swap(c) => c
                     .vis
                     .iter()
@@ -182,8 +254,7 @@ impl Application for SystemMonitorApplet {
                             aspect_ratio,
                             color,
                         } => {
-                            let Size { width, height } =
-                                get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                             VerticalPercentageBar::new(self.swap_percentage(), *color)
                                 // .apply(|bar| aspect_ratio_container(bar, *aspect_ratio))
@@ -197,17 +268,16 @@ impl Application for SystemMonitorApplet {
                             aspect_ratio,
                             color,
                         } => {
-                            let Size { width, height } =
-                                get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
                             let chart = HistoryChart {
                                 history: &self.swap,
                                 max: self.sys.total_swap(),
                                 color: color.as_rgba_color(self.get_theme()),
                             };
                             ChartWidget::new(chart)
-                                .width(Fixed(width))
-                                .height(Fixed(height))
                                 .apply(container)
+                                .width(width)
+                                .height(height)
                                 .style(base_background)
                                 .apply(Element::new)
                         }
@@ -220,11 +290,10 @@ impl Application for SystemMonitorApplet {
                         match v {
                             DoubleView::SuperimposedRunChart {
                                 aspect_ratio,
-                                color_send: color_up,
-                                color_receive: color_down,
+                                color_out: color_up,
+                                color_in: color_down,
                             } => {
-                                let Size { width, height } =
-                                    get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                                let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                                 let upload = HistoryChart::auto_max(
                                     &self.upload,
@@ -251,8 +320,7 @@ impl Application for SystemMonitorApplet {
                                 color,
                                 aspect_ratio,
                             } => {
-                                let Size { width, height } =
-                                    get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                                let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                                 let down = HistoryChart::auto_max(
                                     &self.download,
@@ -271,8 +339,7 @@ impl Application for SystemMonitorApplet {
                                 color,
                                 aspect_ratio,
                             } => {
-                                let Size { width, height } =
-                                    get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                                let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                                 let up = HistoryChart::auto_max(
                                     &self.upload,
@@ -294,12 +361,11 @@ impl Application for SystemMonitorApplet {
                     .iter()
                     .map(|v| match v {
                         DoubleView::SuperimposedRunChart {
-                            color_send,
-                            color_receive,
+                            color_out: color_send,
+                            color_in: color_receive,
                             aspect_ratio,
                         } => {
-                            let Size { width, height } =
-                                get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                             let read = HistoryChart::auto_max(
                                 &self.disk_read,
@@ -326,8 +392,7 @@ impl Application for SystemMonitorApplet {
                             color,
                             aspect_ratio,
                         } => {
-                            let Size { width, height } =
-                                get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                             let read = HistoryChart::auto_max(
                                 &self.disk_read,
@@ -345,8 +410,7 @@ impl Application for SystemMonitorApplet {
                             color,
                             aspect_ratio,
                         } => {
-                            let Size { width, height } =
-                                get_sized_aspect_ratio(&self.core.applet, *aspect_ratio);
+                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
 
                             let write = HistoryChart::auto_max(
                                 &self.disk_write,
@@ -363,15 +427,17 @@ impl Application for SystemMonitorApplet {
                     })
                     .collect(),
             }
-            .apply(|elements| collection(&self.core.applet, elements, INTRA_ITEM_SPACING, 0.0))
+            .apply(|elements| {
+                panel_collection(&self.core.applet, elements, INTRA_ITEM_SPACING, 0.0)
+            })
         });
 
-        let items = collection(&self.core.applet, item_iter, 30, 0.0);
+        let items = panel_collection(&self.core.applet, item_iter, 30, 0.0);
 
         self.core.applet.autosize_window(items).into()
     }
 
-    fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         #[allow(unused_macros)]
         macro_rules! config_set {
             ($name: ident, $value: expr) => {
@@ -398,9 +464,8 @@ impl Application for SystemMonitorApplet {
         match message {
             Message::Config(config) => self.config = config,
             Message::TickCpu => {
-                todo!()
-                // self.sys.refresh_cpu_all();
-                // self.global_cpu.push(self.sys.global_cpu_usage());
+                self.sys.refresh_cpu_all();
+                self.global_cpu.push(self.sys.global_cpu_usage());
             }
             Message::TickRam => {
                 self.sys
@@ -443,12 +508,10 @@ impl Application for SystemMonitorApplet {
         for chart in &self.config.charts {
             let tick = {
                 match chart {
-                    /*
-                    ChartConfig::CPU(c) => {
+                    ChartConfig::Cpu(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickCpu)
                     }
-                    */
                     ChartConfig::Ram(c) => {
                         cosmic::iced::time::every(Duration::from_millis(c.update_interval))
                             .map(|_| Message::TickRam)
