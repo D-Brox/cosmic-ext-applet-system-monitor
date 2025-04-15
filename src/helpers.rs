@@ -1,7 +1,6 @@
 use crate::applet::{History, Message};
 use cosmic::{
-    applet,
-    iced::{self, Alignment::Center, Padding, Size},
+    iced::{self, Alignment::Center, Padding},
     iced_core::Pixels,
     widget::{container, Column, Row},
     Element, Theme,
@@ -32,22 +31,6 @@ pub fn base_background(theme: &Theme) -> container::Style {
     container::Style {
         background: Some(iced::Color::from(theme.cosmic().primary.base).into()),
         ..container::Style::default()
-    }
-}
-
-pub fn get_sized_aspect_ratio(context: &applet::Context, aspect_ratio: f32) -> Size {
-    let (suggested_width, suggested_height) = context.suggested_size(false);
-
-    if context.is_horizontal() {
-        Size {
-            width: suggested_height as f32 * aspect_ratio,
-            height: suggested_height as f32,
-        }
-    } else {
-        Size {
-            width: suggested_width as f32,
-            height: suggested_width as f32 * aspect_ratio,
-        }
     }
 }
 

@@ -21,7 +21,9 @@ pub enum SortMethod {
 impl SortMethod {
     pub fn method(&self) -> impl FnMut(&f32, &f32) -> Ordering {
         match self {
-            SortMethod::Descending => |a: &f32, b: &f32| b.partial_cmp(a).unwrap_or(Ordering::Equal),
+            SortMethod::Descending => {
+                |a: &f32, b: &f32| b.partial_cmp(a).unwrap_or(Ordering::Equal)
+            }
         }
     }
 }
@@ -105,8 +107,8 @@ impl<'a> VerticalPercentageBar {
         }
     }
 
-    pub fn from_pair<T: Into<f32>>(max: T, current: T, color: Color) -> Self {
-        let value = current.into() / max.into() * 100.0;
+    pub fn from_pair(current: u64, max: u64, color: Color) -> Self {
+        let value = current as f32 / max as f32 * 100.0;
         Self::new(value, color)
     }
 }

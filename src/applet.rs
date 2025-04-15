@@ -6,9 +6,8 @@ use cosmic::{
     cosmic_config,
     iced::{Padding, Size, Subscription},
     iced_core::padding,
-    iced_winit::winit::dpi::Pixel,
-    widget::container,
-    Application, Apply as _, Element, Theme,
+    widget::{container, Container},
+    Application, Apply as _, Element, Renderer, Theme,
 };
 use plotters_iced::ChartWidget;
 use std::time::Duration;
@@ -17,9 +16,7 @@ use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 use crate::{
     bar_chart::{SortMethod, VerticalPercentageBar},
     config::{config_subscription, ComponentConfig, Config, CpuView, DoubleView, SingleView},
-    helpers::{
-        base_background, get_sized_aspect_ratio, init_history_with_default, panel_collection,
-    },
+    helpers::{base_background, init_history_with_default, panel_collection},
     run_chart::{HistoryChart, SuperimposedHistoryChart},
 };
 
@@ -105,6 +102,36 @@ impl SystemMonitorApplet {
         }
         .into()
     }
+
+    fn aspect_ratio_container<'a>(
+        &self,
+        content: impl Into<Element<'a, Message>>,
+        aspect_ratio: f32,
+    ) -> Container<'a, Message, Theme, Renderer> {
+        let size = self.size_aspect_ratio(aspect_ratio);
+
+        sized_container(content, size)
+    }
+
+    fn aspect_ratio_container_with_padding<'a>(
+        &self,
+        content: impl Into<Element<'a, Message>>,
+        aspect_ratio: f32,
+    ) -> Container<'a, Message, Theme, Renderer> {
+        let size = self.size_aspect_ratio(aspect_ratio);
+
+        sized_container(content, size).padding(padding::top(size.height / 5.0))
+    }
+}
+
+fn sized_container<'a>(
+    content: impl Into<Element<'a, Message>>,
+    size: Size,
+) -> Container<'a, Message, Theme> {
+    container(content.into())
+        .width(size.width)
+        .height(size.height)
+        .style(base_background)
 }
 
 impl Application for SystemMonitorApplet {
@@ -158,7 +185,6 @@ impl Application for SystemMonitorApplet {
     }
 
     fn view(&self) -> Element<Message> {
-        const INTRA_ITEM_SPACING: u16 = 5;
         let item_iter = self.config.components.iter().map(|module| {
             match module {
                 ComponentConfig::Cpu(c) => c
@@ -237,80 +263,63 @@ impl Application for SystemMonitorApplet {
                 ComponentConfig::Ram(c) => c
                     .vis
                     .iter()
-                    .map(|v| match v {
-                        SingleView::Bar {
-                            aspect_ratio,
-                            color,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
+                    .map(|v| {
+                        match v {
+                            SingleView::Bar {
+                                aspect_ratio,
+                                color,
+                            } => {
+                                let content = VerticalPercentageBar::from_pair(
+                                    self.sys.used_memory(),
+                                    self.sys.total_memory(),
+                                    *color,
+                                );
+                                self.aspect_ratio_container(content, *aspect_ratio)
+                            }
+                            SingleView::Run {
+                                aspect_ratio,
+                                color,
+                            } => {
+                                let chart = HistoryChart {
+                                    history: &self.ram,
+                                    max: self.sys.total_memory(),
+                                    color: color.as_rgba_color(self.get_theme()),
+                                };
 
-                            VerticalPercentageBar::new(
-                                self.sys.used_memory() as f32 / self.sys.total_memory() as f32
-                                    * 100.0,
-                                *color,
-                            )
-                            // .apply(|bar| aspect_ratio_container(bar, *aspect_ratio))
-                            .apply(container)
-                            .style(base_background)
-                            .width(width)
-                            .height(height)
-                            .apply(Element::new)
+                                let content = ChartWidget::new(chart);
+                                self.aspect_ratio_container(content, *aspect_ratio)
+                            }
                         }
-                        SingleView::Run {
-                            aspect_ratio,
-                            color,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-                            let chart = HistoryChart {
-                                history: &self.ram,
-                                max: self.sys.total_memory(),
-                                color: color.as_rgba_color(self.get_theme()),
-                            };
-
-                            ChartWidget::new(chart)
-                                .apply(container)
-                                .style(base_background)
-                                .width(width)
-                                .height(height)
-                                .apply(Element::new)
-                        }
+                        .into()
                     })
                     .collect(),
                 ComponentConfig::Swap(c) => c
                     .vis
                     .iter()
-                    .map(|v| match v {
-                        SingleView::Bar {
-                            aspect_ratio,
-                            color,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
-                            VerticalPercentageBar::new(self.swap_percentage(), *color)
-                                // .apply(|bar| aspect_ratio_container(bar, *aspect_ratio))
-                                .apply(container)
-                                .style(base_background)
-                                .width(width)
-                                .height(height)
-                                .apply(Element::new)
+                    .map(|v| {
+                        match v {
+                            SingleView::Bar {
+                                aspect_ratio,
+                                color,
+                            } => {
+                                let content =
+                                    VerticalPercentageBar::new(self.swap_percentage(), *color);
+                                self.aspect_ratio_container(content, *aspect_ratio)
+                            }
+                            SingleView::Run {
+                                aspect_ratio,
+                                color,
+                            } => {
+                                let chart = HistoryChart {
+                                    history: &self.swap,
+                                    max: self.sys.total_swap(),
+                                    color: color.as_rgba_color(self.get_theme()),
+                                };
+                                let content = ChartWidget::new(chart);
+                                self.aspect_ratio_container(content, *aspect_ratio)
+                            }
                         }
-                        SingleView::Run {
-                            aspect_ratio,
-                            color,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-                            let chart = HistoryChart {
-                                history: &self.swap,
-                                max: self.sys.total_swap(),
-                                color: color.as_rgba_color(self.get_theme()),
-                            };
-                            ChartWidget::new(chart)
-                                .apply(container)
-                                .width(width)
-                                .height(height)
-                                .style(base_background)
-                                .apply(Element::new)
-                        }
+                        .into()
                     })
                     .collect(),
                 ComponentConfig::Net(c) => c
@@ -323,8 +332,6 @@ impl Application for SystemMonitorApplet {
                                 color_out: color_up,
                                 color_in: color_down,
                             } => {
-                                let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
                                 let upload = HistoryChart::auto_max(
                                     &self.upload,
                                     color_up.as_rgba_color(self.get_theme()),
@@ -334,126 +341,89 @@ impl Application for SystemMonitorApplet {
                                     color_down.as_rgba_color(self.get_theme()),
                                 );
 
-                                ChartWidget::new(SuperimposedHistoryChart {
+                                let content = ChartWidget::new(SuperimposedHistoryChart {
                                     h1: upload,
                                     h2: download,
-                                })
-                                // .apply(|bar| aspect_ratio_container(bar, *aspect_ratio))
-                                .apply(container)
-                                .padding(padding::top(height / 5.0))
-                                .style(base_background)
-                                .width(width)
-                                .height(height)
-                                .apply(Element::new)
+                                });
+
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                             }
                             DoubleView::SingleRunA {
                                 color,
                                 aspect_ratio,
                             } => {
-                                let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
                                 let down = HistoryChart::auto_max(
                                     &self.download,
                                     color.as_rgba_color(self.get_theme()),
                                 );
 
-                                ChartWidget::new(down)
-                                    .apply(container)
-                                    .padding(padding::top(height / 5.0))
-                                    .style(base_background)
-                                    .width(width)
-                                    .height(height)
-                                    .apply(Element::new)
+                                let content = ChartWidget::new(down);
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                             }
                             DoubleView::SingleRunB {
                                 color,
                                 aspect_ratio,
                             } => {
-                                let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
                                 let up = HistoryChart::auto_max(
                                     &self.upload,
                                     color.as_rgba_color(self.get_theme()),
                                 );
-                                ChartWidget::new(up)
-                                    .apply(container)
-                                    .padding(padding::top(height / 5.0))
-                                    .style(base_background)
-                                    .width(width)
-                                    .height(height)
-                                    .apply(Element::new)
+                                let content = ChartWidget::new(up);
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                             }
                         }
+                        .into()
                     })
                     .collect(),
                 ComponentConfig::Disk(c) => c
                     .vis
                     .iter()
-                    .map(|v| match v {
-                        DoubleView::SuperimposedRunChart {
-                            color_out: color_send,
-                            color_in: color_receive,
-                            aspect_ratio,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
+                    .map(|v| {
+                        match v {
+                            DoubleView::SuperimposedRunChart {
+                                color_out: color_send,
+                                color_in: color_receive,
+                                aspect_ratio,
+                            } => {
+                                let read = HistoryChart::auto_max(
+                                    &self.disk_read,
+                                    color_receive.as_rgba_color(self.get_theme()),
+                                );
+                                let write = HistoryChart::auto_max(
+                                    &self.disk_write,
+                                    color_send.as_rgba_color(self.get_theme()),
+                                );
 
-                            let read = HistoryChart::auto_max(
-                                &self.disk_read,
-                                color_receive.as_rgba_color(self.get_theme()),
-                            );
-                            let write = HistoryChart::auto_max(
-                                &self.disk_write,
-                                color_send.as_rgba_color(self.get_theme()),
-                            );
-
-                            ChartWidget::new(SuperimposedHistoryChart {
-                                h1: read,
-                                h2: write,
-                            })
-                            // .apply(|bar| aspect_ratio_container(bar, *aspect_ratio))
-                            .apply(container)
-                            .padding(padding::top(height / 5.0))
-                            .style(base_background)
-                            .width(width)
-                            .height(height)
-                            .apply(Element::new)
+                                let content = ChartWidget::new(SuperimposedHistoryChart {
+                                    h1: read,
+                                    h2: write,
+                                });
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio)
+                            }
+                            DoubleView::SingleRunA {
+                                color,
+                                aspect_ratio,
+                            } => {
+                                let read = HistoryChart::auto_max(
+                                    &self.disk_read,
+                                    color.as_rgba_color(self.get_theme()),
+                                );
+                                let content = ChartWidget::new(read);
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio)
+                            }
+                            DoubleView::SingleRunB {
+                                color,
+                                aspect_ratio,
+                            } => {
+                                let write = HistoryChart::auto_max(
+                                    &self.disk_write,
+                                    color.as_rgba_color(self.get_theme()),
+                                );
+                                let content = ChartWidget::new(write);
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio)
+                            }
                         }
-                        DoubleView::SingleRunA {
-                            color,
-                            aspect_ratio,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
-                            let read = HistoryChart::auto_max(
-                                &self.disk_read,
-                                color.as_rgba_color(self.get_theme()),
-                            );
-                            ChartWidget::new(read)
-                                .apply(container)
-                                .padding(padding::top(height / 5.0))
-                                .style(base_background)
-                                .width(width)
-                                .height(height)
-                                .apply(Element::new)
-                        }
-                        DoubleView::SingleRunB {
-                            color,
-                            aspect_ratio,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
-                            let write = HistoryChart::auto_max(
-                                &self.disk_write,
-                                color.as_rgba_color(self.get_theme()),
-                            );
-                            ChartWidget::new(write)
-                                .apply(container)
-                                .padding(padding::top(height / 5.0))
-                                .style(base_background)
-                                .width(width)
-                                .height(height)
-                                .apply(Element::new)
-                        }
+                        .into()
                     })
                     .collect(),
             }
