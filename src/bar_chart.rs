@@ -40,6 +40,10 @@ impl PercentageBar {
             Self::Horizontal(HorizontalPercentageBar::new(value, color))
         }
     }
+    pub(crate) fn from_pair(is_horizontal: bool, current: u64, max: u64, color: Color) -> Self {
+        let value = current as f32 / max as f32 * 100.0;
+        Self::new(is_horizontal, value, color)
+    }
 }
 
 impl From<PercentageBar> for Element<'_, Message> {
