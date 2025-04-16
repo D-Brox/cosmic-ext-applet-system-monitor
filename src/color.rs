@@ -46,7 +46,7 @@ pub enum Color {
     accent_pink,
     accent_indigo,
     // rgb(String),
-    CosmicColor(CosmicColor),
+    Cosmic(CosmicColor),
 }
 
 impl Color {
@@ -102,8 +102,7 @@ impl Color {
             //         .inspect_err(|e| eprintln!("failed to parse into color. {e}"))
             //         .unwrap_or(cosmic_theme.accent_color())
             // }
-            Color::CosmicColor(cc) => *cc,
+            Color::Cosmic(cc) => *cc,
         }
-        .into()
     }
 }

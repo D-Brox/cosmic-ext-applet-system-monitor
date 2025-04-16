@@ -48,7 +48,7 @@ impl From<PercentageBar> for Element<'_, Message> {
     }
 }
 
-impl<'a> Widget<Message, Theme, Renderer> for PercentageBar {
+impl Widget<Message, Theme, Renderer> for PercentageBar {
     fn size(&self) -> Size<Length> {
         match self {
             PercentageBar::Vertical(v) => Widget::<Message, Theme, Renderer>::size(v),
@@ -99,7 +99,7 @@ pub struct VerticalPercentageBar {
     color: Color,
 }
 
-impl<'a> VerticalPercentageBar {
+impl VerticalPercentageBar {
     pub fn new(value: f32, color: Color) -> Self {
         VerticalPercentageBar {
             percentage: value.clamp(0.0, 100.0),
@@ -113,7 +113,7 @@ impl<'a> VerticalPercentageBar {
     }
 }
 
-impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
+impl Widget<Message, Theme, Renderer> for VerticalPercentageBar {
     fn size(&self) -> Size<Length> {
         Size::new(Fill, Fill)
     }
@@ -126,8 +126,7 @@ impl<'a> Widget<Message, Theme, Renderer> for VerticalPercentageBar {
     ) -> layout::Node {
         let Size { width, height } = Widget::size(self);
 
-        let layout = layout::atomic(limits, width, height);
-        layout
+        layout::atomic(limits, width, height)
     }
 
     fn draw(
@@ -213,8 +212,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
     ) -> layout::Node {
         let Size { width, height } = Widget::size(self);
 
-        let layout = layout::atomic(limits, width, height);
-        layout
+        layout::atomic(limits, width, height)
     }
 
     fn draw(
