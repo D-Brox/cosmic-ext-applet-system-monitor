@@ -190,74 +190,64 @@ impl Application for SystemMonitorApplet {
                 ComponentConfig::Cpu(c) => c
                     .vis
                     .iter()
-                    .map(|v| match v {
-                        CpuView::GlobalUsageBarChart {
-                            aspect_ratio,
-                            color,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
-                            VerticalPercentageBar::new(self.sys.global_cpu_usage(), *color)
-                                .apply(container)
-                                .style(base_background)
-                                .width(width)
-                                .height(height)
-                                .apply(Element::new)
-                        }
-                        CpuView::PerCoreUsageHistogram {
-                            per_core_aspect_ratio: aspect_ratio,
-                            color,
-                            spacing,
-                            sorting,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-
-                            let mut cpus: Vec<_> =
-                                self.sys.cpus().iter().map(Cpu::cpu_usage).collect();
-
-                            if let Some(method) = sorting {
-                                match method {
-                                    SortMethod::Descending => {
-                                        cpus.sort_by(|a, b| b.partial_cmp(&a).unwrap());
-                                    }
-                                }
-                                cpus.sort_by(method.method())
+                    .map(|v| {
+                        match v {
+                            CpuView::GlobalUsageBarChart {
+                                aspect_ratio,
+                                color,
+                            } => {
+                                let content =
+                                    VerticalPercentageBar::new(self.sys.global_cpu_usage(), *color);
+                                self.aspect_ratio_container(content, *aspect_ratio)
                             }
+                            CpuView::PerCoreUsageHistogram {
+                                per_core_aspect_ratio,
+                                color,
+                                spacing,
+                                sorting,
+                            } => {
+                                let mut cpus: Vec<_> =
+                                    self.sys.cpus().iter().map(Cpu::cpu_usage).collect();
 
-                            let bars: Vec<_> = cpus
-                                .into_iter()
-                                .map(|usage| {
-                                    VerticalPercentageBar::new(usage, *color)
-                                        .apply(container)
-                                        .width(width)
-                                        .height(height)
-                                        .apply(Element::new)
-                                })
-                                .collect();
+                                if let Some(method) = sorting {
+                                    match method {
+                                        SortMethod::Descending => {
+                                            cpus.sort_by(|a, b| b.partial_cmp(a).unwrap());
+                                        }
+                                    }
+                                    cpus.sort_by(method.method())
+                                }
 
-                            panel_collection(&self.core.applet, bars, *spacing, 0.0)
-                                .apply(container)
-                                .style(base_background)
-                                .into()
+                                let bars: Vec<_> = cpus
+                                    .into_iter()
+                                    .map(|usage| {
+                                        self.aspect_ratio_container(
+                                            VerticalPercentageBar::new(usage, *color),
+                                            *per_core_aspect_ratio,
+                                        )
+                                        .into()
+                                    })
+                                    .collect();
+
+                                panel_collection(&self.core.applet, bars, *spacing, 0.0)
+                                    .apply(container)
+                                    .style(base_background)
+                            }
+                            CpuView::GlobalUsageRunChart {
+                                aspect_ratio,
+                                color,
+                            } => {
+                                let chart = HistoryChart {
+                                    history: &self.global_cpu,
+                                    max: 100.0,
+                                    color: color.as_rgba_color(self.get_theme()),
+                                };
+
+                                let content = ChartWidget::new(chart);
+                                self.aspect_ratio_container(content, *aspect_ratio)
+                            }
                         }
-                        CpuView::GlobalUsageRunChart {
-                            aspect_ratio,
-                            color,
-                        } => {
-                            let Size { width, height } = self.size_aspect_ratio(*aspect_ratio);
-                            let chart = HistoryChart {
-                                history: &self.global_cpu,
-                                max: 100.0,
-                                color: color.as_rgba_color(self.get_theme()),
-                            };
-
-                            ChartWidget::new(chart)
-                                .apply(container)
-                                .style(base_background)
-                                .width(width)
-                                .height(height)
-                                .apply(Element::new)
-                        }
+                        .into()
                     })
                     .collect::<Vec<_>>(),
                 ComponentConfig::Ram(c) => c
