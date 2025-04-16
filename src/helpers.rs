@@ -6,9 +6,9 @@ use cosmic::{
     Element, Theme,
 };
 
-pub fn panel_collection<'a, T: Into<Element<'a, Message>>>(
+pub fn panel_collection<'a>(
     is_horizontal: bool,
-    elements: impl IntoIterator<Item = T>,
+    elements: impl IntoIterator<Item = impl Into<Element<'a, Message>>>,
     spacing: impl Into<Pixels>,
     padding: impl Into<Padding>,
 ) -> Element<'a, Message> {
