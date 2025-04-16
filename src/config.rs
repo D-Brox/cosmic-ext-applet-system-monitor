@@ -34,7 +34,7 @@ pub struct Cpu {
     pub update_interval: u64,
 
     /// size of the history kept and shown in the run chart
-    pub history_size: usize,
+    pub sampling_window: usize,
     pub vis: Box<[CpuView]>,
 }
 
@@ -54,7 +54,7 @@ pub struct Ram {
     pub update_interval: u64,
 
     /// size of the history kept and shown in the run chart
-    pub history_size: usize,
+    pub sampling_window: usize,
     pub vis: Box<[SingleView]>,
 }
 
@@ -64,7 +64,7 @@ pub struct Swap {
     pub update_interval: u64,
 
     /// size of the history kept and shown in the run chart
-    pub history_size: usize,
+    pub sampling_window: usize,
     pub vis: Box<[SingleView]>,
 }
 
@@ -74,7 +74,7 @@ pub struct Network {
     pub update_interval: u64,
 
     /// size of the history kept and shown in the run chart
-    pub history_size: usize,
+    pub sampling_window: usize,
     pub vis: Box<[DoubleView]>,
 }
 
@@ -84,7 +84,7 @@ pub struct Disk {
     pub update_interval: u64,
 
     /// size of the history kept and shown in the run chart
-    pub history_size: usize,
+    pub sampling_window: usize,
     pub vis: Vec<DoubleView>,
 }
 
@@ -174,7 +174,7 @@ impl Default for Cpu {
 
         Cpu {
             update_interval: 1000,
-            history_size: 60,
+            sampling_window: 60,
             vis: [
                 CpuView::GlobalUsageRunChart {
                     aspect_ratio: 3.0,
@@ -202,7 +202,7 @@ impl Default for Ram {
         let color = Color::accent_green;
         Ram {
             update_interval: 2000,
-            history_size: 30,
+            sampling_window: 30,
             vis: [
                 SingleView::Run {
                     aspect_ratio: 2.0,
@@ -225,7 +225,7 @@ impl Default for Swap {
 
         Swap {
             update_interval: 5000,
-            history_size: 12,
+            sampling_window: 12,
             vis: [
                 SingleView::Run {
                     aspect_ratio: 1.5,
@@ -245,7 +245,7 @@ impl Default for Network {
     fn default() -> Self {
         Network {
             update_interval: 1000,
-            history_size: 60,
+            sampling_window: 60,
             vis: [DoubleView::SuperimposedRunChart {
                 color_out: Color::accent_yellow,
                 color_in: Color::accent_red,
@@ -260,7 +260,7 @@ impl Default for Disk {
     fn default() -> Self {
         Disk {
             update_interval: 2000,
-            history_size: 30,
+            sampling_window: 30,
             vis: [DoubleView::SuperimposedRunChart {
                 color_out: Color::accent_orange,
                 color_in: Color::accent_pink,

@@ -155,11 +155,11 @@ impl Application for SystemMonitorApplet {
         let (mut cpu, mut ram, mut swap, mut net, mut disk) = Default::default();
         for chart_config in &flags.config.components {
             match chart_config {
-                ComponentConfig::Cpu(c) => cpu = Some(c.history_size),
-                ComponentConfig::Ram(c) => ram = Some(c.history_size),
-                ComponentConfig::Swap(c) => swap = Some(c.history_size),
-                ComponentConfig::Net(c) => net = Some(c.history_size),
-                ComponentConfig::Disk(c) => disk = Some(c.history_size),
+                ComponentConfig::Cpu(c) => cpu = Some(c.sampling_window),
+                ComponentConfig::Ram(c) => ram = Some(c.sampling_window),
+                ComponentConfig::Swap(c) => swap = Some(c.sampling_window),
+                ComponentConfig::Net(c) => net = Some(c.sampling_window),
+                ComponentConfig::Disk(c) => disk = Some(c.sampling_window),
             }
         }
 
