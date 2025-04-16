@@ -6,20 +6,20 @@ use cosmic::{
     Element, Theme,
 };
 
-pub fn panel_collection<'a>(
-    context: &'_ cosmic::applet::Context,
-    elements: impl IntoIterator<Item = Element<'a, Message>>,
+pub fn panel_collection<'a, T: Into<Element<'a, Message>>>(
+    is_horizontal: bool,
+    elements: impl IntoIterator<Item = T>,
     spacing: impl Into<Pixels>,
     padding: impl Into<Padding>,
 ) -> Element<'a, Message> {
-    if context.is_horizontal() {
-        Row::with_children(elements)
+    if is_horizontal {
+        Row::with_children(elements.into_iter().map(Into::into))
             .spacing(spacing)
             .align_y(Center)
             .padding(padding)
             .into()
     } else {
-        Column::with_children(elements)
+        Column::with_children(elements.into_iter().map(Into::into))
             .spacing(spacing)
             .align_x(Center)
             .padding(padding)

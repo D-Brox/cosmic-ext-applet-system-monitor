@@ -247,7 +247,6 @@ impl Application for SystemMonitorApplet {
                             let content = ChartWidget::new(chart);
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
-                        .into()
                     })
                     .collect::<Vec<_>>(),
                 ComponentConfig::Ram(c) => c
@@ -279,7 +278,6 @@ impl Application for SystemMonitorApplet {
                             let content = ChartWidget::new(chart);
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
-                        .into()
                     })
                     .collect(),
                 ComponentConfig::Swap(c) => c
@@ -310,7 +308,6 @@ impl Application for SystemMonitorApplet {
                             let content = ChartWidget::new(chart);
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
-                        .into()
                     })
                     .collect(),
                 ComponentConfig::Net(c) => c
@@ -361,7 +358,6 @@ impl Application for SystemMonitorApplet {
                             let content = ChartWidget::new(up);
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                         }
-                        .into()
                     })
                     .collect(),
                 ComponentConfig::Disk(c) => c
@@ -410,7 +406,6 @@ impl Application for SystemMonitorApplet {
                             let content = ChartWidget::new(write);
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                         }
-                        .into()
                     })
                     .collect(),
             }
