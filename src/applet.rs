@@ -329,21 +329,21 @@ impl Application for SystemMonitorApplet {
                         match v {
                             DoubleView::SuperimposedRunChart {
                                 aspect_ratio,
-                                color_out: color_up,
-                                color_in: color_down,
+                                color_front,
+                                color_back,
                             } => {
                                 let upload = HistoryChart::auto_max(
                                     &self.upload,
-                                    color_up.as_rgba_color(self.get_theme()),
+                                    color_front.as_rgba_color(self.get_theme()),
                                 );
                                 let download = HistoryChart::auto_max(
                                     &self.download,
-                                    color_down.as_rgba_color(self.get_theme()),
+                                    color_back.as_rgba_color(self.get_theme()),
                                 );
 
                                 let content = ChartWidget::new(SuperimposedHistoryChart {
-                                    h1: upload,
-                                    h2: download,
+                                    back: upload,
+                                    front: download,
                                 });
 
                                 self.aspect_ratio_container_with_padding(content, *aspect_ratio)
@@ -381,22 +381,22 @@ impl Application for SystemMonitorApplet {
                     .map(|v| {
                         match v {
                             DoubleView::SuperimposedRunChart {
-                                color_out: color_send,
-                                color_in: color_receive,
+                                color_front,
+                                color_back,
                                 aspect_ratio,
                             } => {
                                 let read = HistoryChart::auto_max(
                                     &self.disk_read,
-                                    color_receive.as_rgba_color(self.get_theme()),
+                                    color_back.as_rgba_color(self.get_theme()),
                                 );
                                 let write = HistoryChart::auto_max(
                                     &self.disk_write,
-                                    color_send.as_rgba_color(self.get_theme()),
+                                    color_front.as_rgba_color(self.get_theme()),
                                 );
 
                                 let content = ChartWidget::new(SuperimposedHistoryChart {
-                                    h1: read,
-                                    h2: write,
+                                    back: read,
+                                    front: write,
                                 });
                                 self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                             }

@@ -75,8 +75,8 @@ impl Chart<Message> for HistoryChart<'_, f32> {
 }
 
 pub struct SuperimposedHistoryChart<'a> {
-    pub h1: HistoryChart<'a>,
-    pub h2: HistoryChart<'a>,
+    pub back: HistoryChart<'a>,
+    pub front: HistoryChart<'a>,
 }
 
 impl Chart<Message> for SuperimposedHistoryChart<'_> {
@@ -86,54 +86,54 @@ impl Chart<Message> for SuperimposedHistoryChart<'_> {
     /// # !!
     /// Assumes length of both [History] are the same
     fn build_chart<DB: DrawingBackend>(&self, _state: &Self::State, mut builder: ChartBuilder<DB>) {
-        let SuperimposedHistoryChart { h1, h2 } = self;
+        let SuperimposedHistoryChart { back, front } = self;
 
         // invariant of this implementation
-        assert_eq!(h1.history.len(), h2.history.len());
+        assert_eq!(back.history.len(), front.history.len());
 
         #[cfg(debug_assertions)]
         {
             // Expect the history to be full. Checks that CircularQueue was initialized as expected.
-            assert!(h1.history.is_full());
-            assert!(h1.history.is_full());
+            assert!(back.history.is_full());
+            assert!(back.history.is_full());
         }
 
-        let samples = h1.history.len() as u64;
+        let samples = back.history.len() as u64;
 
         let mut chart_1 = builder
-            .build_cartesian_2d(0..samples, 0..h1.max)
+            .build_cartesian_2d(0..samples, 0..back.max)
             .expect("Error: failed to build chart");
 
         let mut chart_2 = builder
-            .build_cartesian_2d(0..samples, 0..h2.max)
+            .build_cartesian_2d(0..samples, 0..front.max)
             .expect("Error: failed to build chart");
 
         let iter1 = (0..samples)
-            .zip(h1.history.asc_iter())
+            .zip(back.history.asc_iter())
             .map(|(x, y)| (x, *y));
 
         let iter2 = (0..samples)
-            .zip(h2.history.asc_iter())
+            .zip(front.history.asc_iter())
             .map(|(x, y)| (x, *y));
 
         chart_1 // h1 area
-            .draw_series(AreaSeries::new(iter1.clone(), 0, h1.color.mix(0.5)))
+            .draw_series(AreaSeries::new(iter1.clone(), 0, back.color.mix(0.5)))
             .expect("Error: failed to draw data series");
 
         chart_2 // h2 area
-            .draw_series(AreaSeries::new(iter2.clone(), 0, h2.color.mix(0.5)))
+            .draw_series(AreaSeries::new(iter2.clone(), 0, front.color.mix(0.5)))
             .expect("Error: failed to draw data series");
 
         chart_1 // h1 line
             .draw_series(LineSeries::new(
                 iter1,
-                ShapeStyle::from(h1.color).stroke_width(1),
+                ShapeStyle::from(back.color).stroke_width(1),
             ))
             .expect("Error: failed to draw data series");
         chart_2 // h2 line
             .draw_series(LineSeries::new(
                 iter2,
-                ShapeStyle::from(h2.color).stroke_width(1),
+                ShapeStyle::from(front.color).stroke_width(1),
             ))
             .expect("Error: failed to draw data series");
     }

@@ -118,9 +118,9 @@ pub enum SingleView {
 pub enum DoubleView {
     SuperimposedRunChart {
         /// The `cosmic::pallette` color to represent the relevant input (e.g. input = disk read rate, net download rate)
-        color_in: Color,
+        color_back: Color,
         /// The `cosmic::pallette` color to represent the relevant output (e.g. output = disk write rate, net upload rate)
-        color_out: Color,
+        color_front: Color,
         /// The **ratio** of width to height of the graph.
         aspect_ratio: f32,
     },
@@ -247,8 +247,8 @@ impl Default for Network {
             update_interval: 1000,
             sampling_window: 60,
             vis: [DoubleView::SuperimposedRunChart {
-                color_out: Color::accent_yellow,
-                color_in: Color::accent_red,
+                color_front: Color::accent_yellow,
+                color_back: Color::accent_red,
                 aspect_ratio: 1.5,
             }]
             .into(),
@@ -262,8 +262,8 @@ impl Default for Disk {
             update_interval: 2000,
             sampling_window: 30,
             vis: [DoubleView::SuperimposedRunChart {
-                color_out: Color::accent_orange,
-                color_in: Color::accent_pink,
+                color_front: Color::accent_orange,
+                color_back: Color::accent_pink,
                 aspect_ratio: 1.5,
             }]
             .into(),
