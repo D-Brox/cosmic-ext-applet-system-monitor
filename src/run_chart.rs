@@ -38,13 +38,10 @@ impl Chart<Message> for HistoryChart<'_> {
             .map(|(x, y)| (x, *y));
 
         chart
-            .draw_series(AreaSeries::new(iter.clone(), 0, self.color.mix(0.5)))
-            .expect("Error: failed to draw data series");
-        chart
-            .draw_series(LineSeries::new(
-                iter,
-                ShapeStyle::from(self.color).stroke_width(1),
-            ))
+            .draw_series(
+                AreaSeries::new(iter, 0, self.color.mix(0.5))
+                    .border_style(ShapeStyle::from(self.color).stroke_width(1)),
+            )
             .expect("Error: failed to draw data series");
     }
 }
@@ -63,13 +60,10 @@ impl Chart<Message> for HistoryChart<'_, f32> {
             .map(|(x, y)| (x, *y));
 
         chart
-            .draw_series(AreaSeries::new(iter.clone(), 0.0, self.color.mix(0.5)))
-            .expect("Error: failed to draw data series");
-        chart
-            .draw_series(LineSeries::new(
-                iter,
-                ShapeStyle::from(self.color).stroke_width(1),
-            ))
+            .draw_series(
+                AreaSeries::new(iter.clone(), 0.0, self.color.mix(0.5))
+                    .border_style(ShapeStyle::from(self.color).stroke_width(1)),
+            )
             .expect("Error: failed to draw data series");
     }
 }
