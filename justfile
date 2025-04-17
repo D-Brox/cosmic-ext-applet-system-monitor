@@ -23,7 +23,7 @@ fmt:
     cargo fmt
 
 # Runs a clippy check
-check *args: fmt
+check *args: fmt spellcheck
     cargo clippy --all-features {{args}} -- -W clippy::pedantic
 
 # Runs a clippy check with JSON message format
@@ -34,7 +34,7 @@ run *args:
     cargo run {{args}}
     
 erase-all-configs:
-    rm ~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v*/charts
+    rm ~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v*/*
 
 # Run with debug logs
 run-logs *args:
