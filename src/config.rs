@@ -18,74 +18,48 @@ pub struct Config {
     // todo radius goes here? should it be different for each view-type?
     pub padding: PaddingOption,
     pub components: Box<[ComponentConfig]>,
-    pub spacing_between_components: f32,
-    pub spacing_within_component: f32,
+    pub component_spacing: f32,
+    pub component_inner_spacing: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum PaddingOption {
     Suggested,
+    #[serde(untagged)]
     Custom(f32),
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Cpu {
-    /// amount of time (in milliseconds) between new data
-    pub update_interval: u64,
-
-    /// size of the history kept and shown in the run chart
-    pub sampling_window: usize,
-    pub vis: Box<[CpuView]>,
 }
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ComponentConfig {
-    Cpu(Cpu),
-    Ram(Ram),
-    Swap(Swap),
-    Net(Network),
-    Disk(Disk),
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Ram {
-    /// amount of time (in milliseconds) between new data
-    pub update_interval: u64,
-
-    /// size of the history kept and shown in the run chart
-    pub sampling_window: usize,
-    pub vis: Box<[SingleView]>,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Swap {
-    /// amount of time (in milliseconds) between new data
-    pub update_interval: u64,
-
-    /// size of the history kept and shown in the run chart
-    pub sampling_window: usize,
-    pub vis: Box<[SingleView]>,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Network {
-    /// amount of time (in milliseconds) between new data
-    pub update_interval: u64,
-
-    /// size of the history kept and shown in the run chart
-    pub sampling_window: usize,
-    pub vis: Box<[DoubleView]>,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Disk {
-    /// amount of time (in milliseconds) between new data
-    pub update_interval: u64,
-
-    /// size of the history kept and shown in the run chart
-    pub sampling_window: usize,
-    pub vis: Vec<DoubleView>,
+    Cpu {
+        /// amount of time (in milliseconds) between new data
+        update_interval: u64,
+        /// size of the history kept and shown in the run chart
+        sampling_window: usize,
+        vis: Box<[CpuView]>,
+    },
+    Mem {
+        /// amount of time (in milliseconds) between new data
+        update_interval: u64,
+        /// size of the history kept and shown in the run chart
+        sampling_window: usize,
+        vis: Box<[PercentView]>,
+    },
+    Net {
+        /// amount of time (in milliseconds) between new data
+        update_interval: u64,
+        /// size of the history kept and shown in the run chart
+        sampling_window: usize,
+        vis: Box<[IoView]>,
+    },
+    Disk {
+        /// amount of time (in milliseconds) between new data
+        update_interval: u64,
+        /// size of the history kept and shown in the run chart
+        sampling_window: usize,
+        vis: Box<[IoView]>,
+    },
 }
 
 pub fn config_subscription() -> Subscription<Message> {
@@ -106,61 +80,87 @@ pub fn config_subscription() -> Subscription<Message> {
     })
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum SingleView {
-    // todo radius goes inside these?
-    Bar { aspect_ratio: f32, color: Color },
-    Run { aspect_ratio: f32, color: Color },
-}
-
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 /// Typically used for input-output pair
-pub enum DoubleView {
-    SuperimposedRunChart {
-        /// The `cosmic::pallette` color to represent the relevant input (e.g. input = disk read rate, net download rate)
+pub enum IoView {
+    #[serde(rename = "RunChart")]
+    Run {
+        /// The `cosmic::palette` color to represent the relevant input (e.g. input = disk read rate, net download rate)
+        #[serde(alias = "color_read", alias = "color_download")]
         color_back: Color,
-        /// The `cosmic::pallette` color to represent the relevant output (e.g. output = disk write rate, net upload rate)
+        /// The `cosmic::palette` color to represent the relevant output (e.g. output = disk write rate, net upload rate)
+        #[serde(alias = "color_write", alias = "color_upload")]
         color_front: Color,
         /// The **ratio** of width to height of the graph.
         aspect_ratio: f32,
     },
     /// If this is a view for some IO, A is for the system input (e.g. input = disk read rate, net download rate)
-    SingleRunA { color: Color, aspect_ratio: f32 },
+    #[serde(alias = "ReadRunChart", alias = "DownloadRunChart")]
+    RunA { color: Color, aspect_ratio: f32 },
     /// If IO, B is the system output (e.g. output = disk write rate, net upload rate)
-    SingleRunB { color: Color, aspect_ratio: f32 },
-    // SeperateRunCharts,
+    #[serde(alias = "WriteRunChart", alias = "UploadRunChart")]
+    RunB { color: Color, aspect_ratio: f32 },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CpuView {
-    GlobalUsageRunChart {
-        aspect_ratio: f32,
+    GlobalRun {
         color: Color,
+        aspect_ratio: f32,
     },
-    PerCoreUsageHistogram {
-        per_core_aspect_ratio: f32,
+    PerCoreBar {
         color: Color,
         spacing: f32,
-        sorting: Option<SortMethod>,
+        bar_aspect_ratio: f32,
+        sorting: SortMethod,
     },
-    GlobalUsageBarChart {
-        aspect_ratio: f32,
+    GlobalBar {
         color: Color,
+        aspect_ratio: f32,
     },
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum PercentView {
+    #[serde(rename = "RunChart")]
+    Run {
+        #[serde(alias = "color_ram")]
+        color_back: Color,
+        #[serde(alias = "color_swap")]
+        color_front: Color,
+        aspect_ratio: f32,
+    },
+    #[serde(alias = "RamRunChart")]
+    RunA { color: Color, aspect_ratio: f32 },
+    #[serde(alias = "SwapRunChart")]
+    RunB { color: Color, aspect_ratio: f32 },
+
+    #[serde(rename = "BarChart")]
+    Bar {
+        #[serde(alias = "color_ram")]
+        color_back: Color,
+        #[serde(alias = "color_swap")]
+        color_front: Color,
+        spacing: f32,
+        bar_aspect_ratio: f32,
+    },
+    #[serde(alias = "RamBarChart")]
+    BarA { color: Color, aspect_ratio: f32 },
+    #[serde(alias = "SwapBarChart")]
+    BarB { color: Color, aspect_ratio: f32 },
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             padding: PaddingOption::Suggested,
-            spacing_between_components: 15.0,
-            spacing_within_component: 5.0,
+            component_spacing: 10.0,
+            component_inner_spacing: 2.5,
             components: [
-                ComponentConfig::Cpu(Cpu::default()),
-                ComponentConfig::Ram(Ram::default()),
-                ComponentConfig::Swap(Swap::default()),
-                ComponentConfig::Net(Network::default()),
-                ComponentConfig::Disk(Disk::default()),
+                ComponentConfig::default_cpu(),
+                ComponentConfig::default_mem(),
+                ComponentConfig::default_disk(),
+                ComponentConfig::default_net(),
                 // ChartConfig::VRAM(VRAM::default()),
             ]
             .into(),
@@ -168,25 +168,25 @@ impl Default for Config {
     }
 }
 
-impl Default for Cpu {
-    fn default() -> Self {
+impl ComponentConfig {
+    fn default_cpu() -> Self {
         let color = Color::accent_blue;
 
-        Cpu {
+        ComponentConfig::Cpu {
             update_interval: 1000,
             sampling_window: 60,
             vis: [
-                CpuView::GlobalUsageRunChart {
+                CpuView::GlobalRun {
                     aspect_ratio: 3.0,
                     color,
                 },
-                CpuView::PerCoreUsageHistogram {
-                    per_core_aspect_ratio: 0.25,
+                CpuView::PerCoreBar {
+                    bar_aspect_ratio: 0.25,
                     color,
                     spacing: 3.0,
-                    sorting: Some(SortMethod::Descending),
+                    sorting: SortMethod::None,
                 },
-                CpuView::GlobalUsageBarChart {
+                CpuView::GlobalBar {
                     aspect_ratio: 0.5,
                     color,
                 },
@@ -194,59 +194,35 @@ impl Default for Cpu {
             .into(),
         }
     }
-}
 
-impl Default for Ram {
-    fn default() -> Self {
-        println!("using RAM's default config");
-        let color = Color::accent_green;
-        Ram {
+    fn default_mem() -> Self {
+        let color_back = Color::accent_green;
+        let color_front = Color::accent_purple;
+        ComponentConfig::Mem {
             update_interval: 2000,
             sampling_window: 30,
             vis: [
-                SingleView::Run {
+                PercentView::Run {
+                    color_back,
+                    color_front,
                     aspect_ratio: 2.0,
-                    color,
                 },
-                SingleView::Bar {
-                    aspect_ratio: 0.5,
-                    color,
-                },
-            ]
-            .into(),
-        }
-    }
-}
-
-impl Default for Swap {
-    fn default() -> Self {
-        println!("using SWAP's default config");
-        let color = Color::accent_purple;
-
-        Swap {
-            update_interval: 5000,
-            sampling_window: 12,
-            vis: [
-                SingleView::Run {
-                    aspect_ratio: 1.5,
-                    color,
-                },
-                SingleView::Bar {
-                    aspect_ratio: 0.5,
-                    color,
+                PercentView::Bar {
+                    color_back,
+                    color_front,
+                    bar_aspect_ratio: 0.5,
+                    spacing: 3.0,
                 },
             ]
             .into(),
         }
     }
-}
 
-impl Default for Network {
-    fn default() -> Self {
-        Network {
+    fn default_net() -> Self {
+        ComponentConfig::Net {
             update_interval: 1000,
             sampling_window: 60,
-            vis: [DoubleView::SuperimposedRunChart {
+            vis: [IoView::Run {
                 color_front: Color::accent_yellow,
                 color_back: Color::accent_red,
                 aspect_ratio: 1.5,
@@ -254,14 +230,12 @@ impl Default for Network {
             .into(),
         }
     }
-}
 
-impl Default for Disk {
-    fn default() -> Self {
-        Disk {
+    fn default_disk() -> Self {
+        ComponentConfig::Disk {
             update_interval: 2000,
             sampling_window: 30,
-            vis: [DoubleView::SuperimposedRunChart {
+            vis: [IoView::Run {
                 color_front: Color::accent_orange,
                 color_back: Color::accent_pink,
                 aspect_ratio: 1.5,

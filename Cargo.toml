@@ -16,12 +16,11 @@ i18n-embed-fl = "0.9.1"
 # lazy-regex = "3.4.1"
 # nvml-wrapper = "0.10.0"
 open = "5.1.3"
-plotters = "0.3.6"
-plotters-iced = { git = "https://github.com/D-Brox/plotters-cosmic-iced.git", default-features = false }
-# plotters-iced = { path = "../plotters", default-features = false }
 rust-embed = "8.3.0"
 serde = "1.0.209"
 sysinfo = "0.34.2"
+
+
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"

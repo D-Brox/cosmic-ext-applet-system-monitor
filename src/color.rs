@@ -2,16 +2,15 @@ use std::borrow::Borrow;
 
 use cosmic::theme::CosmicColor;
 use cosmic::Theme;
-use plotters::style::RGBAColor;
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[allow(non_camel_case_types)]
 /// Enum that bundles [Theme] dependent colors with ordinary RGB colors
 ///
-/// All fieldless variants are mapped into the field of [CosmicPaletteInner](cosmic::cosmic_theme::CosmicPaletteInner) with the same name.
+/// All fieldless variants are mapped into the field of [`CosmicPaletteInner`](cosmic::cosmic_theme::CosmicPaletteInner) with the same name.
 ///
-/// Any RGB color can be created from using the [ColorSelection::rgb] containing a hexcode
+/// Any RGB color can be created from using the [`ColorSelection::rgb`] containing a hexcode
 pub enum Color {
     gray_1,
     gray_2,
@@ -45,20 +44,10 @@ pub enum Color {
     accent_purple,
     accent_pink,
     accent_indigo,
-    // rgb(String),
     Cosmic(CosmicColor),
 }
 
 impl Color {
-    // todo remove
-    pub fn as_rgba_color(&self, theme: impl Borrow<Theme>) -> RGBAColor {
-        let theme = theme.borrow();
-        let cosmic_color = self.as_cosmic_color(theme);
-
-        let rgb = cosmic_color.color.into_format::<u8>();
-        RGBAColor(rgb.red, rgb.green, rgb.blue, cosmic_color.alpha as f64)
-    }
-
     pub fn as_cosmic_color(&self, theme: impl Borrow<Theme>) -> CosmicColor {
         let cosmic_theme = theme.borrow().cosmic();
         let palette = &cosmic_theme.palette;
@@ -95,13 +84,6 @@ impl Color {
             Color::accent_purple => palette.accent_purple,
             Color::accent_pink => palette.accent_pink,
             Color::accent_indigo => palette.accent_indigo,
-            // Color::rgb(s) => {
-            //     println!("using custom color: {s}");
-            //     s.parse::<Rgba<Srgb, u8>>()
-            //         .map(Rgba::into_format)
-            //         .inspect_err(|e| eprintln!("failed to parse into color. {e}"))
-            //         .unwrap_or(cosmic_theme.accent_color())
-            // }
             Color::Cosmic(cc) => *cc,
         }
     }

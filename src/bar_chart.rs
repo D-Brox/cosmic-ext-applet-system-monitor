@@ -18,14 +18,16 @@ use serde::{Deserialize, Serialize};
 pub enum SortMethod {
     Ascending,
     Descending,
+    None,
 }
 impl SortMethod {
-    pub fn method(&self) -> impl FnMut(&f32, &f32) -> Ordering {
+    pub fn method(self) -> impl FnMut(&f32, &f32) -> Ordering {
         match self {
             SortMethod::Descending => {
                 |a: &f32, b: &f32| b.partial_cmp(a).unwrap_or(Ordering::Equal)
             }
             SortMethod::Ascending => |a: &f32, b: &f32| a.partial_cmp(b).unwrap_or(Ordering::Equal),
+            SortMethod::None => |_: &f32, _: &f32| Ordering::Less,
         }
     }
 }
@@ -131,7 +133,6 @@ impl Widget<Message, Theme, Renderer> for VerticalPercentageBar {
         limits: &layout::Limits,
     ) -> layout::Node {
         let Size { width, height } = Widget::size(self);
-
         layout::atomic(limits, width, height)
     }
 

@@ -3,7 +3,6 @@
 mod applet;
 mod color;
 mod config;
-mod helpers;
 mod localization;
 // mod sysmon;
 mod bar_chart;
@@ -11,10 +10,10 @@ mod run_chart;
 
 use applet::{Flags, SystemMonitorApplet, ID};
 use config::{Config, CONFIG_VERSION};
-use cosmic::cosmic_config::{self, CosmicConfigEntry};
+use cosmic::cosmic_config::{Config as CosmicConfig, CosmicConfigEntry};
 
 fn main() -> cosmic::iced::Result {
-    let (config_handler, config) = match cosmic_config::Config::new(ID, CONFIG_VERSION) {
+    let (config_handler, config) = match CosmicConfig::new(ID, CONFIG_VERSION) {
         Ok(config_handler) => {
             let config = match Config::get_entry(&config_handler) {
                 Ok(ok) => ok,
