@@ -21,11 +21,7 @@ plotters-iced = { git = "https://github.com/D-Brox/plotters-cosmic-iced.git", de
 # plotters-iced = { path = "../plotters", default-features = false }
 rust-embed = "8.3.0"
 serde = "1.0.209"
-sysinfo = "0.33.1"
-
-[features]
-default = ["wgpu"]
-wgpu = ["plotters-iced/wgpu"]
+sysinfo = "0.34.2"
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
