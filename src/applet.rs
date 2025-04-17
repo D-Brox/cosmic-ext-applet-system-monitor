@@ -14,7 +14,7 @@ use std::time::Duration;
 use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 
 use crate::{
-    bar_chart::{PercentageBar, SortMethod},
+    bar_chart::PercentageBar,
     config::{config_subscription, ComponentConfig, Config, CpuView, DoubleView, SingleView},
     helpers::{base_background, init_history_with_default, panel_collection},
     run_chart::{HistoryChart, SuperimposedHistoryChart},
@@ -38,13 +38,13 @@ pub struct SystemMonitorApplet {
     global_cpu: History<f32>,
     ram: History,
     swap: History,
-    /// amount uploaded between refresh of sysinfo::Nets. (DEOS NOT STORE RATE)
+    /// amount uploaded between refresh of sysinfo::Nets. (DOES NOT STORE RATE)
     upload: History,
-    /// amount downloaded between refresh of sysinfo::Nets. (DEOS NOT STORE RATE)
+    /// amount downloaded between refresh of sysinfo::Nets. (DOES NOT STORE RATE)
     download: History,
-    /// amount read between refresh of sysinfo::Disks. (DEOS NOT STORE RATE)
+    /// amount read between refresh of sysinfo::Disks. (DOES NOT STORE RATE)
     disk_read: History,
-    /// amount written between refresh of sysinfo::Disks. (DEOS NOT STORE RATE)
+    /// amount written between refresh of sysinfo::Disks. (DOES NOT STORE RATE)
     disk_write: History,
 }
 
@@ -212,11 +212,6 @@ impl Application for SystemMonitorApplet {
                                 self.sys.cpus().iter().map(Cpu::cpu_usage).collect();
 
                             if let Some(method) = sorting {
-                                match method {
-                                    SortMethod::Descending => {
-                                        cpus.sort_by(|a, b| b.partial_cmp(a).unwrap());
-                                    }
-                                }
                                 cpus.sort_by(method.method())
                             }
 
@@ -312,53 +307,53 @@ impl Application for SystemMonitorApplet {
                     .collect(),
                 ComponentConfig::Net(c) => c
                     .vis
-                    .iter()
+                        .iter()
                     .map(|v| match v {
                         DoubleView::SuperimposedRunChart {
-                            aspect_ratio,
-                            color_front,
-                            color_back,
+                                aspect_ratio,
+                                color_front,
+                                color_back,
                         } => {
-                            let upload = HistoryChart::auto_max(
-                                &self.upload,
-                                color_front.as_rgba_color(self.get_theme()),
-                            );
-                            let download = HistoryChart::auto_max(
-                                &self.download,
-                                color_back.as_rgba_color(self.get_theme()),
-                            );
+                                    let upload = HistoryChart::auto_max(
+                                        &self.upload,
+                                        color_front.as_rgba_color(self.get_theme()),
+                                    );
+                                    let download = HistoryChart::auto_max(
+                                        &self.download,
+                                        color_back.as_rgba_color(self.get_theme()),
+                                    );
 
-                            let content = ChartWidget::new(SuperimposedHistoryChart {
-                                back: upload,
-                                front: download,
-                            });
+                                    let content = ChartWidget::new(SuperimposedHistoryChart {
+                                        back: upload,
+                                        front: download,
+                                    });
 
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
-                        }
+                                }
                         DoubleView::SingleRunA {
                             color,
                             aspect_ratio,
                         } => {
-                            let down = HistoryChart::auto_max(
-                                &self.download,
-                                color.as_rgba_color(self.get_theme()),
-                            );
+                                    let down = HistoryChart::auto_max(
+                                        &self.download,
+                                        color.as_rgba_color(self.get_theme()),
+                                    );
 
-                            let content = ChartWidget::new(down);
+                                    let content = ChartWidget::new(down);
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
-                        }
+                                }
                         DoubleView::SingleRunB {
                             color,
                             aspect_ratio,
                         } => {
-                            let up = HistoryChart::auto_max(
-                                &self.upload,
-                                color.as_rgba_color(self.get_theme()),
-                            );
-                            let content = ChartWidget::new(up);
+                                    let up = HistoryChart::auto_max(
+                                        &self.upload,
+                                        color.as_rgba_color(self.get_theme()),
+                                    );
+                                    let content = ChartWidget::new(up);
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
-                        }
-                    })
+                            }
+                        })
                     .collect(),
                 ComponentConfig::Disk(c) => c
                     .vis
@@ -369,41 +364,41 @@ impl Application for SystemMonitorApplet {
                             color_back,
                             aspect_ratio,
                         } => {
-                            let read = HistoryChart::auto_max(
-                                &self.disk_read,
-                                color_back.as_rgba_color(self.get_theme()),
-                            );
-                            let write = HistoryChart::auto_max(
-                                &self.disk_write,
-                                color_front.as_rgba_color(self.get_theme()),
-                            );
+                                let read = HistoryChart::auto_max(
+                                    &self.disk_read,
+                                    color_back.as_rgba_color(self.get_theme()),
+                                );
+                                let write = HistoryChart::auto_max(
+                                    &self.disk_write,
+                                    color_front.as_rgba_color(self.get_theme()),
+                                );
 
-                            let content = ChartWidget::new(SuperimposedHistoryChart {
-                                back: read,
-                                front: write,
-                            });
+                                let content = ChartWidget::new(SuperimposedHistoryChart {
+                                    back: read,
+                                    front: write,
+                                });
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
-                        }
+                            }
                         DoubleView::SingleRunA {
                             color,
                             aspect_ratio,
                         } => {
-                            let read = HistoryChart::auto_max(
-                                &self.disk_read,
-                                color.as_rgba_color(self.get_theme()),
-                            );
-                            let content = ChartWidget::new(read);
+                                let read = HistoryChart::auto_max(
+                                    &self.disk_read,
+                                    color.as_rgba_color(self.get_theme()),
+                                );
+                                let content = ChartWidget::new(read);
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
-                        }
+                            }
                         DoubleView::SingleRunB {
                             color,
                             aspect_ratio,
                         } => {
-                            let write = HistoryChart::auto_max(
-                                &self.disk_write,
-                                color.as_rgba_color(self.get_theme()),
-                            );
-                            let content = ChartWidget::new(write);
+                                let write = HistoryChart::auto_max(
+                                    &self.disk_write,
+                                    color.as_rgba_color(self.get_theme()),
+                                );
+                                let content = ChartWidget::new(write);
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                         }
                     })

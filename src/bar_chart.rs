@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum SortMethod {
+    Ascending,
     Descending,
 }
 impl SortMethod {
@@ -24,6 +25,7 @@ impl SortMethod {
             SortMethod::Descending => {
                 |a: &f32, b: &f32| b.partial_cmp(a).unwrap_or(Ordering::Equal)
             }
+            SortMethod::Ascending => |a: &f32, b: &f32| a.partial_cmp(b).unwrap_or(Ordering::Equal),
         }
     }
 }
