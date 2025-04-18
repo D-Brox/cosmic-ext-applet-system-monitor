@@ -11,6 +11,7 @@ use std::sync::LazyLock;
 #[folder = "i18n/"]
 struct Localizations;
 
+#[allow(dead_code)]
 pub static LANGUAGE_LOADER: LazyLock<FluentLanguageLoader> = LazyLock::new(|| {
     let loader: FluentLanguageLoader = fluent_language_loader!();
 
