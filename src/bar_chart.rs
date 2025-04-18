@@ -44,6 +44,8 @@ impl PercentageBar {
             Self::Horizontal(HorizontalPercentageBar::new(value, color))
         }
     }
+
+    #[allow(clippy::cast_precision_loss)]
     pub(crate) fn from_pair(is_horizontal: bool, current: u64, max: u64, color: Color) -> Self {
         let value = current as f32 / max as f32 * 100.0;
         Self::new(is_horizontal, value, color)
@@ -114,7 +116,8 @@ impl VerticalPercentageBar {
             color,
         }
     }
-
+    
+    #[allow(clippy::cast_precision_loss)]
     pub fn from_pair(current: u64, max: u64, color: Color) -> Self {
         let value = current as f32 / max as f32 * 100.0;
         Self::new(value, color)

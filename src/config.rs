@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 pub const CONFIG_VERSION: u64 = 2;
 
+#[allow(clippy::float_cmp)]
 #[derive(Clone, CosmicConfigEntry, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
     // todo radius goes here? should it be different for each view-type?

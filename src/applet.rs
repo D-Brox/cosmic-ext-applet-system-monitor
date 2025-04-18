@@ -15,7 +15,7 @@ use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 use crate::{
     bar_chart::PercentageBar,
     config::{config_subscription, ComponentConfig, Config, CpuView, IoView, PercentView},
-    run_chart::{HistoryChart, SuperimposedHistoryChart},
+    run_chart::{HistoryChart, SimpleHistoryChart, SuperimposedHistoryChart},
 };
 
 pub type History<T = u64> = CircularQueue<T>;
@@ -78,6 +78,7 @@ impl SystemMonitorApplet {
         let (bounds_width, bounds_height) = self.core.applet.suggested_window_size();
         let padding = self.padding();
 
+        #[allow(clippy::cast_precision_loss)]
         if self.is_horizontal() {
             let height = bounds_height.get() as f32 - padding.vertical();
             Size {
@@ -216,6 +217,7 @@ impl Application for SystemMonitorApplet {
         (app, Task::none())
     }
 
+    #[allow(clippy::too_many_lines)]
     fn view(&self) -> Element<Message> {
         let item_iter = self.config.components.iter().map(|module| {
             match module {
@@ -262,15 +264,8 @@ impl Application for SystemMonitorApplet {
                             aspect_ratio,
                             color,
                         } => {
-                            let chart = HistoryChart::new(
-                                &self.global_cpu,
-                                100.0,
-                                *color, //: color.as_rgba_color(self.get_theme()),
-                            );
-
+                            let chart = SimpleHistoryChart::new(&self.global_cpu, 100.0, *color);
                             self.aspect_ratio_container(chart, *aspect_ratio)
-                            // let content = ChartWidget::new(chart);
-                            // self.aspect_ratio_container(content, *aspect_ratio)
                         }
                     })
                     .collect::<Vec<_>>(),
@@ -336,16 +331,10 @@ impl Application for SystemMonitorApplet {
                             color_back,
                             color_front,
                         } => {
-                            let ram = HistoryChart::new(
-                                &self.ram,
-                                self.sys.total_memory(),
-                                *color_back, //.as_rgba_color(self.get_theme()),
-                            );
-                            let swap = HistoryChart::new(
-                                &self.swap,
-                                self.sys.total_swap(),
-                                *color_front, //.as_rgba_color(self.get_theme()),
-                            );
+                            let ram =
+                                HistoryChart::new(&self.ram, self.sys.total_memory(), *color_back);
+                            let swap =
+                                HistoryChart::new(&self.swap, self.sys.total_swap(), *color_front);
 
                             let content = SuperimposedHistoryChart {
                                 back: ram,
@@ -358,26 +347,16 @@ impl Application for SystemMonitorApplet {
                             color,
                             aspect_ratio,
                         } => {
-                            let ram = HistoryChart::new(
-                                &self.ram,
-                                self.sys.total_memory(),
-                                *color, //.as_rgba_color(self.get_theme()),
-                            );
-
-                            // let content = ChartWidget::new(ram);
+                            let ram =
+                                SimpleHistoryChart::new(&self.ram, self.sys.total_memory(), *color);
                             self.aspect_ratio_container(ram, *aspect_ratio)
                         }
                         PercentView::RunB {
                             color,
                             aspect_ratio,
                         } => {
-                            let swap = HistoryChart::new(
-                                &self.swap,
-                                self.sys.total_swap(),
-                                *color, //.as_rgba_color(self.get_theme()),
-                            );
-
-                            // let content = ChartWidget::new(swap);
+                            let swap =
+                                SimpleHistoryChart::new(&self.swap, self.sys.total_swap(), *color);
                             self.aspect_ratio_container(swap, *aspect_ratio)
                         }
                     })
@@ -390,14 +369,8 @@ impl Application for SystemMonitorApplet {
                             color_front,
                             color_back,
                         } => {
-                            let upload = HistoryChart::auto_max(
-                                &self.upload,
-                                *color_front, //.as_rgba_color(self.get_theme()),
-                            );
-                            let download = HistoryChart::auto_max(
-                                &self.download,
-                                *color_back, //.as_rgba_color(self.get_theme()),
-                            );
+                            let upload = HistoryChart::auto_max(&self.upload, *color_front);
+                            let download = HistoryChart::auto_max(&self.download, *color_back);
 
                             let content = SuperimposedHistoryChart {
                                 back: upload,
@@ -410,10 +383,7 @@ impl Application for SystemMonitorApplet {
                             color,
                             aspect_ratio,
                         } => {
-                            let down = HistoryChart::auto_max(
-                                &self.download,
-                                *color, //.as_rgba_color(self.get_theme()),
-                            );
+                            let down = SimpleHistoryChart::auto_max(&self.download, *color);
 
                             self.aspect_ratio_container_with_padding(down, *aspect_ratio)
                         }
@@ -421,10 +391,7 @@ impl Application for SystemMonitorApplet {
                             color,
                             aspect_ratio,
                         } => {
-                            let up = HistoryChart::auto_max(
-                                &self.upload,
-                                *color, //.as_rgba_color(self.get_theme()),
-                            );
+                            let up = SimpleHistoryChart::auto_max(&self.upload, *color);
                             self.aspect_ratio_container_with_padding(up, *aspect_ratio)
                         }
                     })
@@ -437,14 +404,8 @@ impl Application for SystemMonitorApplet {
                             color_back,
                             aspect_ratio,
                         } => {
-                            let read = HistoryChart::auto_max(
-                                &self.disk_read,
-                                *color_back, //.as_rgba_color(self.get_theme()),
-                            );
-                            let write = HistoryChart::auto_max(
-                                &self.disk_write,
-                                *color_front, //.as_rgba_color(self.get_theme()),
-                            );
+                            let read = HistoryChart::auto_max(&self.disk_read, *color_back);
+                            let write = HistoryChart::auto_max(&self.disk_write, *color_front);
 
                             let content = SuperimposedHistoryChart {
                                 back: read,
@@ -456,22 +417,14 @@ impl Application for SystemMonitorApplet {
                             color,
                             aspect_ratio,
                         } => {
-                            let read = HistoryChart::auto_max(
-                                &self.disk_read,
-                                *color, //.as_rgba_color(self.get_theme()),
-                            );
-                            // let content = ChartWidget::new(read);
+                            let read = SimpleHistoryChart::auto_max(&self.disk_read, *color);
                             self.aspect_ratio_container_with_padding(read, *aspect_ratio)
                         }
                         IoView::RunB {
                             color,
                             aspect_ratio,
                         } => {
-                            let write = HistoryChart::auto_max(
-                                &self.disk_write,
-                                *color, //.as_rgba_color(self.get_theme()),
-                            );
-                            // let content = ChartWidget::new(write);
+                            let write = SimpleHistoryChart::auto_max(&self.disk_write, *color);
                             self.aspect_ratio_container_with_padding(write, *aspect_ratio)
                         }
                     })
