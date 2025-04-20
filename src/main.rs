@@ -12,7 +12,7 @@ mod localization;
 
 use applet::{Flags, SystemMonitorApplet, ID};
 use config::{Config, CONFIG_VERSION};
-use cosmic::cosmic_config::{Config as CosmicConfig, CosmicConfigEntry, Error as ConfigError};
+use cosmic::cosmic_config::{Config as CosmicConfig, CosmicConfigEntry};
 
 fn main() -> cosmic::iced::Result {
     let (config_handler, config) = match CosmicConfig::new(ID, CONFIG_VERSION) {
@@ -21,7 +21,7 @@ fn main() -> cosmic::iced::Result {
                 Ok(ok) => ok,
                 Err((errs, config)) => {
                     eprintln!("errors loading config: {errs:?}");
-                    if errs.iter().any(|err|!err.is_err()){
+                    if errs.iter().any(|err| !err.is_err()) {
                         let _ = config.write_entry(&config_handler);
                     }
                     config
