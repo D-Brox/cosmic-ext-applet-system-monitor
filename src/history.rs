@@ -39,6 +39,9 @@ impl<T: Default + Copy> History<T> {
     }
 
     pub fn resize(&mut self, capacity: usize) {
+        if capacity == self.capacity {
+            return;
+        }
         if self.capacity != 0 {
             // Reverse front and back to make it contiguous
             self.data[self.insertion_index..].reverse();
