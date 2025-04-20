@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     applet::{Message, ID},
-    bar_chart::SortMethod,
     color::Color,
+    components::bar::SortMethod,
 };
 pub const CONFIG_VERSION: u64 = 2;
 

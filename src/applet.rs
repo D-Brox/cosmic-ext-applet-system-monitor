@@ -12,10 +12,14 @@ use std::time::Duration;
 use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 
 use crate::{
-    bar_chart::PercentageBar,
-    config::{config_subscription, ComponentConfig, Config, CpuView, IoView, PercentView},
+    components::{
+        bar::PercentageBar,
+        run::{HistoryChart, SimpleHistoryChart, SuperimposedHistoryChart},
+    },
+    config::{
+        config_subscription, ComponentConfig, Config, CpuView, IoView, PaddingOption, PercentView,
+    },
     history::History,
-    run_chart::{HistoryChart, SimpleHistoryChart, SuperimposedHistoryChart},
 };
 
 pub const ID: &str = "dev.DBrox.CosmicSystemMonitor";
@@ -83,10 +87,8 @@ impl SystemMonitorApplet {
 
     fn padding(&self) -> Padding {
         match self.config.padding {
-            crate::config::PaddingOption::Suggested => {
-                self.core.applet.suggested_padding(false).into()
-            }
-            crate::config::PaddingOption::Custom(p) => p,
+            PaddingOption::Suggested => self.core.applet.suggested_padding(false).into(),
+            PaddingOption::Custom(p) => p,
         }
         .into()
     }

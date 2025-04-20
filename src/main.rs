@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod applet;
-mod bar_chart;
+mod components {
+    pub mod bar;
+    pub mod run;
+}
 mod color;
 mod config;
 mod history;
 mod localization;
-mod run_chart;
 
 use applet::{Flags, SystemMonitorApplet, ID};
 use config::{Config, CONFIG_VERSION};
