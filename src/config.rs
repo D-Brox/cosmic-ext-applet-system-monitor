@@ -1,26 +1,44 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::{
-    applet::{Message, ID},
-    bar_chart::SortMethod,
-    color::Color,
-};
+#![allow(clippy::float_cmp)]
 use cosmic::{
     cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry},
     iced::Subscription,
 };
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    applet::{Message, ID},
+    bar_chart::SortMethod,
+    color::Color,
+};
 pub const CONFIG_VERSION: u64 = 2;
 
-#[allow(clippy::float_cmp)]
 #[derive(Clone, CosmicConfigEntry, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
     // todo radius goes here? should it be different for each view-type?
     pub padding: PaddingOption,
+    pub sampling: SamplingConfig,
     pub components: Box<[ComponentConfig]>,
     pub component_spacing: f32,
     pub component_inner_spacing: f32,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SamplingConfig {
+    pub cpu: Sampling,
+    pub mem: Sampling,
+    pub net: Sampling,
+    pub disk: Sampling,
+    pub gpu: Sampling,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Sampling {
+    /// amount of time (in milliseconds) between new data
+    pub update_interval: u64,
+    /// size of the history kept and shown in the run chart
+    pub sampling_window: usize,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -33,34 +51,11 @@ pub enum PaddingOption {
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ComponentConfig {
-    Cpu {
-        /// amount of time (in milliseconds) between new data
-        update_interval: u64,
-        /// size of the history kept and shown in the run chart
-        sampling_window: usize,
-        vis: Box<[CpuView]>,
-    },
-    Mem {
-        /// amount of time (in milliseconds) between new data
-        update_interval: u64,
-        /// size of the history kept and shown in the run chart
-        sampling_window: usize,
-        vis: Box<[PercentView]>,
-    },
-    Net {
-        /// amount of time (in milliseconds) between new data
-        update_interval: u64,
-        /// size of the history kept and shown in the run chart
-        sampling_window: usize,
-        vis: Box<[IoView]>,
-    },
-    Disk {
-        /// amount of time (in milliseconds) between new data
-        update_interval: u64,
-        /// size of the history kept and shown in the run chart
-        sampling_window: usize,
-        vis: Box<[IoView]>,
-    },
+    Cpu(Box<[CpuView]>),
+
+    Mem(Box<[PercentView]>),
+    Net(Box<[IoView]>),
+    Disk(Box<[IoView]>),
 }
 
 pub fn config_subscription() -> Subscription<Message> {
@@ -162,9 +157,37 @@ impl Default for Config {
                 ComponentConfig::default_mem(),
                 ComponentConfig::default_disk(),
                 ComponentConfig::default_net(),
-                // ChartConfig::VRAM(VRAM::default()),
+                // ComponentConfig::default_gpu(),
             ]
             .into(),
+            sampling: SamplingConfig::default(),
+        }
+    }
+}
+
+impl Default for SamplingConfig {
+    fn default() -> Self {
+        SamplingConfig {
+            cpu: Sampling {
+                update_interval: 1000,
+                sampling_window: 60,
+            },
+            mem: Sampling {
+                update_interval: 2000,
+                sampling_window: 30,
+            },
+            net: Sampling {
+                update_interval: 2000,
+                sampling_window: 30,
+            },
+            disk: Sampling {
+                update_interval: 1000,
+                sampling_window: 60,
+            },
+            gpu: Sampling {
+                update_interval: 2000,
+                sampling_window: 30,
+            },
         }
     }
 }
@@ -173,10 +196,8 @@ impl ComponentConfig {
     fn default_cpu() -> Self {
         let color = Color::accent_blue;
 
-        ComponentConfig::Cpu {
-            update_interval: 1000,
-            sampling_window: 60,
-            vis: [
+        ComponentConfig::Cpu(
+            [
                 CpuView::GlobalRun {
                     aspect_ratio: 3.0,
                     color,
@@ -185,7 +206,7 @@ impl ComponentConfig {
                     bar_aspect_ratio: 0.25,
                     color,
                     spacing: 3.0,
-                    sorting: SortMethod::None,
+                    sorting: SortMethod::Unsorted,
                 },
                 CpuView::GlobalBar {
                     aspect_ratio: 0.5,
@@ -193,16 +214,14 @@ impl ComponentConfig {
                 },
             ]
             .into(),
-        }
+        )
     }
 
     fn default_mem() -> Self {
         let color_back = Color::accent_green;
         let color_front = Color::accent_purple;
-        ComponentConfig::Mem {
-            update_interval: 2000,
-            sampling_window: 30,
-            vis: [
+        ComponentConfig::Mem(
+            [
                 PercentView::Run {
                     color_back,
                     color_front,
@@ -216,32 +235,49 @@ impl ComponentConfig {
                 },
             ]
             .into(),
-        }
+        )
     }
 
     fn default_net() -> Self {
-        ComponentConfig::Net {
-            update_interval: 1000,
-            sampling_window: 60,
-            vis: [IoView::Run {
+        ComponentConfig::Net(
+            [IoView::Run {
                 color_front: Color::accent_yellow,
                 color_back: Color::accent_red,
                 aspect_ratio: 1.5,
             }]
             .into(),
-        }
+        )
     }
 
     fn default_disk() -> Self {
-        ComponentConfig::Disk {
-            update_interval: 2000,
-            sampling_window: 30,
-            vis: [IoView::Run {
+        ComponentConfig::Disk(
+            [IoView::Run {
                 color_front: Color::accent_orange,
                 color_back: Color::accent_pink,
                 aspect_ratio: 1.5,
             }]
             .into(),
-        }
+        )
     }
+
+    // fn default_gpu() -> Self {
+    //     let color_back = Color::accent_warm_grey;
+    //     let color_front = Color::accent_indigo;
+    //     ComponentConfig::Mem(
+    //         [
+    //             PercentView::Run {
+    //                 color_back,
+    //                 color_front,
+    //                 aspect_ratio: 2.0,
+    //             },
+    //             PercentView::Bar {
+    //                 color_back,
+    //                 color_front,
+    //                 bar_aspect_ratio: 0.5,
+    //                 spacing: 3.0,
+    //             },
+    //         ]
+    //         .into(),
+    //     )
+    // }
 }

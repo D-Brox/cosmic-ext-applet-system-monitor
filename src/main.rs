@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod applet;
+mod bar_chart;
 mod color;
 mod config;
+mod history;
 mod localization;
-// mod sysmon;
-mod bar_chart;
 mod run_chart;
 
 use applet::{Flags, SystemMonitorApplet, ID};
@@ -22,6 +22,7 @@ fn main() -> cosmic::iced::Result {
                     config
                 }
             };
+            #[cfg(debug_assertions)]
             if let Err(err) = config.write_entry(&config_handler) {
                 eprintln!("Error writing config: {err:?}");
             }

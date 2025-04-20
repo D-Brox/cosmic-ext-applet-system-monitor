@@ -8,8 +8,7 @@ use cosmic::{
     Element, Renderer, Theme,
 };
 
-use crate::applet::{History, Message};
-use crate::color::Color;
+use crate::{applet::Message, color::Color, history::History};
 
 #[derive(Debug)]
 pub struct HistoryChart<'a, T = u64> {
@@ -64,7 +63,7 @@ macro_rules! impl_program_history_chart {
                     y: bounds.height,
                 });
 
-                for (i, j) in self.history.asc_iter().enumerate() {
+                for (i, j) in self.history.iter().enumerate() {
                     let x = i as f32 * x_step;
                     let y = bounds.height - *j as f32 * y_step;
                     path_builder.line_to(Point{x,y});

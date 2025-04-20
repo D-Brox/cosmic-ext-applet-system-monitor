@@ -14,11 +14,12 @@ use cosmic::{
 use renderer::Style;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub enum SortMethod {
     Ascending,
     Descending,
-    None,
+    #[default]
+    Unsorted,
 }
 impl SortMethod {
     pub fn method(self) -> impl FnMut(&f32, &f32) -> Ordering {
@@ -27,7 +28,7 @@ impl SortMethod {
                 |a: &f32, b: &f32| b.partial_cmp(a).unwrap_or(Ordering::Equal)
             }
             SortMethod::Ascending => |a: &f32, b: &f32| a.partial_cmp(b).unwrap_or(Ordering::Equal),
-            SortMethod::None => |_: &f32, _: &f32| Ordering::Less,
+            SortMethod::Unsorted => |_: &f32, _: &f32| Ordering::Less,
         }
     }
 }
@@ -116,7 +117,7 @@ impl VerticalPercentageBar {
             color,
         }
     }
-    
+
     #[allow(clippy::cast_precision_loss)]
     pub fn from_pair(current: u64, max: u64, color: Color) -> Self {
         let value = current as f32 / max as f32 * 100.0;

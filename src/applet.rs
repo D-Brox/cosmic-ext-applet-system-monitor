@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use circular_queue::CircularQueue;
 use cosmic::{
     app::{Core, Task},
     cosmic_config,
@@ -15,21 +14,9 @@ use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
 use crate::{
     bar_chart::PercentageBar,
     config::{config_subscription, ComponentConfig, Config, CpuView, IoView, PercentView},
+    history::History,
     run_chart::{HistoryChart, SimpleHistoryChart, SuperimposedHistoryChart},
 };
-
-pub type History<T = u64> = CircularQueue<T>;
-
-pub fn init_history<T: Default>(size: impl Into<usize>) -> History<T> {
-    let size = size.into();
-    let mut history = History::<T>::with_capacity(size);
-
-    for _ in 0..size {
-        history.push(Default::default());
-    }
-
-    history
-}
 
 pub const ID: &str = "dev.DBrox.CosmicSystemMonitor";
 
@@ -64,7 +51,7 @@ pub enum Message {
     TickMem,
     TickNet,
     TickDisk,
-    // TickVRAM,
+    // TickGpu,
 }
 
 #[derive(Clone, Debug)]
@@ -179,20 +166,13 @@ impl Application for SystemMonitorApplet {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let (mut cpu, mut mem, mut net, mut disk) = Default::default();
+        let sampling = &flags.config.sampling;
         for chart_config in &flags.config.components {
             match chart_config {
-                ComponentConfig::Cpu {
-                    sampling_window, ..
-                } => cpu = Some(*sampling_window),
-                ComponentConfig::Mem {
-                    sampling_window, ..
-                } => mem = Some(*sampling_window),
-                ComponentConfig::Net {
-                    sampling_window, ..
-                } => net = Some(*sampling_window),
-                ComponentConfig::Disk {
-                    sampling_window, ..
-                } => disk = Some(*sampling_window),
+                ComponentConfig::Cpu { .. } => cpu = Some(sampling.cpu.sampling_window),
+                ComponentConfig::Mem { .. } => mem = Some(sampling.mem.sampling_window),
+                ComponentConfig::Net { .. } => net = Some(sampling.net.sampling_window),
+                ComponentConfig::Disk { .. } => disk = Some(sampling.disk.sampling_window), // ComponentConfig::Gpu  => gpu = Some(flags.config.sampling.gpu.sampling_window),
             }
         }
 
@@ -205,13 +185,13 @@ impl Application for SystemMonitorApplet {
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
 
-            global_cpu: init_history(cpu.unwrap_or(0)),
-            ram: init_history(mem.unwrap_or(0)),
-            swap: init_history(mem.unwrap_or(0)),
-            upload: init_history(net.unwrap_or(0)),
-            download: init_history(net.unwrap_or(0)),
-            disk_read: init_history(disk.unwrap_or(0)),
-            disk_write: init_history(disk.unwrap_or(0)),
+            global_cpu: History::with_capacity(cpu.unwrap_or(0)),
+            ram: History::with_capacity(mem.unwrap_or(0)),
+            swap: History::with_capacity(mem.unwrap_or(0)),
+            upload: History::with_capacity(net.unwrap_or(0)),
+            download: History::with_capacity(net.unwrap_or(0)),
+            disk_read: History::with_capacity(disk.unwrap_or(0)),
+            disk_write: History::with_capacity(disk.unwrap_or(0)),
         };
 
         (app, Task::none())
@@ -221,7 +201,7 @@ impl Application for SystemMonitorApplet {
     fn view(&self) -> Element<Message> {
         let item_iter = self.config.components.iter().map(|module| {
             match module {
-                ComponentConfig::Cpu { vis, .. } => vis
+                ComponentConfig::Cpu(vis) => vis
                     .iter()
                     .map(|v| match v {
                         CpuView::GlobalBar {
@@ -269,7 +249,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect::<Vec<_>>(),
-                ComponentConfig::Mem { vis, .. } => vis
+                ComponentConfig::Mem(vis) => vis
                     .iter()
                     .map(|v| match v {
                         PercentView::Bar {
@@ -361,7 +341,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect(),
-                ComponentConfig::Net { vis, .. } => vis
+                ComponentConfig::Net(vis) => vis
                     .iter()
                     .map(|v| match v {
                         IoView::Run {
@@ -396,7 +376,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect(),
-                ComponentConfig::Disk { vis, .. } => vis
+                ComponentConfig::Disk(vis) => vis
                     .iter()
                     .map(|v| match v {
                         IoView::Run {
@@ -429,6 +409,7 @@ impl Application for SystemMonitorApplet {
                         }
                     })
                     .collect(),
+                // ComponentConfig::Disk (vis) => todo!(),
             }
             .apply(|elements| {
                 self.panel_collection(elements, self.config.component_inner_spacing, 0.0)
@@ -441,31 +422,19 @@ impl Application for SystemMonitorApplet {
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
-        #[allow(unused_macros)]
-        macro_rules! config_set {
-            ($name: ident, $value: expr) => {
-                match &self.config_handler {
-                    Some(config_handler) => {
-                        match paste::paste! { self.config.[<set_ $name>](config_handler, $value) } {
-                            Ok(_) => {}
-                            Err(err) => {
-                                eprintln!("failed to save config {:?}: {}", stringify!($name), err);
-                            }
-                        }
-                    }
-                    None => {
-                        self.config.$name = $value;
-                        eprintln!(
-                            "failed to save config {:?}: no config handler",
-                            stringify!($name),
-                        );
-                    }
-                }
-            };
-        }
-
         match message {
-            Message::Config(config) => self.config = config,
+            Message::Config(config) => {
+                self.config = config;
+                let sampĺing = &self.config.sampling;
+                self.global_cpu.resize(sampĺing.cpu.sampling_window);
+                self.ram.resize(sampĺing.mem.sampling_window);
+                self.swap.resize(sampĺing.mem.sampling_window);
+                self.upload.resize(sampĺing.net.sampling_window);
+                self.download.resize(sampĺing.net.sampling_window);
+                self.disk_read.resize(sampĺing.disk.sampling_window);
+                self.disk_write.resize(sampĺing.disk.sampling_window);
+                // self.gpu.resize(sampĺing.cpu.sampling_window);
+            }
             Message::TickCpu => {
                 self.sys.refresh_cpu_all();
                 self.global_cpu.push(self.sys.global_cpu_usage());
@@ -496,40 +465,37 @@ impl Application for SystemMonitorApplet {
                     });
                 self.disk_read.push(read);
                 self.disk_write.push(written);
-            } //
-              // Message::TickVRAM => self.chart.update_vram(),
+            } // Message::TickGpu => todo!(),
         }
         Task::none()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let mut subs = Vec::new();
+        let sampling = &self.config.sampling;
         for chart in &self.config.components {
             let tick = {
                 match chart {
-                    ComponentConfig::Cpu {
-                        update_interval, ..
-                    } => cosmic::iced::time::every(Duration::from_millis(*update_interval))
-                        .map(|_| Message::TickCpu),
-                    ComponentConfig::Mem {
-                        update_interval, ..
-                    } => cosmic::iced::time::every(Duration::from_millis(*update_interval))
-                        .map(|_| Message::TickMem),
-                    ComponentConfig::Net {
-                        update_interval, ..
-                    } => cosmic::iced::time::every(Duration::from_millis(*update_interval))
-                        .map(|_| Message::TickNet),
-                    ComponentConfig::Disk {
-                        update_interval, ..
-                    } => cosmic::iced::time::every(Duration::from_millis(*update_interval))
-                        .map(|_| Message::TickDisk), /*
-                                                     ChartConfig::VRAM(_c) => {
-                                                         // uninplemented
-                                                         continue;
-                                                         // cosmic::iced::time::every(Duration::from_millis(c.update_interval))
-                                                         // .map(|_| Message::TickVRAM)
-                                                     }
-                                                     */
+                    ComponentConfig::Cpu { .. } => cosmic::iced::time::every(
+                        Duration::from_millis(sampling.cpu.update_interval),
+                    )
+                    .map(|_| Message::TickCpu),
+                    ComponentConfig::Mem { .. } => cosmic::iced::time::every(
+                        Duration::from_millis(sampling.mem.update_interval),
+                    )
+                    .map(|_| Message::TickMem),
+                    ComponentConfig::Net { .. } => cosmic::iced::time::every(
+                        Duration::from_millis(sampling.net.update_interval),
+                    )
+                    .map(|_| Message::TickNet),
+                    ComponentConfig::Disk { .. } => cosmic::iced::time::every(
+                        Duration::from_millis(sampling.disk.update_interval),
+                    )
+                    .map(|_| Message::TickDisk),
+                    // ComponentConfig::Gpu { .. } => cosmic::iced::time::every(
+                    //     Duration::from_millis(sampling.gpu.update_interval),
+                    // )
+                    // .map(|_| Message::TickGpu),
                 }
             };
             subs.push(tick);
