@@ -10,6 +10,7 @@ pub struct History<T = u64> {
 
 impl<T: Default + Copy> History<T> {
     pub fn with_capacity(capacity: usize) -> Self {
+        let capacity = capacity.max(1);
         Self {
             data: vec![Default::default(); capacity],
             capacity,
@@ -39,6 +40,7 @@ impl<T: Default + Copy> History<T> {
     }
 
     pub fn resize(&mut self, capacity: usize) {
+        let capacity = capacity.max(1);
         if capacity == self.capacity {
             return;
         }

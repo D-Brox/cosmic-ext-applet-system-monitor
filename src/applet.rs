@@ -86,7 +86,7 @@ impl SystemMonitorApplet {
     }
 
     fn padding(&self) -> Padding {
-        match self.config.padding {
+        match self.config.layout.padding {
             PaddingOption::Suggested => self.core.applet.suggested_padding(false).into(),
             PaddingOption::Custom(p) => p,
         }
@@ -206,7 +206,7 @@ impl Application for SystemMonitorApplet {
                 ComponentConfig::Cpu(vis) => vis
                     .iter()
                     .map(|v| match v {
-                        CpuView::GlobalBar {
+                        CpuView::BarGlobal {
                             aspect_ratio,
                             color,
                         } => {
@@ -217,7 +217,7 @@ impl Application for SystemMonitorApplet {
                             );
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
-                        CpuView::PerCoreBar {
+                        CpuView::BarCores {
                             bar_aspect_ratio: per_core_aspect_ratio,
                             color,
                             spacing,
@@ -242,7 +242,7 @@ impl Application for SystemMonitorApplet {
                                 .apply(container)
                                 .style(base_background)
                         }
-                        CpuView::GlobalRun {
+                        CpuView::Run {
                             aspect_ratio,
                             color,
                         } => {
@@ -255,10 +255,10 @@ impl Application for SystemMonitorApplet {
                     .iter()
                     .map(|v| match v {
                         PercentView::Bar {
-                            color_back,
-                            color_front,
+                            color_left,
+                            color_right,
                             spacing,
-                            bar_aspect_ratio,
+                            aspect_ratio,
                         } => {
                             let bars = vec![
                                 self.aspect_ratio_container(
@@ -266,25 +266,25 @@ impl Application for SystemMonitorApplet {
                                         self.is_horizontal(),
                                         self.sys.used_memory(),
                                         self.sys.total_memory(),
-                                        *color_back,
+                                        *color_left,
                                     ),
-                                    *bar_aspect_ratio,
+                                    *aspect_ratio,
                                 ),
                                 self.aspect_ratio_container(
                                     PercentageBar::from_pair(
                                         self.is_horizontal(),
                                         self.sys.used_swap(),
                                         self.sys.total_swap(),
-                                        *color_front,
+                                        *color_right,
                                     ),
-                                    *bar_aspect_ratio,
+                                    *aspect_ratio,
                                 ),
                             ];
                             self.panel_collection(bars, *spacing, 0.0)
                                 .apply(container)
                                 .style(base_background)
                         }
-                        PercentView::BarA {
+                        PercentView::BarLeft {
                             color,
                             aspect_ratio,
                         } => {
@@ -296,7 +296,7 @@ impl Application for SystemMonitorApplet {
                             );
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
-                        PercentView::BarB {
+                        PercentView::BarRight {
                             color,
                             aspect_ratio,
                         } => {
@@ -325,7 +325,7 @@ impl Application for SystemMonitorApplet {
 
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
-                        PercentView::RunA {
+                        PercentView::RunFront {
                             color,
                             aspect_ratio,
                         } => {
@@ -333,7 +333,7 @@ impl Application for SystemMonitorApplet {
                                 SimpleHistoryChart::new(&self.ram, self.sys.total_memory(), *color);
                             self.aspect_ratio_container(ram, *aspect_ratio)
                         }
-                        PercentView::RunB {
+                        PercentView::RunBack {
                             color,
                             aspect_ratio,
                         } => {
@@ -361,7 +361,7 @@ impl Application for SystemMonitorApplet {
 
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                         }
-                        IoView::RunA {
+                        IoView::RunBack {
                             color,
                             aspect_ratio,
                         } => {
@@ -369,7 +369,7 @@ impl Application for SystemMonitorApplet {
 
                             self.aspect_ratio_container_with_padding(down, *aspect_ratio)
                         }
-                        IoView::RunB {
+                        IoView::RunFront {
                             color,
                             aspect_ratio,
                         } => {
@@ -395,14 +395,14 @@ impl Application for SystemMonitorApplet {
                             };
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
                         }
-                        IoView::RunA {
+                        IoView::RunBack {
                             color,
                             aspect_ratio,
                         } => {
                             let read = SimpleHistoryChart::auto_max(&self.disk_read, *color);
                             self.aspect_ratio_container_with_padding(read, *aspect_ratio)
                         }
-                        IoView::RunB {
+                        IoView::RunFront {
                             color,
                             aspect_ratio,
                         } => {
@@ -414,11 +414,11 @@ impl Application for SystemMonitorApplet {
                 // ComponentConfig::Disk (vis) => todo!(),
             }
             .apply(|elements| {
-                self.panel_collection(elements, self.config.component_inner_spacing, 0.0)
+                self.panel_collection(elements, self.config.layout.inner_spacing, 0.0)
             })
         });
 
-        let items = self.panel_collection(item_iter, self.config.component_spacing, self.padding());
+        let items = self.panel_collection(item_iter, self.config.layout.spacing, self.padding());
 
         self.core.applet.autosize_window(items).into()
     }

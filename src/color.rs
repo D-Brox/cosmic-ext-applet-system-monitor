@@ -44,6 +44,7 @@ pub enum Color {
     accent_purple,
     accent_pink,
     accent_indigo,
+    #[serde(untagged)]
     Cosmic(CosmicColor),
 }
 

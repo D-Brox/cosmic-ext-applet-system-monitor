@@ -2,7 +2,9 @@
 
 #![allow(clippy::float_cmp)]
 use cosmic::{
-    cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry},
+    cosmic_config::{
+        self, Config as CosmicConfig, ConfigGet, ConfigSet, CosmicConfigEntry, Error as ConfigError,
+    },
     iced::Subscription,
 };
 use serde::{Deserialize, Serialize};
@@ -14,14 +16,95 @@ use crate::{
 };
 pub const CONFIG_VERSION: u64 = 2;
 
-#[derive(Clone, CosmicConfigEntry, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
     // todo radius goes here? should it be different for each view-type?
-    pub padding: PaddingOption,
     pub sampling: SamplingConfig,
     pub components: Box<[ComponentConfig]>,
-    pub component_spacing: f32,
-    pub component_inner_spacing: f32,
+    pub layout: LayoutConfig,
+}
+
+impl CosmicConfigEntry for Config {
+    const VERSION: u64 = CONFIG_VERSION;
+    fn write_entry(&self, config: &CosmicConfig) -> Result<(), ConfigError> {
+        let tx = config.transaction();
+        ConfigSet::set(&tx, "sampling", &self.sampling)?;
+        ConfigSet::set(&tx, "components", &self.components)?;
+        ConfigSet::set(&tx, "layout", &self.layout)?;
+        tx.commit()
+    }
+    fn get_entry(config: &CosmicConfig) -> Result<Self, (Vec<ConfigError>, Self)> {
+        let mut default = Self::default();
+        let mut errors = Vec::new();
+
+        macro_rules! config_get {
+            ($field_name:ident,$field_type:ty) => {
+                match ConfigGet::get::<$field_type>(config, stringify!($field_name)) {
+                    Ok($field_name) => default.$field_name = $field_name,
+                    Err(why) if !why.is_err() => {
+                        let tx = config.transaction();
+                        if let Ok(_) =
+                            ConfigSet::set(&tx, stringify!($field_name), &default.$field_name)
+                        {
+                            _ = tx.commit();
+                        }
+                    }
+                    Err(e) => errors.push(e),
+                }
+            };
+        }
+        config_get!(sampling, SamplingConfig);
+        config_get!(components, Box<[ComponentConfig]>);
+        config_get!(layout, LayoutConfig);
+
+        if errors.is_empty() {
+            Ok(default)
+        } else {
+            Err((errors, default))
+        }
+    }
+    fn update_keys<T: AsRef<str>>(
+        &mut self,
+        config: &CosmicConfig,
+        changed_keys: &[T],
+    ) -> (Vec<ConfigError>, Vec<&'static str>) {
+        let mut keys = Vec::with_capacity(changed_keys.len());
+        let mut errors = Vec::new();
+
+        macro_rules! config_set {
+            ($field_name:ident,$field_type:ty) => {
+                match cosmic_config::ConfigGet::get::<$field_type>(config, stringify!($field_name))
+                {
+                    Ok(value) => {
+                        if self.$field_name != value {
+                            keys.push(stringify!($field_name));
+                        }
+                        self.$field_name = value;
+                    }
+                    Err(e) => {
+                        errors.push(e);
+                    }
+                }
+            };
+        }
+
+        for key in changed_keys {
+            match key.as_ref() {
+                "sampling" => config_set!(sampling, SamplingConfig),
+                "components" => config_set!(components, Box<[ComponentConfig]>),
+                "layout" => config_set!(layout, LayoutConfig),
+                _ => {}
+            }
+        }
+        (errors, keys)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct LayoutConfig {
+    pub padding: PaddingOption,
+    pub spacing: f32,
+    pub inner_spacing: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -66,8 +149,9 @@ pub fn config_subscription() -> Subscription<Message> {
         CONFIG_VERSION,
     )
     .map(|update| {
+        println!("there");
         if !update.errors.is_empty() {
-            eprintln!(
+            println!(
                 "errors loading config {:?}: {:?}",
                 update.keys, update.errors
             );
@@ -91,28 +175,37 @@ pub enum IoView {
         aspect_ratio: f32,
     },
     /// If this is a view for some IO, A is for the system input (e.g. input = disk read rate, net download rate)
-    #[serde(alias = "ReadRunChart", alias = "DownloadRunChart")]
-    RunA { color: Color, aspect_ratio: f32 },
+    #[serde(
+        rename = "RunChartBack",
+        alias = "RunChartRead",
+        alias = "RunChartDownload"
+    )]
+    RunBack { color: Color, aspect_ratio: f32 },
     /// If IO, B is the system output (e.g. output = disk write rate, net upload rate)
-    #[serde(alias = "WriteRunChart", alias = "UploadRunChart")]
-    RunB { color: Color, aspect_ratio: f32 },
+    #[serde(
+        rename = "RunChartFront",
+        alias = "RunChartWrite",
+        alias = "RunChartUpload"
+    )]
+    RunFront { color: Color, aspect_ratio: f32 },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CpuView {
-    GlobalRun {
+    #[serde(rename = "RunChart")]
+    Run {
         color: Color,
         aspect_ratio: f32,
     },
-    PerCoreBar {
+    BarGlobal {
+        color: Color,
+        aspect_ratio: f32,
+    },
+    BarCores {
         color: Color,
         spacing: f32,
         bar_aspect_ratio: f32,
         sorting: SortMethod,
-    },
-    GlobalBar {
-        color: Color,
-        aspect_ratio: f32,
     },
 }
 
@@ -126,32 +219,30 @@ pub enum PercentView {
         color_front: Color,
         aspect_ratio: f32,
     },
-    #[serde(alias = "RamRunChart")]
-    RunA { color: Color, aspect_ratio: f32 },
-    #[serde(alias = "SwapRunChart")]
-    RunB { color: Color, aspect_ratio: f32 },
+    #[serde(rename = "RunChartBack", alias = "RunChartRam")]
+    RunFront { color: Color, aspect_ratio: f32 },
+    #[serde(rename = "RunChartFront", alias = "RunChartSwap")]
+    RunBack { color: Color, aspect_ratio: f32 },
 
     #[serde(rename = "BarChart")]
     Bar {
         #[serde(alias = "color_ram")]
-        color_back: Color,
+        color_left: Color,
         #[serde(alias = "color_swap")]
-        color_front: Color,
+        color_right: Color,
         spacing: f32,
-        bar_aspect_ratio: f32,
+        aspect_ratio: f32,
     },
-    #[serde(alias = "RamBarChart")]
-    BarA { color: Color, aspect_ratio: f32 },
-    #[serde(alias = "SwapBarChart")]
-    BarB { color: Color, aspect_ratio: f32 },
+    #[serde(alias = "BarChartRam")]
+    BarLeft { color: Color, aspect_ratio: f32 },
+    #[serde(alias = "BarChartSwap")]
+    BarRight { color: Color, aspect_ratio: f32 },
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            padding: PaddingOption::Suggested,
-            component_spacing: 10.0,
-            component_inner_spacing: 2.5,
+            layout: LayoutConfig::default(),
             components: [
                 ComponentConfig::default_cpu(),
                 ComponentConfig::default_mem(),
@@ -161,6 +252,16 @@ impl Default for Config {
             ]
             .into(),
             sampling: SamplingConfig::default(),
+        }
+    }
+}
+
+impl Default for LayoutConfig {
+    fn default() -> Self {
+        Self {
+            padding: PaddingOption::Suggested,
+            spacing: 5.0,
+            inner_spacing: 2.5,
         }
     }
 }
@@ -198,17 +299,11 @@ impl ComponentConfig {
 
         ComponentConfig::Cpu(
             [
-                CpuView::GlobalRun {
-                    aspect_ratio: 3.0,
+                CpuView::Run {
+                    aspect_ratio: 1.5,
                     color,
                 },
-                CpuView::PerCoreBar {
-                    bar_aspect_ratio: 0.25,
-                    color,
-                    spacing: 3.0,
-                    sorting: SortMethod::Unsorted,
-                },
-                CpuView::GlobalBar {
+                CpuView::BarGlobal {
                     aspect_ratio: 0.5,
                     color,
                 },
@@ -225,13 +320,13 @@ impl ComponentConfig {
                 PercentView::Run {
                     color_back,
                     color_front,
-                    aspect_ratio: 2.0,
+                    aspect_ratio: 1.5,
                 },
                 PercentView::Bar {
-                    color_back,
-                    color_front,
-                    bar_aspect_ratio: 0.5,
-                    spacing: 3.0,
+                    color_left: color_back,
+                    color_right: color_front,
+                    aspect_ratio: 0.5,
+                    spacing: 2.5,
                 },
             ]
             .into(),
@@ -268,13 +363,13 @@ impl ComponentConfig {
     //             PercentView::Run {
     //                 color_back,
     //                 color_front,
-    //                 aspect_ratio: 2.0,
+    //                 aspect_ratio: 1.5,
     //             },
     //             PercentView::Bar {
     //                 color_back,
     //                 color_front,
     //                 bar_aspect_ratio: 0.5,
-    //                 spacing: 3.0,
+    //                 spacing: 2.5,
     //             },
     //         ]
     //         .into(),

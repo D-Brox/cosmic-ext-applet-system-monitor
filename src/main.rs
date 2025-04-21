@@ -18,19 +18,19 @@ fn main() -> cosmic::iced::Result {
     let (config_handler, config) = match CosmicConfig::new(ID, CONFIG_VERSION) {
         Ok(config_handler) => {
             let config = match Config::get_entry(&config_handler) {
-                Ok(ok) => ok,
+                Ok(ok) => {
+                    println!("here");
+                    ok
+                }
                 Err((errs, config)) => {
-                    eprintln!("errors loading config: {errs:?}");
-                    if errs.iter().any(|err| !err.is_err()) {
-                        let _ = config.write_entry(&config_handler);
-                    }
+                    println!("errors loading config: {errs:?}");
                     config
                 }
             };
             (Some(config_handler), config)
         }
         Err(err) => {
-            eprintln!("failed to create config handler: {err}");
+            println!("failed to create config handler: {err}");
             (None, Config::default())
         }
     };
