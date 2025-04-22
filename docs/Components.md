@@ -3,13 +3,13 @@
 The components config is a list of monitored resources, and can contain duplicates.
 Each component contains a list of views, i.e., how the component is displayed.
 
-There are currently 4 kinds of components:
+There are currently 5 kinds of components:
 
 - `Cpu`: monitors cpu global and per-core usage
 - `Mem`: monitors RAM and Swap usage
 - `Net`: monitors network upload/download
 - `Disk`: monitors disk read/write
-- `Gpu`: monitors GPU usage and VRAM usage (WIP, #19)
+- `Gpu`: monitors GPU usage and VRAM usage
 
 There are 2 types of views, each with their own config:
 
