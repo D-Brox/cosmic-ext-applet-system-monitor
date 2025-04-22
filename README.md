@@ -55,7 +55,7 @@ Resource monitoring:
 - [x] Memory usage (RAM and Swap)
 - [x] Network I/O
 - [x] Disk I/O
-- [ ] GPU (usage and VRAM) (WIP, testing needed for Nvidia)
+- [x] GPU (usage and VRAM)
 - [ ] Thermal sensors
 
 [Component](./docs/Components.md) views 
