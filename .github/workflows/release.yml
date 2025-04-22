@@ -51,7 +51,7 @@ jobs:
           ARCH=`uname -m`
 
           mkdir ./$NAME
-          cp ./target/release/$NAME ./res/*.desktop ./res/*.metainfo.xml ./res/icons/hicolor/scalable/apps/*.svg ./res/install.sh  ./$NAME/
+          cp ./target/release/$NAME ./res/*.desktop ./res/*.metainfo.xml ./res/*.svg ./res/install.sh  ./$NAME/
           strip -s ./$NAME/$NAME
           tar -czvf $NAME-$ARCH.tar.gz $NAME
 
