@@ -48,8 +48,9 @@ macro_rules! impl_program_history_chart {
                 bounds: Rectangle,
                 _cursor: mouse::Cursor,
             ) -> Vec<Geometry<Renderer>> {
-                let mut frame = Frame::new(renderer, bounds.size());
-                let line_color = self.color.as_cosmic_color(theme);
+                let mut fill = Frame::new(renderer, bounds.size());
+                let mut line = Frame::new(renderer, bounds.size());
+                let color = self.color.as_cosmic_color(theme);
 
                 let mut path_builder = path::Builder::new();
                 let x_step = bounds.width / (self.history.len() - 1) as f32;
@@ -75,22 +76,22 @@ macro_rules! impl_program_history_chart {
                 });
 
                 let path = path_builder.build();
-                frame.stroke(
+                fill.fill(
+                    &path,
+                    Fill {
+                        style: stroke::Style::Solid(color.with_alpha(0.5).into()),
+                        ..Default::default()
+                    },
+                );
+                line.stroke(
                     &path,
                     Stroke {
-                        style: stroke::Style::Solid(line_color.into()),
+                        style: stroke::Style::Solid(color.into()),
                         width: 1.0,
                         ..Default::default()
                     },
                 );
-                frame.fill(
-                    &path,
-                    Fill {
-                        style: stroke::Style::Solid(line_color.with_alpha(0.5).into()),
-                        ..Default::default()
-                    },
-                );
-                vec![frame.into_geometry()]
+                vec![fill.into_geometry(),line.into_geometry()]
             }
         })*
     };
@@ -185,17 +186,9 @@ impl Program<Message, Theme, Renderer> for SuperimposedHistoryChart<'_> {
         cursor: mouse::Cursor,
     ) -> Vec<Geometry<Renderer>> {
         let mut geometries = Background.draw(state, renderer, theme, bounds, cursor);
-        geometries.extend(Program::draw(
-            &self.back, state, renderer, theme, bounds, cursor,
-        ));
-        geometries.extend(Program::draw(
-            &self.front,
-            state,
-            renderer,
-            theme,
-            bounds,
-            cursor,
-        ));
+        let back = self.back.draw(state, renderer, theme, bounds, cursor);
+        let front = self.front.draw(state, renderer, theme, bounds, cursor);
+        geometries.extend(back.into_iter().zip(front).flat_map(|(f, b)| [f, b]));
         geometries
     }
 }
