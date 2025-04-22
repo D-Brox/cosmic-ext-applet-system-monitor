@@ -4,105 +4,67 @@ A highly configurable system resource monitor for the COSMIC DE
 
 ![screenshot of the applet](./res/screenshot.png)
 
+The instructions for configuring are located in the [documentation](./docs/README.md)
 
-## Dependencies
+## Installing
 
-- libfontconfig-dev
-- libxkbcommon-dev
+You can just grab the `.deb`, `.rpm` or tarball from the [releases](https://github.com/D-Brox/cosmic-ext-applet-syste-monitor/releases/latest) page.
 
-Or equivalent packages in non-debian based distros.
 
-## Install
+## Building from source
 
-Clone the repo and run the commands corresponding to your distro:
+Clone the repository
 
 ```sh
 git clone https://github.com/D-Brox/cosmic-ext-applet-system-monitor 
 cd cosmic-ext-applet-system-monitor 
+```
 
-# Debian based distros
-just build-deb
-sudo just install-deb
+Install the build dependencies (or equivalent packages in non debian-based distros):
 
-# RPM based distros
-just build-rpm
-sudo just install-rpm
+- rustc/cargo
+- just
+- libxkbcommon-dev
 
-# Arch based distros
-just install-aur ${aur_helper}
 
-# For other distros
+Build and install the project:
+
+```bash
 just build-release
-# Global install (root)
-sudo just install
-# or local install (user)
+sudo just install 
+# or
 just install-local
 ```
 
+For alternative packaging methods, use the one of the following recipes:
+
+- `deb`: run `just build-deb` and `sudo just install-deb`
+- `rpm`: run `just build-rpm` and `sudo just install-rpm`
+
+For vendoring, use `just vendor` and `just vendor-build`
+
 ## Roadmap
 
-- [x] CPU usage
-- [x] Memory usage (RAM and swap)
-- [x] Network chart (upload/download)
-- [x] Disk chart (write/read)
-- [ ] GPU VRAM chart (help needed)
-- [x] Displayed charts config
-- [x] Sampling configs
-- [x] Chart theming
-- [x] Vertical charts (for left/right panels)
+Theming:
+- [x] Layout
+- [x] Custom colors
+- [ ] Transparency
+
+Resource monitoring:
+- [x] CPU usage (global and per core)
+- [x] Memory usage (RAM and Swap)
+- [x] Network I/O
+- [x] Disk I/O
+- [ ] GPU (usage and VRAM) (WIP, testing needed for Nvidia)
+- [ ] Thermal sensors
+
+[Component](./docs/Components.md) views 
+- [x] Run chart views (percentage and I/O)
+- [x] Bar chart views (percentage and CPU cores)
+- [ ] Text views
 - [ ] Popup (general system info)
 
-## Configuring
 
-You can configure the charts displayed by editing `~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v1/charts`. Only charts in this config will be displayed. `VRAM` will be ignored until it is implemented.
-
-The fields `update_interval`, `samples` and `size` are the sampling time in milliseconds, the total number of samples displayed and the size relative to the panel height (top/bottom panels), respectively.
-
-You can use colors defined in [CosmicPaletteInner](https://pop-os.github.io/libcosmic/cosmic/cosmic_theme/struct.CosmicPaletteInner.html), as well as `rgb("")` with a hexcode.
-
-Example config where the CPU, RAM, Swap, Net and Disk charts are displayed, in this order:
-```ron
-[
-    CPU((
-        update_interval: 1000,
-        samples: 60,
-        size: 1.5,
-        color: accent_blue,
-    )),
-    RAM((
-        update_interval: 2000,
-        samples: 30,
-        size: 1.5,
-        color: accent_green,
-    )),
-    Swap((
-        update_interval: 5000,
-        samples: 12,
-        size: 1.5,
-        color: accent_purple,
-    )),
-     Net((
-         update_interval: 1000,
-         samples: 60,
-         size: 1.5,
-         color_up: accent_yellow,
-         color_down: accent_red,
-     )),
-     Disk((
-         update_interval: 2000,
-         samples: 30,
-         color_read: accent_orange,
-         color_write: accent_pink,
-         size: 1.5,
-     )),
-    // VRAM((
-    //     update_interval: 1000,
-    //     samples: 60,
-    //     color: accent_indigo,
-    //     size: 1.5,
-    // )),
-]
-```
 
 ## Contributing
 
@@ -119,12 +81,11 @@ just build-debug && sudo just debug=1 install
 - [paradoxxxzero](https://github.com/paradoxxxzero) for their [GNOME Shell system monitor extension](https://github.com/paradoxxxzero/gnome-shell-system-monitor-applet), the inspiration for this applet
 - [edfloreshz](https://github.com/edfloreshz) for the [template for COSMIC applets](https://github.com/edfloreshz/cosmic-applet-template), which taught me the logic behind an applet
 - [aschiavon91](https://github.com/aschiavon91) for their initial work at a [system status applet](https://github.com/aschiavon91/cosmic-applet-sys-status/), which was used as a reference implementation
-- [Joylei](https://github.com/Joylei) for implementing an [Iced backend for `plotters`](https://github.com/Joylei/plotters-iced), used at the core of this applet
 
 ## Known wgpu issue
 
 There are currently some rendering issues with the `wgpu` libcosmic features in some older hybrid gpus.
-If you are affected by this, you can build and install it with this feature disabled:
+If you are affected by this, you can build and install it with this feature disabled, however this may lead to other problems:
 
 ```sh
 just build-no-wgpu
