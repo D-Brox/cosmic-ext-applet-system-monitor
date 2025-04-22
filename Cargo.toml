@@ -17,10 +17,14 @@ rust-embed = "8.3.0"
 serde = "1"
 sysinfo = "0.34.2"
 
+[features]
+default = ["wgpu"]
+wgpu = ["libcosmic/wgpu"]
+
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
-features = ["applet", "tokio", "wayland", "wgpu"]
+features = ["applet", "tokio", "wayland"]
 
 [dependencies.i18n-embed]
 version = "0.15"
