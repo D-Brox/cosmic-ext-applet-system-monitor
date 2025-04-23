@@ -8,7 +8,7 @@ The instructions for configuring are located in the [documentation](./docs/READM
 
 ## Installing
 
-You can just grab the `.deb`, `.rpm` or tarball from the [releases](https://github.com/D-Brox/cosmic-ext-applet-syste-monitor/releases/latest) page.
+You can just grab the `.deb`, `.rpm` or tarball from the [releases](https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/latest) page.
 
 
 ## Building from source
