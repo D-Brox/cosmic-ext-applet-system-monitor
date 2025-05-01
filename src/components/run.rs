@@ -33,6 +33,16 @@ impl<'a, T> HistoryChart<'a, T> {
     }
 }
 
+impl<'a, T: Copy + Ord> HistoryChart<'a, T> {
+    pub fn link_max(front: &mut HistoryChart<T>, back: &mut HistoryChart<T>) {
+        let max_front = front.max;
+        let max_back = back.max;
+        let max = max_front.max(max_back);
+        front.max = max;
+        back.max = max;
+    }
+}
+
 macro_rules! impl_program_history_chart {
     ($($t:ty),+) => {
         $(

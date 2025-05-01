@@ -1,5 +1,5 @@
-use lazy_regex::{Lazy, Regex, lazy_regex};
-use nvml_wrapper::{Device, Nvml, error::NvmlError};
+use lazy_regex::{lazy_regex, Lazy, Regex};
+use nvml_wrapper::{error::NvmlError, Device, Nvml};
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};

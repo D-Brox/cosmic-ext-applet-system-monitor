@@ -139,7 +139,7 @@ pub enum ComponentConfig {
     Mem(Box<[PercentView]>),
     Net(Box<[IoView]>),
     Disk(Box<[IoView]>),
-    Gpu(Box<[PercentView]>)
+    Gpu(Box<[PercentView]>),
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -229,9 +229,17 @@ pub enum PercentView {
         color_front: Color,
         aspect_ratio: f32,
     },
-    #[serde(rename = "RunChartBack", alias = "RunChartRam",alias = "RunChartUsage")]
+    #[serde(
+        rename = "RunChartBack",
+        alias = "RunChartRam",
+        alias = "RunChartUsage"
+    )]
     RunBack { color: Color, aspect_ratio: f32 },
-    #[serde(rename = "RunChartFront", alias = "RunChartSwap",alias = "RunChartVram")]
+    #[serde(
+        rename = "RunChartFront",
+        alias = "RunChartSwap",
+        alias = "RunChartVram"
+    )]
     RunFront { color: Color, aspect_ratio: f32 },
 
     #[serde(rename = "BarChart")]
@@ -371,13 +379,13 @@ impl ComponentConfig {
         ComponentConfig::Gpu(
             [
                 PercentView::Run {
-                    color_back:color_usage,
-                    color_front:color_vram,
+                    color_back: color_usage,
+                    color_front: color_vram,
                     aspect_ratio: 1.5,
                 },
                 PercentView::Bar {
-                    color_left:color_usage,
-                    color_right:color_vram,
+                    color_left: color_usage,
+                    color_right: color_vram,
                     aspect_ratio: 0.5,
                     spacing: 2.5,
                 },

@@ -361,12 +361,13 @@ impl Application for SystemMonitorApplet {
                             color_front,
                             color_back,
                         } => {
-                            let upload = HistoryChart::auto_max(&self.upload, *color_front);
-                            let download = HistoryChart::auto_max(&self.download, *color_back);
+                            let mut download = HistoryChart::auto_max(&self.download, *color_back);
+                            let mut upload = HistoryChart::auto_max(&self.upload, *color_front);
+                            HistoryChart::link_max(&mut download, &mut upload);
 
                             let content = SuperimposedHistoryChart {
-                                back: upload,
-                                front: download,
+                                back: download,
+                                front: upload,
                             };
 
                             self.aspect_ratio_container_with_padding(content, *aspect_ratio)
@@ -396,8 +397,9 @@ impl Application for SystemMonitorApplet {
                             color_back,
                             aspect_ratio,
                         } => {
-                            let read = HistoryChart::auto_max(&self.disk_read, *color_back);
-                            let write = HistoryChart::auto_max(&self.disk_write, *color_front);
+                            let mut read = HistoryChart::auto_max(&self.disk_read, *color_back);
+                            let mut write = HistoryChart::auto_max(&self.disk_write, *color_front);
+                            HistoryChart::link_max(&mut read, &mut write);
 
                             let content = SuperimposedHistoryChart {
                                 back: read,
@@ -509,7 +511,7 @@ impl Application for SystemMonitorApplet {
                                     aspect_ratio,
                                 } => {
                                     let usage =
-                                    SimpleHistoryChart::new(&self.gpu_usage[*idx], 100, *color);
+                                        SimpleHistoryChart::new(&self.gpu_usage[*idx], 100, *color);
                                     self.aspect_ratio_container(usage, *aspect_ratio)
                                 }
                                 PercentView::RunFront {
@@ -588,7 +590,7 @@ impl Application for SystemMonitorApplet {
             }
             Message::TickGpu => {
                 self.gpus.refresh();
-                for (idx,data) in self.gpus.data().iter().enumerate() {
+                for (idx, data) in self.gpus.data().iter().enumerate() {
                     self.gpu_usage[idx].push(data.usage);
                     self.vram[idx].push(data.used_vram);
                 }

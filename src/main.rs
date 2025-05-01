@@ -3,8 +3,8 @@
 mod applet;
 mod components {
     pub mod bar;
-    pub mod run;
     pub mod gpu;
+    pub mod run;
 }
 mod color;
 mod config;
