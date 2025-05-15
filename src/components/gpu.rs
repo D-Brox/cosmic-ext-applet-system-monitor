@@ -1,11 +1,11 @@
-use lazy_regex::{lazy_regex, Lazy, Regex};
 use nvml_wrapper::{error::NvmlError, Device, Nvml};
+use regex::Regex;
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-static RE_CARDS: Lazy<Regex> = lazy_regex!(r"card(\d+)/device$");
+static RE_CARDS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"card(\d+)/device$").unwrap());
 const NV_VENDOR_ID: u16 = 0x10DE;
 static NVML: LazyLock<Result<Nvml, NvmlError>> = LazyLock::new(Nvml::init);
 
@@ -65,13 +65,13 @@ impl Gpus {
                         let vendor = std::fs::read_to_string(device_vendor_path)
                             .ok()
                             .and_then(|content| {
-                                u16::from_str_radix(&content.trim_start_matches("0x"), 16).ok()
+                                u16::from_str_radix(content.trim_start_matches("0x"), 16).ok()
                             })
                             .or(uevent.get("PCI_ID").and_then(|id| {
-                                id.split_once(":")
+                                id.split_once(':')
                                     .and_then(|p| u16::from_str_radix(p.0, 16).ok())
                             }));
-                        let driver = uevent.get("DRIVER").map(|s| s.as_str());
+                        let driver = uevent.get("DRIVER").map(String::as_str);
 
                         if vendor == Some(NV_VENDOR_ID) || driver == Some("nvidia") {
                             let pci_slot = uevent.get("PCI_SLOT_NAME").cloned()?;
@@ -82,7 +82,7 @@ impl Gpus {
                     })
                     .collect::<Vec<_>>()
             })
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
         Self { inner: gpus }
     }
 
@@ -127,7 +127,7 @@ impl Gpu {
         Some(Self {
             vendor: GpuType::PrayAndHope { device },
             data: GpuData {
-                usage: utilization.gpu as u64,
+                usage: u64::from(utilization.gpu),
                 used_vram: meminfo.total - meminfo.free,
                 total_vram: meminfo.total,
             },
@@ -139,12 +139,12 @@ impl Gpu {
             GpuType::PrayAndHope { device } => {
                 _ = device
                     .utilization_rates()
-                    .map(|utilization| self.data.usage = utilization.gpu as u64)
+                    .map(|utilization| self.data.usage = u64::from(utilization.gpu));
             }
 
             GpuType::PlugAndPlay { sysfs_path } => {
                 _ = read_syspath(sysfs_path, "gpu_busy_percent")
-                    .map(|usage| self.data.usage = usage)
+                    .map(|usage| self.data.usage = usage);
             }
         }
     }
@@ -154,12 +154,12 @@ impl Gpu {
             GpuType::PrayAndHope { device } => {
                 _ = device
                     .memory_info()
-                    .map(|meminfo| self.data.used_vram = meminfo.total - meminfo.free)
+                    .map(|meminfo| self.data.used_vram = meminfo.total - meminfo.free);
             }
 
             GpuType::PlugAndPlay { sysfs_path } => {
                 _ = read_syspath(sysfs_path, "mem_info_vram_used")
-                    .map(|used_vram| self.data.used_vram = used_vram)
+                    .map(|used_vram| self.data.used_vram = used_vram);
             }
         }
     }

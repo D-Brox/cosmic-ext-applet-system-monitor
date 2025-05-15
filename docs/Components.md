@@ -84,6 +84,7 @@ The following aliases can be used to help configuring:
 
 The `Cpu` component monitors global usage, which can be displayed as a run chart or bar chart, or per-core usage, which can be displayed only as a bar chart.
 The `color` and `aspect_ratio` work the same way as defined in [Run charts](#run-charts) and [Bar charts](#bar-charts).
+The `sorting` field on the per-core bar chart can have the values `Unsorted`, `Ascending` or `Descending`, and can be omitted.
 
 ```ron
 [
@@ -99,6 +100,7 @@ The `color` and `aspect_ratio` work the same way as defined in [Run charts](#run
         color: accent_green,
         spacing: 2.5,
         aspect_ratio: 0.5,
+        sorting: Unsorted
     )
 ]
 ```

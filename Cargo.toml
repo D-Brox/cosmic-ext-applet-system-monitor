@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-ext-applet-system-monitor"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 authors = ["D-Brox <davidfbg00@gmail.com>"]
 description = "System monitor applet for the COSMIC DE"
@@ -12,10 +12,10 @@ rust-version = "1.85"
 
 [dependencies]
 i18n-embed-fl = "0.9.1"
-lazy-regex = "3.4.1"
-rust-embed = "8.3.0"
+regex = "1.11.1"
+rust-embed = "8.7.2"
 serde = "1"
-sysinfo = "0.35.0"
+sysinfo = "0.35.1"
 
 [features]
 default = ["wgpu"]

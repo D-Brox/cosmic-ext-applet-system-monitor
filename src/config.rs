@@ -159,7 +159,6 @@ pub fn config_subscription() -> Subscription<Message> {
         CONFIG_VERSION,
     )
     .map(|update| {
-        println!("there");
         if !update.errors.is_empty() {
             println!(
                 "errors loading config {:?}: {:?}",
@@ -214,7 +213,9 @@ pub enum CpuView {
     BarCores {
         color: Color,
         spacing: f32,
-        bar_aspect_ratio: f32,
+        #[serde(alias = "bar_aspect_ratio")]
+        aspect_ratio: f32,
+        #[serde(default)]
         sorting: SortMethod,
     },
 }

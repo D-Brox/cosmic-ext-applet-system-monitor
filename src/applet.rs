@@ -228,7 +228,7 @@ impl Application for SystemMonitorApplet {
                             self.aspect_ratio_container(content, *aspect_ratio)
                         }
                         CpuView::BarCores {
-                            bar_aspect_ratio: per_core_aspect_ratio,
+                            aspect_ratio,
                             color,
                             spacing,
                             sorting,
@@ -243,7 +243,7 @@ impl Application for SystemMonitorApplet {
                                 .map(|usage| {
                                     self.aspect_ratio_container(
                                         PercentageBar::new(self.is_horizontal(), usage, *color),
-                                        *per_core_aspect_ratio,
+                                        *aspect_ratio,
                                     )
                                 })
                                 .collect();
