@@ -135,7 +135,6 @@ pub enum PaddingOption {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ComponentConfig {
     Cpu(Box<[CpuView]>),
-
     Mem(Box<[PercentView]>),
     Net(Box<[IoView]>),
     Disk(Box<[IoView]>),
@@ -197,42 +196,44 @@ pub enum IoView {
         alias = "RunChartUpload"
     )]
     RunFront { color: Color, aspect_ratio: f32 },
+    /// Displays I/O rates as text (e.g., "↓ 12.3MB/s ↑ 4.5MB/s"). Added for text-based I/O monitoring.
+    #[serde(rename = "TextView")]
+    Text { aspect_ratio: f32 },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CpuView {
     #[serde(rename = "RunChart")]
-    Run {
-        color: Color,
-        aspect_ratio: f32,
-    },
-    BarGlobal {
-        color: Color,
-        aspect_ratio: f32,
-    },
+    Run { color: Color, aspect_ratio: f32 },
+    #[serde(rename = "BarChartGlobal")]
+    BarGlobal { color: Color, aspect_ratio: f32 },
+    #[serde(rename = "BarChartCores")]
     BarCores {
         color: Color,
         spacing: f32,
-        #[serde(alias = "bar_aspect_ratio")]
         aspect_ratio: f32,
         #[serde(default)]
         sorting: SortMethod,
     },
+    /// Displays CPU usage and temperature (e.g., "C 75% 65°C").
+    #[serde(rename = "TextView")]
+    Text { aspect_ratio: f32 },
+    #[serde(rename = "TempChart")]
+    TempChart { color: Color, aspect_ratio: f32 },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum PercentView {
-    #[serde(rename = "RunChart")]
+    #[serde(rename = "RunChart", alias = "RunChartMem", alias = "RunChartGpu")]
     Run {
-        #[serde(alias = "color_ram", alias = "color_usage")]
-        color_back: Color,
-        #[serde(alias = "color_swap", alias = "color_vram")]
-        color_front: Color,
         aspect_ratio: f32,
+        color_back: Color,
+        color_front: Color,
     },
     #[serde(
         rename = "RunChartBack",
         alias = "RunChartRam",
+        alias = "RunChartGpuUsage",
         alias = "RunChartUsage"
     )]
     RunBack { color: Color, aspect_ratio: f32 },
@@ -243,33 +244,41 @@ pub enum PercentView {
     )]
     RunFront { color: Color, aspect_ratio: f32 },
 
-    #[serde(rename = "BarChart")]
+    #[serde(rename = "BarChart", alias = "BarChartMem", alias = "BarChartGpu")]
     Bar {
-        #[serde(alias = "color_ram", alias = "color_usage")]
-        color_left: Color,
-        #[serde(alias = "color_swap", alias = "color_vram")]
-        color_right: Color,
-        spacing: f32,
         aspect_ratio: f32,
+        color_left: Color,
+        color_right: Color,
+        #[serde(default)]
+        spacing: f32,
     },
-    #[serde(alias = "BarChartRam", alias = "BarChartUsage")]
+    #[serde(
+        rename = "BarLeft",
+        alias = "BarChartRam",
+        alias = "BarChartGpuUsage",
+        alias = "BarChartUsage"
+    )]
     BarLeft { color: Color, aspect_ratio: f32 },
     #[serde(alias = "BarChartSwap", alias = "BarChartVram")]
     BarRight { color: Color, aspect_ratio: f32 },
+    /// Displays component-specific information as text.
+    /// For Memory: "M [`RAM_PERCENT`]% S [`SWAP_PERCENT`]%"
+    /// For GPU: "G [`USAGE_PERCENT`]% V [`VRAM_PERCENT`]% [`TEMP`]°C"
+    #[serde(rename = "TextView")]
+    Text { aspect_ratio: f32 },
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            layout: LayoutConfig::default(),
-            components: [
+            components: Box::new([
                 ComponentConfig::default_cpu(),
                 ComponentConfig::default_mem(),
-                ComponentConfig::default_disk(),
                 ComponentConfig::default_net(),
+                ComponentConfig::default_disk(),
                 ComponentConfig::default_gpu(),
-            ]
-            .into(),
+            ]),
+            layout: LayoutConfig::default(),
             sampling: SamplingConfig::default(),
         }
     }
@@ -287,7 +296,7 @@ impl Default for LayoutConfig {
 
 impl Default for SamplingConfig {
     fn default() -> Self {
-        SamplingConfig {
+        Self {
             cpu: Sampling {
                 update_interval: 1000,
                 sampling_window: 60,
@@ -326,6 +335,7 @@ impl ComponentConfig {
                     aspect_ratio: 0.5,
                     color,
                 },
+                CpuView::Text { aspect_ratio: 3.0 },
             ]
             .into(),
         )
@@ -347,6 +357,7 @@ impl ComponentConfig {
                     aspect_ratio: 0.5,
                     spacing: 2.5,
                 },
+                PercentView::Text { aspect_ratio: 2.0 },
             ]
             .into(),
         )
@@ -354,22 +365,28 @@ impl ComponentConfig {
 
     fn default_net() -> Self {
         ComponentConfig::Net(
-            [IoView::Run {
-                color_front: Color::accent_yellow,
-                color_back: Color::accent_red,
-                aspect_ratio: 1.5,
-            }]
+            [
+                IoView::Run {
+                    color_back: Color::accent_red,
+                    color_front: Color::accent_yellow,
+                    aspect_ratio: 2.0,
+                },
+                IoView::Text { aspect_ratio: 4.0 },
+            ]
             .into(),
         )
     }
 
     fn default_disk() -> Self {
         ComponentConfig::Disk(
-            [IoView::Run {
-                color_front: Color::accent_orange,
-                color_back: Color::accent_pink,
-                aspect_ratio: 1.5,
-            }]
+            [
+                IoView::Run {
+                    color_front: Color::accent_orange,
+                    color_back: Color::accent_pink,
+                    aspect_ratio: 2.0,
+                },
+                IoView::Text { aspect_ratio: 4.0 },
+            ]
             .into(),
         )
     }
@@ -390,6 +407,7 @@ impl ComponentConfig {
                     aspect_ratio: 0.5,
                     spacing: 2.5,
                 },
+                PercentView::Text { aspect_ratio: 3.0 },
             ]
             .into(),
         )

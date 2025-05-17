@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod applet;
-mod components {
-    pub mod bar;
-    pub mod gpu;
-    pub mod run;
-}
+mod components;
 mod color;
 mod config;
 mod history;

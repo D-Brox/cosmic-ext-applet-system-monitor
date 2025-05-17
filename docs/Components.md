@@ -18,7 +18,7 @@ There are 2 types of views, each with their own config:
 
 ## Run charts
 
-For the components that monitor 2 values (`Mem`,`Net`,`Disk`,`Gpu`), run charts can be drawn with a single value of with both values. 
+For the components that monitor 2 values (`Mem`,`Net`,`Disk`,`Gpu`), run charts can be drawn with a single value or with both values. 
 The `aspect_ratio` field corresponds to the height and width ratio, while the color fields are explained in the [colors section](#colors).
 
 ```ron
