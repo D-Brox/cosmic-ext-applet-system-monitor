@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-ext-applet-system-monitor"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 authors = ["D-Brox <davidfbg00@gmail.com>"]
 description = "System monitor applet for the COSMIC DE"
@@ -32,7 +32,7 @@ features = ["fluent-system", "desktop-requester"]
 
 [dependencies.nvml-wrapper]
 git = "https://github.com/rust-nvml/nvml-wrapper"
-rev = "572095f6"
+rev = "6856c2d1"
 
 [package.metadata.deb]
 license-file = "LICENSE"
