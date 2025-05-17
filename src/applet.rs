@@ -9,7 +9,7 @@ use cosmic::{
     Application, Apply as _, Element, Renderer, Theme,
 };
 use std::time::Duration;
-use sysinfo::{Cpu, Disk, Disks, MemoryRefreshKind, Networks, System};
+use sysinfo::{Cpu, CpuRefreshKind, Disk, Disks, MemoryRefreshKind, Networks, RefreshKind, System};
 
 use crate::{
     components::{
@@ -200,7 +200,11 @@ impl Application for SystemMonitorApplet {
             gpu_usage: vec![History::with_capacity(gpu); gpus.num_gpus()],
             vram: vec![History::with_capacity(gpu); gpus.num_gpus()],
 
-            sys: System::new_all(),
+            sys: System::new_with_specifics(
+                RefreshKind::nothing()
+                    .with_cpu(CpuRefreshKind::nothing().with_cpu_usage())
+                    .with_memory(MemoryRefreshKind::everything()),
+            ),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
             gpus,
@@ -558,12 +562,11 @@ impl Application for SystemMonitorApplet {
                 }
             }
             Message::TickCpu => {
-                self.sys.refresh_cpu_all();
+                self.sys.refresh_cpu_usage();
                 self.global_cpu.push(self.sys.global_cpu_usage());
             }
             Message::TickMem => {
-                self.sys
-                    .refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram().with_swap());
+                self.sys.refresh_memory();
                 self.ram.push(self.sys.used_memory());
                 self.swap.push(self.sys.used_swap());
             }

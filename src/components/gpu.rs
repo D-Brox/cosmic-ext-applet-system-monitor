@@ -5,7 +5,6 @@ use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-static RE_CARDS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"card(\d+)/device$").unwrap());
 const NV_VENDOR_ID: u16 = 0x10DE;
 static NVML: LazyLock<Result<Nvml, NvmlError>> = LazyLock::new(Nvml::init);
 
@@ -32,6 +31,7 @@ enum GpuType {
 
 impl Gpus {
     pub fn new() -> Self {
+        let re_cards = Regex::new(r"card(\d+)/device$").unwrap();
         let gpus = read_dir("/sys/class/drm")
             .map(|dir_entries| {
                 dir_entries
@@ -41,7 +41,7 @@ impl Gpus {
                         // Check if it's a card or a display output
                         let entry = dir_entry.ok()?;
                         let sysfs_path = entry.path().join("device");
-                        let _ = RE_CARDS.captures(sysfs_path.to_str().unwrap())?;
+                        let _ = re_cards.captures(sysfs_path.to_str().unwrap())?;
 
                         // Next get the uevent info of the card if it exists
                         let device_uevent_path = sysfs_path.join("uevent");
