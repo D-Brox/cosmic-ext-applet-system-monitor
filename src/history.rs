@@ -56,4 +56,16 @@ impl<T: Default + Copy> History<T> {
         self.capacity = capacity;
         self.insertion_index = 0;
     }
+
+    pub fn last(&self) -> Option<T> {
+        if self.capacity == 0 {
+            return None;
+        }
+        let idx = if self.insertion_index == 0 {
+            self.capacity - 1
+        } else {
+            self.insertion_index - 1
+        };
+        Some(self.data[idx])
+    }
 }

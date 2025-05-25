@@ -58,6 +58,10 @@ macro_rules! impl_program_history_chart {
                 bounds: Rectangle,
                 _cursor: mouse::Cursor,
             ) -> Vec<Geometry<Renderer>> {
+                if self.history.len() < 2 {
+                    return vec![];
+                }
+
                 let mut fill = Frame::new(renderer, bounds.size());
                 let mut line = Frame::new(renderer, bounds.size());
                 let color = self.color.as_cosmic_color(theme);
@@ -198,7 +202,7 @@ impl Program<Message, Theme, Renderer> for SuperimposedHistoryChart<'_> {
         let mut geometries = Background.draw(state, renderer, theme, bounds, cursor);
         let back = self.back.draw(state, renderer, theme, bounds, cursor);
         let front = self.front.draw(state, renderer, theme, bounds, cursor);
-        geometries.extend(back.into_iter().zip(front).flat_map(|(f, b)| [f, b]));
+        geometries.extend(back.into_iter().zip(front).flat_map(|(b, f)| [b, f]));
         geometries
     }
 }
@@ -219,16 +223,8 @@ impl Program<Message, Theme, Renderer> for Background {
         let mut frame = Frame::new(renderer, bounds.size());
         let bg_color = theme.cosmic().background.base;
 
-        let mut bg_builder = path::Builder::new();
         let external_bounds = bounds.expand(10.0);
-        let Point { x, y } = external_bounds.position();
-        bg_builder.move_to(Point { x, y });
-        bg_builder.line_to(Point {
-            x: x + external_bounds.width,
-            y,
-        });
-
-        let background = bg_builder.build();
+        let background = path::Path::rectangle(external_bounds.position(), bounds.size());
 
         frame.fill(
             &background,

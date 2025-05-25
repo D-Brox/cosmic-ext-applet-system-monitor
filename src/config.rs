@@ -135,7 +135,6 @@ pub enum PaddingOption {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ComponentConfig {
     Cpu(Box<[CpuView]>),
-
     Mem(Box<[PercentView]>),
     Net(Box<[IoView]>),
     Disk(Box<[IoView]>),
@@ -189,14 +188,23 @@ pub enum IoView {
         alias = "RunChartRead",
         alias = "RunChartDownload"
     )]
-    RunBack { color: Color, aspect_ratio: f32 },
+    RunBack {
+        color: Color,
+        aspect_ratio: f32,
+    },
     /// If IO, B is the system output (e.g. output = disk write rate, net upload rate)
     #[serde(
         rename = "RunChartFront",
         alias = "RunChartWrite",
         alias = "RunChartUpload"
     )]
-    RunFront { color: Color, aspect_ratio: f32 },
+    RunFront {
+        color: Color,
+        aspect_ratio: f32,
+    },
+    Text {
+        aspect_ratio: f32,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -218,6 +226,13 @@ pub enum CpuView {
         #[serde(default)]
         sorting: SortMethod,
     },
+    Text {
+        aspect_ratio: f32,
+    },
+    TempChart {
+        color: Color,
+        aspect_ratio: f32,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -235,13 +250,19 @@ pub enum PercentView {
         alias = "RunChartRam",
         alias = "RunChartUsage"
     )]
-    RunBack { color: Color, aspect_ratio: f32 },
+    RunBack {
+        color: Color,
+        aspect_ratio: f32,
+    },
     #[serde(
         rename = "RunChartFront",
         alias = "RunChartSwap",
         alias = "RunChartVram"
     )]
-    RunFront { color: Color, aspect_ratio: f32 },
+    RunFront {
+        color: Color,
+        aspect_ratio: f32,
+    },
 
     #[serde(rename = "BarChart")]
     Bar {
@@ -253,9 +274,18 @@ pub enum PercentView {
         aspect_ratio: f32,
     },
     #[serde(alias = "BarChartRam", alias = "BarChartUsage")]
-    BarLeft { color: Color, aspect_ratio: f32 },
+    BarLeft {
+        color: Color,
+        aspect_ratio: f32,
+    },
     #[serde(alias = "BarChartSwap", alias = "BarChartVram")]
-    BarRight { color: Color, aspect_ratio: f32 },
+    BarRight {
+        color: Color,
+        aspect_ratio: f32,
+    },
+    Text {
+        aspect_ratio: f32,
+    },
 }
 
 impl Default for Config {
@@ -287,7 +317,7 @@ impl Default for LayoutConfig {
 
 impl Default for SamplingConfig {
     fn default() -> Self {
-        SamplingConfig {
+        Self {
             cpu: Sampling {
                 update_interval: 1000,
                 sampling_window: 60,
@@ -326,6 +356,7 @@ impl ComponentConfig {
                     aspect_ratio: 0.5,
                     color,
                 },
+                CpuView::Text { aspect_ratio: 3.0 },
             ]
             .into(),
         )

@@ -1021,6 +1021,7 @@ dependencies = [
  "i18n-embed-fl",
  "libcosmic",
  "nvml-wrapper",
+ "paste",
  "regex",
  "rust-embed",
  "serde",
