@@ -57,12 +57,6 @@ impl<T: Default + Copy> History<T> {
         self.insertion_index = 0;
     }
 
-    /// Returns the last element pushed to the history, if any.
-    ///
-    /// If the history buffer has a capacity of 0 or has not been written to yet
-    /// (though `insertion_index` logic usually means a value is present if capacity > 0),
-    /// this will return `None`.
-    /// Otherwise, it returns the most recently added value.
     pub fn last(&self) -> Option<T> {
         if self.capacity == 0 {
             return None;

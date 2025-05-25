@@ -17,19 +17,9 @@ pub struct HistoryChart<'a, T = u64> {
     color: Color,
 }
 
-// Implementation block for generic HistoryChart functionality, specifically for auto-calculating max value.
-// Requires T to support PartialOrd for comparison and Default for initial fold value.
-impl<'a, T: Copy + PartialOrd + Default + 'a> HistoryChart<'a, T> {
-    /// Creates a `HistoryChart` automatically determining the maximum value from the history data.
-    /// Uses `fold` with `partial_cmp` to correctly find the maximum among `T` which might be `f32` (handling NaN).
-    pub fn auto_max(history: &'a History<T>, color: Color) -> HistoryChart<'a, T> {
-        let max_val = history
-            .iter()
-            .fold(T::default(), |acc, item| match acc.partial_cmp(item) {
-                Some(std::cmp::Ordering::Less) => *item,
-                _ => acc,
-            });
-        HistoryChart::new(history, max_val, color)
+impl<'a> HistoryChart<'a> {
+    pub fn auto_max(history: &'a History, color: Color) -> HistoryChart<'a> {
+        HistoryChart::new(history, *history.iter().max().unwrap_or(&0), color)
     }
 }
 
@@ -43,23 +33,16 @@ impl<'a, T> HistoryChart<'a, T> {
     }
 }
 
-// Implementation block for generic HistoryChart functionality, specifically for linking max values.
-// Requires T to support PartialOrd for comparison.
-impl<T: Copy + PartialOrd> HistoryChart<'_, T> {
-    /// Links the maximum displayable value between two `HistoryChart` instances.
-    /// Ensures both charts use the same scale by setting their `max` to the greater of the two.
-    /// Handles `f32` comparison using `partial_cmp`.
-    pub fn link_max(front: &mut HistoryChart<'_, T>, back: &mut HistoryChart<'_, T>) {
-        let max_val = match front.max.partial_cmp(&back.max) {
-            Some(std::cmp::Ordering::Less) => back.max,
-            Some(std::cmp::Ordering::Equal | std::cmp::Ordering::Greater) | None => front.max, // Nested or-patterns
-        };
-        front.max = max_val;
-        back.max = max_val;
+impl<T: Copy + Ord> HistoryChart<'_, T> {
+    pub fn link_max(front: &mut HistoryChart<T>, back: &mut HistoryChart<T>) {
+        let max_front = front.max;
+        let max_back = back.max;
+        let max = max_front.max(max_back);
+        front.max = max;
+        back.max = max;
     }
 }
 
-/// This was made generic to handle `u64` and `f32` chart data.
 macro_rules! impl_program_history_chart {
     ($($t:ty),+) => {
         $(
@@ -76,20 +59,15 @@ macro_rules! impl_program_history_chart {
                 _cursor: mouse::Cursor,
             ) -> Vec<Geometry<Renderer>> {
                 if self.history.len() < 2 {
-                    return vec![]; // Early return if not enough data to draw a line
+                    return vec![];
                 }
 
-                let mut fill_frame = Frame::new(renderer, bounds.size());
-                let mut line_frame = Frame::new(renderer, bounds.size());
+                let mut fill = Frame::new(renderer, bounds.size());
+                let mut line = Frame::new(renderer, bounds.size());
                 let color = self.color.as_cosmic_color(theme);
 
                 let mut path_builder = path::Builder::new();
-                // Adjusted x_step calculation to prevent division by zero if history has less than 2 items.
-                let x_step = if self.history.len() > 1 {
-                    bounds.width / (self.history.len() - 1) as f32
-                } else {
-                    bounds.width
-                };
+                let x_step = bounds.width / (self.history.len() - 1) as f32;
                 let y_step = if self.max as f32 != 0.0 {
                      bounds.height / self.max as f32
                 } else {
@@ -112,22 +90,22 @@ macro_rules! impl_program_history_chart {
                 });
 
                 let path = path_builder.build();
-                fill_frame.fill(
+                fill.fill(
                     &path,
                     Fill {
                         style: stroke::Style::Solid(color.with_alpha(0.5).into()),
                         ..Default::default()
                     },
                 );
-                line_frame.stroke(
+                line.stroke(
                     &path,
                     Stroke {
                         style: stroke::Style::Solid(color.into()),
-                        width: 1.5,
+                        width: 1.0,
                         ..Default::default()
                     },
                 );
-                vec![fill_frame.into_geometry(),line_frame.into_geometry()]
+                vec![fill.into_geometry(),line.into_geometry()]
             }
         })*
     };
@@ -160,11 +138,7 @@ macro_rules! impl_program_simple_history_chart {
                     bounds: Rectangle,
                     cursor: mouse::Cursor,
                 ) -> Vec<Geometry<Renderer>> {
-                    let mut geometries = vec![];
-
-                    // Use the Background implementation
-                    geometries.extend(Background.draw(state, renderer, theme, bounds, cursor));
-
+                    let mut geometries = Background.draw(state, renderer, theme, bounds, cursor);
                     geometries.extend(self.history.draw(
                         state,
                         renderer,
@@ -180,13 +154,11 @@ macro_rules! impl_program_simple_history_chart {
 }
 impl_program_simple_history_chart!(u64, f32);
 
-impl<'a, T: Copy + PartialOrd + Default + 'a> SimpleHistoryChart<'a, T> {
-    /// Creates a `SimpleHistoryChart` automatically determining the maximum value.
-    /// Leverages `HistoryChart::auto_max`.
-    pub fn auto_max(history: &'a History<T>, color: Color) -> SimpleHistoryChart<'a, T> {
+impl<'a> SimpleHistoryChart<'a> {
+    pub fn auto_max(history: &'a History, color: Color) -> SimpleHistoryChart<'a> {
         SimpleHistoryChart::new(
             history,
-            HistoryChart::auto_max(history, color).max, // Use the max from the generic auto_max
+            *history.iter().max().unwrap_or(&Default::default()),
             color,
         )
     }
@@ -204,48 +176,37 @@ impl<'a, T> SimpleHistoryChart<'a, T> {
     }
 }
 
-/// A chart that superimposes two data series (front and back).
-/// Made generic over `T`.
 #[derive(Debug)]
-pub struct SuperimposedHistoryChart<'a, T = u64> {
-    pub back: HistoryChart<'a, T>,
-    pub front: HistoryChart<'a, T>,
+pub struct SuperimposedHistoryChart<'a> {
+    pub back: HistoryChart<'a>,
+    pub front: HistoryChart<'a>,
 }
 
-/// This was made generic for `u64` and `f32` data types.
-macro_rules! impl_program_superimposed_history_chart {
-    ($($t:ty),+) => {
-        $(
-            impl<'a> From<SuperimposedHistoryChart<'a, $t>> for Element<'a, Message> {
-                fn from(value: SuperimposedHistoryChart<'a, $t>) -> Self {
-                    Canvas::new(value).into()
-                }
-            }
-
-            impl<'a> Program<Message, Theme, Renderer> for SuperimposedHistoryChart<'a, $t>{
-                type State = ();
-
-                fn draw(
-                    &self,
-                    state: &Self::State,
-                    renderer: &Renderer,
-                    theme: &Theme,
-                    bounds: Rectangle,
-                    cursor: mouse::Cursor,
-                ) -> Vec<Geometry<Renderer>> {
-                    let mut geometries = Background.draw(state, renderer, theme, bounds, cursor);
-                    let back = self.back.draw(state, renderer, theme, bounds, cursor);
-                    let front = self.front.draw(state, renderer, theme, bounds, cursor);
-                    geometries.extend(back.into_iter().zip(front).flat_map(|(b, f)| [b, f]));
-                    geometries
-                }
-            }
-        )*
-    };
+impl<'a> From<SuperimposedHistoryChart<'a>> for Element<'a, Message> {
+    fn from(value: SuperimposedHistoryChart<'a>) -> Self {
+        Canvas::new(value).into()
+    }
 }
-impl_program_superimposed_history_chart!(u64, f32);
 
-/// Simple background drawing program for theme adherence.
+impl Program<Message, Theme, Renderer> for SuperimposedHistoryChart<'_> {
+    type State = ();
+
+    fn draw(
+        &self,
+        state: &Self::State,
+        renderer: &Renderer,
+        theme: &Theme,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> Vec<Geometry<Renderer>> {
+        let mut geometries = Background.draw(state, renderer, theme, bounds, cursor);
+        let back = self.back.draw(state, renderer, theme, bounds, cursor);
+        let front = self.front.draw(state, renderer, theme, bounds, cursor);
+        geometries.extend(back.into_iter().zip(front).flat_map(|(b, f)| [b, f]));
+        geometries
+    }
+}
+
 struct Background;
 
 impl Program<Message, Theme, Renderer> for Background {
@@ -260,21 +221,18 @@ impl Program<Message, Theme, Renderer> for Background {
         _cursor: mouse::Cursor,
     ) -> Vec<Geometry<Renderer>> {
         let mut frame = Frame::new(renderer, bounds.size());
+        let bg_color = theme.cosmic().background.base;
 
-        // Create a rounded rectangle path for the background
-        let chart_area_path = path::Path::rounded_rectangle(
-            Point::ORIGIN,
-            bounds.size(),
-            cosmic::iced::core::border::Radius::from(5.0),
+        let external_bounds = bounds.expand(10.0);
+        let background = path::Path::rectangle(external_bounds.position(), bounds.size());
+
+        frame.fill(
+            &background,
+            Fill {
+                style: stroke::Style::Solid(bg_color.into()),
+                ..Default::default()
+            },
         );
-
-        // Use a theme-aware color with appropriate opacity
-        // Using neutral_5 with alpha for better visibility in both light and dark themes
-        let bg_color = cosmic::iced::Color::from(theme.cosmic().palette.neutral_5.with_alpha(0.3));
-
-        // Fill the rounded rectangle with the background color
-        frame.fill(&chart_area_path, bg_color);
-
         vec![frame.into_geometry()]
     }
 }

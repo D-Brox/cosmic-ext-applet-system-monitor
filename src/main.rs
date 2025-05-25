@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod applet;
-mod components;
 mod color;
+mod components;
 mod config;
 mod history;
 mod localization;

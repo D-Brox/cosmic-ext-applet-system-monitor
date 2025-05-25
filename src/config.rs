@@ -188,97 +188,118 @@ pub enum IoView {
         alias = "RunChartRead",
         alias = "RunChartDownload"
     )]
-    RunBack { color: Color, aspect_ratio: f32 },
+    RunBack {
+        color: Color,
+        aspect_ratio: f32,
+    },
     /// If IO, B is the system output (e.g. output = disk write rate, net upload rate)
     #[serde(
         rename = "RunChartFront",
         alias = "RunChartWrite",
         alias = "RunChartUpload"
     )]
-    RunFront { color: Color, aspect_ratio: f32 },
-    /// Displays I/O rates as text (e.g., "↓ 12.3MB/s ↑ 4.5MB/s"). Added for text-based I/O monitoring.
-    #[serde(rename = "TextView")]
-    Text { aspect_ratio: f32 },
+    RunFront {
+        color: Color,
+        aspect_ratio: f32,
+    },
+    Text {
+        aspect_ratio: f32,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CpuView {
     #[serde(rename = "RunChart")]
-    Run { color: Color, aspect_ratio: f32 },
-    #[serde(rename = "BarChartGlobal")]
-    BarGlobal { color: Color, aspect_ratio: f32 },
-    #[serde(rename = "BarChartCores")]
+    Run {
+        color: Color,
+        aspect_ratio: f32,
+    },
+    BarGlobal {
+        color: Color,
+        aspect_ratio: f32,
+    },
     BarCores {
         color: Color,
         spacing: f32,
+        #[serde(alias = "bar_aspect_ratio")]
         aspect_ratio: f32,
         #[serde(default)]
         sorting: SortMethod,
     },
-    /// Displays CPU usage and temperature (e.g., "C 75% 65°C").
-    #[serde(rename = "TextView")]
-    Text { aspect_ratio: f32 },
-    #[serde(rename = "TempChart")]
-    TempChart { color: Color, aspect_ratio: f32 },
+    Text {
+        aspect_ratio: f32,
+    },
+    TempChart {
+        color: Color,
+        aspect_ratio: f32,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum PercentView {
-    #[serde(rename = "RunChart", alias = "RunChartMem", alias = "RunChartGpu")]
+    #[serde(rename = "RunChart")]
     Run {
-        aspect_ratio: f32,
+        #[serde(alias = "color_ram", alias = "color_usage")]
         color_back: Color,
+        #[serde(alias = "color_swap", alias = "color_vram")]
         color_front: Color,
+        aspect_ratio: f32,
     },
     #[serde(
         rename = "RunChartBack",
         alias = "RunChartRam",
-        alias = "RunChartGpuUsage",
         alias = "RunChartUsage"
     )]
-    RunBack { color: Color, aspect_ratio: f32 },
+    RunBack {
+        color: Color,
+        aspect_ratio: f32,
+    },
     #[serde(
         rename = "RunChartFront",
         alias = "RunChartSwap",
         alias = "RunChartVram"
     )]
-    RunFront { color: Color, aspect_ratio: f32 },
-
-    #[serde(rename = "BarChart", alias = "BarChartMem", alias = "BarChartGpu")]
-    Bar {
+    RunFront {
+        color: Color,
         aspect_ratio: f32,
-        color_left: Color,
-        color_right: Color,
-        #[serde(default)]
-        spacing: f32,
     },
-    #[serde(
-        rename = "BarLeft",
-        alias = "BarChartRam",
-        alias = "BarChartGpuUsage",
-        alias = "BarChartUsage"
-    )]
-    BarLeft { color: Color, aspect_ratio: f32 },
+
+    #[serde(rename = "BarChart")]
+    Bar {
+        #[serde(alias = "color_ram", alias = "color_usage")]
+        color_left: Color,
+        #[serde(alias = "color_swap", alias = "color_vram")]
+        color_right: Color,
+        spacing: f32,
+        aspect_ratio: f32,
+    },
+    #[serde(alias = "BarChartRam", alias = "BarChartUsage")]
+    BarLeft {
+        color: Color,
+        aspect_ratio: f32,
+    },
     #[serde(alias = "BarChartSwap", alias = "BarChartVram")]
-    BarRight { color: Color, aspect_ratio: f32 },
-    /// Displays component-specific information as text.
-    /// For Memory: "M [`RAM_PERCENT`]% S [`SWAP_PERCENT`]%"
-    /// For GPU: "G [`USAGE_PERCENT`]% V [`VRAM_PERCENT`]% [`TEMP`]°C"
-    #[serde(rename = "TextView")]
-    Text { aspect_ratio: f32 },
+    BarRight {
+        color: Color,
+        aspect_ratio: f32,
+    },
+    Text {
+        aspect_ratio: f32,
+    },
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            components: Box::new([
+            layout: LayoutConfig::default(),
+            components: [
                 ComponentConfig::default_cpu(),
                 ComponentConfig::default_mem(),
-                ComponentConfig::default_net(),
                 ComponentConfig::default_disk(),
+                ComponentConfig::default_net(),
                 ComponentConfig::default_gpu(),
-            ]),
-            layout: LayoutConfig::default(),
+            ]
+            .into(),
             sampling: SamplingConfig::default(),
         }
     }
@@ -357,7 +378,6 @@ impl ComponentConfig {
                     aspect_ratio: 0.5,
                     spacing: 2.5,
                 },
-                PercentView::Text { aspect_ratio: 2.0 },
             ]
             .into(),
         )
@@ -365,28 +385,22 @@ impl ComponentConfig {
 
     fn default_net() -> Self {
         ComponentConfig::Net(
-            [
-                IoView::Run {
-                    color_back: Color::accent_red,
-                    color_front: Color::accent_yellow,
-                    aspect_ratio: 2.0,
-                },
-                IoView::Text { aspect_ratio: 4.0 },
-            ]
+            [IoView::Run {
+                color_front: Color::accent_yellow,
+                color_back: Color::accent_red,
+                aspect_ratio: 1.5,
+            }]
             .into(),
         )
     }
 
     fn default_disk() -> Self {
         ComponentConfig::Disk(
-            [
-                IoView::Run {
-                    color_front: Color::accent_orange,
-                    color_back: Color::accent_pink,
-                    aspect_ratio: 2.0,
-                },
-                IoView::Text { aspect_ratio: 4.0 },
-            ]
+            [IoView::Run {
+                color_front: Color::accent_orange,
+                color_back: Color::accent_pink,
+                aspect_ratio: 1.5,
+            }]
             .into(),
         )
     }
@@ -407,7 +421,6 @@ impl ComponentConfig {
                     aspect_ratio: 0.5,
                     spacing: 2.5,
                 },
-                PercentView::Text { aspect_ratio: 3.0 },
             ]
             .into(),
         )
