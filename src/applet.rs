@@ -5,7 +5,7 @@ use cosmic::{
     cosmic_config,
     iced::{Alignment, Padding, Pixels, Size, Subscription},
     iced_core::padding,
-    widget::{container, Column, Container, Row},
+    widget::{container, text, tooltip, Column, Container, Row},
     Application, Apply as _, Element, Renderer, Theme,
 };
 use std::time::Duration;
@@ -143,6 +143,104 @@ impl SystemMonitorApplet {
                 .into()
         }
     }
+
+    // Helper functions for formatting data for tooltips
+    fn format_bytes(&self, bytes: u64) -> String {
+        const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+        let mut size = bytes as f64;
+        let mut unit_index = 0;
+
+        while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+            size /= 1024.0;
+            unit_index += 1;
+        }
+
+        if unit_index == 0 {
+            format!("{} {}", bytes, UNITS[unit_index])
+        } else {
+            format!("{:.1} {}", size, UNITS[unit_index])
+        }
+    }
+
+    fn format_percentage(&self, current: u64, total: u64) -> String {
+        if total == 0 {
+            "0.0%".to_string()
+        } else {
+            let percentage = (current as f64 / total as f64) * 100.0;
+            format!("{:.1}%", percentage)
+        }
+    }
+
+    fn format_cpu_tooltip(&self, usage: f32) -> String {
+        format!("CPU: {:.1}%", usage)
+    }
+
+    fn format_memory_tooltip(&self) -> String {
+        let used = self.sys.used_memory();
+        let total = self.sys.total_memory();
+        let percentage = self.format_percentage(used, total);
+        format!(
+            "RAM: {} / {} ({})",
+            self.format_bytes(used),
+            self.format_bytes(total),
+            percentage
+        )
+    }
+
+    fn format_swap_tooltip(&self) -> String {
+        let used = self.sys.used_swap();
+        let total = self.sys.total_swap();
+        if total == 0 {
+            "Swap: Not available".to_string()
+        } else {
+            let percentage = self.format_percentage(used, total);
+            format!(
+                "Swap: {} / {} ({})",
+                self.format_bytes(used),
+                self.format_bytes(total),
+                percentage
+            )
+        }
+    }
+
+    fn format_network_tooltip(&self, is_upload: bool) -> String {
+        let history = if is_upload {
+            &self.upload
+        } else {
+            &self.download
+        };
+        let current_rate = history.iter().last().copied().unwrap_or(0);
+        let direction = if is_upload { "Upload" } else { "Download" };
+        format!("{}: {}/s", direction, self.format_bytes(current_rate))
+    }
+
+    fn format_disk_tooltip(&self, is_write: bool) -> String {
+        let history = if is_write {
+            &self.disk_write
+        } else {
+            &self.disk_read
+        };
+        let current_rate = history.iter().last().copied().unwrap_or(0);
+        let operation = if is_write { "Write" } else { "Read" };
+        format!("Disk {}: {}/s", operation, self.format_bytes(current_rate))
+    }
+
+    fn format_gpu_tooltip(&self, gpu_index: usize) -> String {
+        if let Some(gpu_data) = self.gpus.data().get(gpu_index) {
+            let usage_percentage = format!("{:.1}%", gpu_data.usage);
+            let vram_percentage = self.format_percentage(gpu_data.used_vram, gpu_data.total_vram);
+            format!(
+                "GPU {}: {}% usage, VRAM: {} / {} ({})",
+                gpu_index,
+                usage_percentage,
+                self.format_bytes(gpu_data.used_vram),
+                self.format_bytes(gpu_data.total_vram),
+                vram_percentage
+            )
+        } else {
+            format!("GPU {}: No data available", gpu_index)
+        }
+    }
 }
 
 fn sized_container<'a>(
@@ -229,7 +327,13 @@ impl Application for SystemMonitorApplet {
                                 self.sys.global_cpu_usage(),
                                 *color,
                             );
-                            self.aspect_ratio_container(content, *aspect_ratio)
+                            let container = self.aspect_ratio_container(content, *aspect_ratio);
+                            let tooltip_text = self.format_cpu_tooltip(self.sys.global_cpu_usage());
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         CpuView::BarCores {
                             aspect_ratio,
@@ -244,24 +348,46 @@ impl Application for SystemMonitorApplet {
 
                             let bars: Vec<_> = cpus
                                 .into_iter()
-                                .map(|usage| {
-                                    self.aspect_ratio_container(
+                                .enumerate()
+                                .map(|(core_idx, usage)| {
+                                    let container = self.aspect_ratio_container(
                                         PercentageBar::new(self.is_horizontal(), usage, *color),
                                         *aspect_ratio,
+                                    );
+                                    let tooltip_text =
+                                        format!("CPU Core {}: {:.1}%", core_idx, usage);
+                                    tooltip(
+                                        container,
+                                        text(tooltip_text),
+                                        cosmic::widget::tooltip::Position::Top,
                                     )
                                 })
                                 .collect();
 
-                            self.panel_collection(bars, *spacing, 0.0)
+                            let container = self
+                                .panel_collection(bars, *spacing, 0.0)
                                 .apply(container)
-                                .style(base_background)
+                                .style(base_background);
+                            let tooltip_text =
+                                format!("CPU Cores: {} cores total", self.sys.cpus().len());
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         CpuView::Run {
                             aspect_ratio,
                             color,
                         } => {
                             let chart = SimpleHistoryChart::new(&self.global_cpu, 100.0, *color);
-                            self.aspect_ratio_container(chart, *aspect_ratio)
+                            let container = self.aspect_ratio_container(chart, *aspect_ratio);
+                            let tooltip_text = self.format_cpu_tooltip(self.sys.global_cpu_usage());
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                     })
                     .collect::<Vec<_>>(),
@@ -275,28 +401,55 @@ impl Application for SystemMonitorApplet {
                             aspect_ratio,
                         } => {
                             let bars = vec![
-                                self.aspect_ratio_container(
-                                    PercentageBar::from_pair(
-                                        self.is_horizontal(),
-                                        self.sys.used_memory(),
-                                        self.sys.total_memory(),
-                                        *color_left,
-                                    ),
-                                    *aspect_ratio,
-                                ),
-                                self.aspect_ratio_container(
-                                    PercentageBar::from_pair(
-                                        self.is_horizontal(),
-                                        self.sys.used_swap(),
-                                        self.sys.total_swap(),
-                                        *color_right,
-                                    ),
-                                    *aspect_ratio,
-                                ),
+                                {
+                                    let container = self.aspect_ratio_container(
+                                        PercentageBar::from_pair(
+                                            self.is_horizontal(),
+                                            self.sys.used_memory(),
+                                            self.sys.total_memory(),
+                                            *color_left,
+                                        ),
+                                        *aspect_ratio,
+                                    );
+                                    let tooltip_text = self.format_memory_tooltip();
+                                    tooltip(
+                                        container,
+                                        text(tooltip_text),
+                                        cosmic::widget::tooltip::Position::Top,
+                                    )
+                                },
+                                {
+                                    let container = self.aspect_ratio_container(
+                                        PercentageBar::from_pair(
+                                            self.is_horizontal(),
+                                            self.sys.used_swap(),
+                                            self.sys.total_swap(),
+                                            *color_right,
+                                        ),
+                                        *aspect_ratio,
+                                    );
+                                    let tooltip_text = self.format_swap_tooltip();
+                                    tooltip(
+                                        container,
+                                        text(tooltip_text),
+                                        cosmic::widget::tooltip::Position::Top,
+                                    )
+                                },
                             ];
-                            self.panel_collection(bars, *spacing, 0.0)
+                            let container = self
+                                .panel_collection(bars, *spacing, 0.0)
                                 .apply(container)
-                                .style(base_background)
+                                .style(base_background);
+                            let tooltip_text = format!(
+                                "{}\n{}",
+                                self.format_memory_tooltip(),
+                                self.format_swap_tooltip()
+                            );
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         PercentView::BarLeft {
                             color,
@@ -308,7 +461,13 @@ impl Application for SystemMonitorApplet {
                                 self.sys.total_memory(),
                                 *color,
                             );
-                            self.aspect_ratio_container(content, *aspect_ratio)
+                            let container = self.aspect_ratio_container(content, *aspect_ratio);
+                            let tooltip_text = self.format_memory_tooltip();
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         PercentView::BarRight {
                             color,
@@ -320,7 +479,13 @@ impl Application for SystemMonitorApplet {
                                 self.sys.total_swap(),
                                 *color,
                             );
-                            self.aspect_ratio_container(content, *aspect_ratio)
+                            let container = self.aspect_ratio_container(content, *aspect_ratio);
+                            let tooltip_text = self.format_swap_tooltip();
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         PercentView::Run {
                             aspect_ratio,
@@ -337,7 +502,17 @@ impl Application for SystemMonitorApplet {
                                 front: swap,
                             };
 
-                            self.aspect_ratio_container(content, *aspect_ratio)
+                            let container = self.aspect_ratio_container(content, *aspect_ratio);
+                            let tooltip_text = format!(
+                                "{}\n{}",
+                                self.format_memory_tooltip(),
+                                self.format_swap_tooltip()
+                            );
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         PercentView::RunBack {
                             color,
@@ -345,7 +520,13 @@ impl Application for SystemMonitorApplet {
                         } => {
                             let ram =
                                 SimpleHistoryChart::new(&self.ram, self.sys.total_memory(), *color);
-                            self.aspect_ratio_container(ram, *aspect_ratio)
+                            let container = self.aspect_ratio_container(ram, *aspect_ratio);
+                            let tooltip_text = self.format_memory_tooltip();
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         PercentView::RunFront {
                             color,
@@ -353,7 +534,13 @@ impl Application for SystemMonitorApplet {
                         } => {
                             let swap =
                                 SimpleHistoryChart::new(&self.swap, self.sys.total_swap(), *color);
-                            self.aspect_ratio_container(swap, *aspect_ratio)
+                            let container = self.aspect_ratio_container(swap, *aspect_ratio);
+                            let tooltip_text = self.format_swap_tooltip();
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                     })
                     .collect(),
@@ -374,7 +561,18 @@ impl Application for SystemMonitorApplet {
                                 front: upload,
                             };
 
-                            self.aspect_ratio_container_with_padding(content, *aspect_ratio)
+                            let container =
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio);
+                            let tooltip_text = format!(
+                                "{}\n{}",
+                                self.format_network_tooltip(false),
+                                self.format_network_tooltip(true)
+                            );
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         IoView::RunBack {
                             color,
@@ -382,14 +580,28 @@ impl Application for SystemMonitorApplet {
                         } => {
                             let down = SimpleHistoryChart::auto_max(&self.download, *color);
 
-                            self.aspect_ratio_container_with_padding(down, *aspect_ratio)
+                            let container =
+                                self.aspect_ratio_container_with_padding(down, *aspect_ratio);
+                            let tooltip_text = self.format_network_tooltip(false);
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::Top,
+                            )
                         }
                         IoView::RunFront {
                             color,
                             aspect_ratio,
                         } => {
                             let up = SimpleHistoryChart::auto_max(&self.upload, *color);
-                            self.aspect_ratio_container_with_padding(up, *aspect_ratio)
+                            let container =
+                                self.aspect_ratio_container_with_padding(up, *aspect_ratio);
+                            let tooltip_text = self.format_network_tooltip(true);
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::FollowCursor,
+                            )
                         }
                     })
                     .collect(),
@@ -409,21 +621,46 @@ impl Application for SystemMonitorApplet {
                                 back: read,
                                 front: write,
                             };
-                            self.aspect_ratio_container_with_padding(content, *aspect_ratio)
+                            let container =
+                                self.aspect_ratio_container_with_padding(content, *aspect_ratio);
+                            let tooltip_text = format!(
+                                "{}\n{}",
+                                self.format_disk_tooltip(false),
+                                self.format_disk_tooltip(true)
+                            );
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::FollowCursor,
+                            )
                         }
                         IoView::RunBack {
                             color,
                             aspect_ratio,
                         } => {
                             let read = SimpleHistoryChart::auto_max(&self.disk_read, *color);
-                            self.aspect_ratio_container_with_padding(read, *aspect_ratio)
+                            let container =
+                                self.aspect_ratio_container_with_padding(read, *aspect_ratio);
+                            let tooltip_text = self.format_disk_tooltip(false);
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::FollowCursor,
+                            )
                         }
                         IoView::RunFront {
                             color,
                             aspect_ratio,
                         } => {
                             let write = SimpleHistoryChart::auto_max(&self.disk_write, *color);
-                            self.aspect_ratio_container_with_padding(write, *aspect_ratio)
+                            let container =
+                                self.aspect_ratio_container_with_padding(write, *aspect_ratio);
+                            let tooltip_text = self.format_disk_tooltip(true);
+                            tooltip(
+                                container,
+                                text(tooltip_text),
+                                cosmic::widget::tooltip::Position::FollowCursor,
+                            )
                         }
                     })
                     .collect(),
@@ -443,28 +680,61 @@ impl Application for SystemMonitorApplet {
                                     aspect_ratio,
                                 } => {
                                     let bars = vec![
-                                        self.aspect_ratio_container(
-                                            PercentageBar::from_pair(
-                                                self.is_horizontal(),
-                                                data.usage,
-                                                100,
-                                                *color_left,
-                                            ),
-                                            *aspect_ratio,
-                                        ),
-                                        self.aspect_ratio_container(
-                                            PercentageBar::from_pair(
-                                                self.is_horizontal(),
-                                                data.used_vram,
-                                                data.total_vram,
-                                                *color_right,
-                                            ),
-                                            *aspect_ratio,
-                                        ),
+                                        {
+                                            let container = self.aspect_ratio_container(
+                                                PercentageBar::from_pair(
+                                                    self.is_horizontal(),
+                                                    data.usage,
+                                                    100,
+                                                    *color_left,
+                                                ),
+                                                *aspect_ratio,
+                                            );
+                                            let tooltip_text =
+                                                format!("GPU {} Usage: {:.1}%", idx, data.usage);
+                                            tooltip(
+                                                container,
+                                                text(tooltip_text),
+                                                cosmic::widget::tooltip::Position::FollowCursor,
+                                            )
+                                        },
+                                        {
+                                            let container = self.aspect_ratio_container(
+                                                PercentageBar::from_pair(
+                                                    self.is_horizontal(),
+                                                    data.used_vram,
+                                                    data.total_vram,
+                                                    *color_right,
+                                                ),
+                                                *aspect_ratio,
+                                            );
+                                            let vram_tooltip = format!(
+                                                "GPU {} VRAM: {} / {} ({}%)",
+                                                idx,
+                                                self.format_bytes(data.used_vram),
+                                                self.format_bytes(data.total_vram),
+                                                self.format_percentage(
+                                                    data.used_vram,
+                                                    data.total_vram
+                                                )
+                                            );
+                                            tooltip(
+                                                container,
+                                                text(vram_tooltip),
+                                                cosmic::widget::tooltip::Position::FollowCursor,
+                                            )
+                                        },
                                     ];
-                                    self.panel_collection(bars, *spacing, 0.0)
+                                    let container = self
+                                        .panel_collection(bars, *spacing, 0.0)
                                         .apply(container)
-                                        .style(base_background)
+                                        .style(base_background);
+                                    let tooltip_text = self.format_gpu_tooltip(*idx);
+                                    tooltip(
+                                        container,
+                                        text(tooltip_text),
+                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                    )
                                 }
                                 PercentView::BarLeft {
                                     color,
@@ -476,7 +746,15 @@ impl Application for SystemMonitorApplet {
                                         100,
                                         *color,
                                     );
-                                    self.aspect_ratio_container(content, *aspect_ratio)
+                                    let container =
+                                        self.aspect_ratio_container(content, *aspect_ratio);
+                                    let tooltip_text =
+                                        format!("GPU {} Usage: {:.1}%", idx, data.usage);
+                                    tooltip(
+                                        container,
+                                        text(tooltip_text),
+                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                    )
                                 }
                                 PercentView::BarRight {
                                     color,
@@ -488,7 +766,20 @@ impl Application for SystemMonitorApplet {
                                         data.total_vram,
                                         *color,
                                     );
-                                    self.aspect_ratio_container(content, *aspect_ratio)
+                                    let container =
+                                        self.aspect_ratio_container(content, *aspect_ratio);
+                                    let vram_tooltip = format!(
+                                        "GPU {} VRAM: {} / {} ({}%)",
+                                        idx,
+                                        self.format_bytes(data.used_vram),
+                                        self.format_bytes(data.total_vram),
+                                        self.format_percentage(data.used_vram, data.total_vram)
+                                    );
+                                    tooltip(
+                                        container,
+                                        text(vram_tooltip),
+                                        cosmic::widget::tooltip::Position::Top,
+                                    )
                                 }
                                 PercentView::Run {
                                     aspect_ratio,
@@ -508,7 +799,14 @@ impl Application for SystemMonitorApplet {
                                         front: vram,
                                     };
 
-                                    self.aspect_ratio_container(content, *aspect_ratio)
+                                    let container =
+                                        self.aspect_ratio_container(content, *aspect_ratio);
+                                    let tooltip_text = self.format_gpu_tooltip(*idx);
+                                    tooltip(
+                                        container,
+                                        text(tooltip_text),
+                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                    )
                                 }
                                 PercentView::RunBack {
                                     color,
@@ -516,7 +814,15 @@ impl Application for SystemMonitorApplet {
                                 } => {
                                     let usage =
                                         SimpleHistoryChart::new(&self.gpu_usage[*idx], 100, *color);
-                                    self.aspect_ratio_container(usage, *aspect_ratio)
+                                    let container =
+                                        self.aspect_ratio_container(usage, *aspect_ratio);
+                                    let tooltip_text =
+                                        format!("GPU {} Usage: {:.1}%", idx, data.usage);
+                                    tooltip(
+                                        container,
+                                        text(tooltip_text),
+                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                    )
                                 }
                                 PercentView::RunFront {
                                     color,
@@ -527,7 +833,20 @@ impl Application for SystemMonitorApplet {
                                         data.total_vram,
                                         *color,
                                     );
-                                    self.aspect_ratio_container(vram, *aspect_ratio)
+                                    let container =
+                                        self.aspect_ratio_container(vram, *aspect_ratio);
+                                    let vram_tooltip = format!(
+                                        "GPU {} VRAM: {} / {} ({}%)",
+                                        idx,
+                                        self.format_bytes(data.used_vram),
+                                        self.format_bytes(data.total_vram),
+                                        self.format_percentage(data.used_vram, data.total_vram)
+                                    );
+                                    tooltip(
+                                        container,
+                                        text(vram_tooltip),
+                                        cosmic::widget::tooltip::Position::Top,
+                                    )
                                 }
                             })
                             .collect::<Vec<_>>()
