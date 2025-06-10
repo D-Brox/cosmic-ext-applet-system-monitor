@@ -390,11 +390,6 @@ impl Application for SystemMonitorApplet {
                             let chart = SimpleHistoryChart::new(&self.global_cpu, 100.0, *color);
                             let container = self.aspect_ratio_container(chart, *aspect_ratio);
                             let tooltip_text = self.format_cpu_tooltip(self.sys.global_cpu_usage());
-                            // tooltip(
-                            //     container,
-                            //     text(tooltip_text),
-                            //     cosmic::widget::tooltip::Position::Top,
-                            // )
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
