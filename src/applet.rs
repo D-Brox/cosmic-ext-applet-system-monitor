@@ -5,7 +5,8 @@ use cosmic::{
     cosmic_config,
     iced::{Alignment, Padding, Pixels, Size, Subscription},
     iced_core::padding,
-    widget::{container, text, tooltip, Column, Container, Row},
+    surface,
+    widget::{container, Column, Container, Row},
     Application, Apply as _, Element, Renderer, Theme,
 };
 use std::time::Duration;
@@ -61,7 +62,7 @@ pub enum Message {
     TickNet,
     TickDisk,
     TickGpu,
-    // TickGpu,
+    Surface(surface::Action),
 }
 
 #[derive(Clone, Debug)]
@@ -329,10 +330,12 @@ impl Application for SystemMonitorApplet {
                             );
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
                             let tooltip_text = self.format_cpu_tooltip(self.sys.global_cpu_usage());
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         CpuView::BarCores {
@@ -356,10 +359,12 @@ impl Application for SystemMonitorApplet {
                                     );
                                     let tooltip_text =
                                         format!("CPU Core {}: {:.1}%", core_idx, usage);
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(tooltip_text),
-                                        cosmic::widget::tooltip::Position::Top,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 })
                                 .collect();
@@ -370,10 +375,12 @@ impl Application for SystemMonitorApplet {
                                 .style(base_background);
                             let tooltip_text =
                                 format!("CPU Cores: {} cores total", self.sys.cpus().len());
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         CpuView::Run {
@@ -383,10 +390,17 @@ impl Application for SystemMonitorApplet {
                             let chart = SimpleHistoryChart::new(&self.global_cpu, 100.0, *color);
                             let container = self.aspect_ratio_container(chart, *aspect_ratio);
                             let tooltip_text = self.format_cpu_tooltip(self.sys.global_cpu_usage());
-                            tooltip(
+                            // tooltip(
+                            //     container,
+                            //     text(tooltip_text),
+                            //     cosmic::widget::tooltip::Position::Top,
+                            // )
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                     })
@@ -412,10 +426,12 @@ impl Application for SystemMonitorApplet {
                                         *aspect_ratio,
                                     );
                                     let tooltip_text = self.format_memory_tooltip();
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(tooltip_text),
-                                        cosmic::widget::tooltip::Position::Top,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 },
                                 {
@@ -429,10 +445,12 @@ impl Application for SystemMonitorApplet {
                                         *aspect_ratio,
                                     );
                                     let tooltip_text = self.format_swap_tooltip();
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(tooltip_text),
-                                        cosmic::widget::tooltip::Position::Top,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 },
                             ];
@@ -445,10 +463,12 @@ impl Application for SystemMonitorApplet {
                                 self.format_memory_tooltip(),
                                 self.format_swap_tooltip()
                             );
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         PercentView::BarLeft {
@@ -463,10 +483,12 @@ impl Application for SystemMonitorApplet {
                             );
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
                             let tooltip_text = self.format_memory_tooltip();
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         PercentView::BarRight {
@@ -481,10 +503,12 @@ impl Application for SystemMonitorApplet {
                             );
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
                             let tooltip_text = self.format_swap_tooltip();
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         PercentView::Run {
@@ -508,10 +532,12 @@ impl Application for SystemMonitorApplet {
                                 self.format_memory_tooltip(),
                                 self.format_swap_tooltip()
                             );
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         PercentView::RunBack {
@@ -522,10 +548,12 @@ impl Application for SystemMonitorApplet {
                                 SimpleHistoryChart::new(&self.ram, self.sys.total_memory(), *color);
                             let container = self.aspect_ratio_container(ram, *aspect_ratio);
                             let tooltip_text = self.format_memory_tooltip();
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         PercentView::RunFront {
@@ -536,10 +564,12 @@ impl Application for SystemMonitorApplet {
                                 SimpleHistoryChart::new(&self.swap, self.sys.total_swap(), *color);
                             let container = self.aspect_ratio_container(swap, *aspect_ratio);
                             let tooltip_text = self.format_swap_tooltip();
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                     })
@@ -568,10 +598,12 @@ impl Application for SystemMonitorApplet {
                                 self.format_network_tooltip(false),
                                 self.format_network_tooltip(true)
                             );
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         IoView::RunBack {
@@ -583,10 +615,12 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(down, *aspect_ratio);
                             let tooltip_text = self.format_network_tooltip(false);
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::Top,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         IoView::RunFront {
@@ -597,10 +631,12 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(up, *aspect_ratio);
                             let tooltip_text = self.format_network_tooltip(true);
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::FollowCursor,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                     })
@@ -628,10 +664,12 @@ impl Application for SystemMonitorApplet {
                                 self.format_disk_tooltip(false),
                                 self.format_disk_tooltip(true)
                             );
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::FollowCursor,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         IoView::RunBack {
@@ -642,10 +680,12 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(read, *aspect_ratio);
                             let tooltip_text = self.format_disk_tooltip(false);
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::FollowCursor,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                         IoView::RunFront {
@@ -656,10 +696,12 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(write, *aspect_ratio);
                             let tooltip_text = self.format_disk_tooltip(true);
-                            tooltip(
+                            self.core.applet.applet_tooltip(
                                 container,
-                                text(tooltip_text),
-                                cosmic::widget::tooltip::Position::FollowCursor,
+                                tooltip_text,
+                                false,
+                                Message::Surface,
+                                None,
                             )
                         }
                     })
@@ -692,10 +734,12 @@ impl Application for SystemMonitorApplet {
                                             );
                                             let tooltip_text =
                                                 format!("GPU {} Usage: {:.1}%", idx, data.usage);
-                                            tooltip(
+                                            self.core.applet.applet_tooltip(
                                                 container,
-                                                text(tooltip_text),
-                                                cosmic::widget::tooltip::Position::FollowCursor,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
                                             )
                                         },
                                         {
@@ -718,10 +762,12 @@ impl Application for SystemMonitorApplet {
                                                     data.total_vram
                                                 )
                                             );
-                                            tooltip(
+                                            self.core.applet.applet_tooltip(
                                                 container,
-                                                text(vram_tooltip),
-                                                cosmic::widget::tooltip::Position::FollowCursor,
+                                                vram_tooltip,
+                                                false,
+                                                Message::Surface,
+                                                None,
                                             )
                                         },
                                     ];
@@ -730,10 +776,12 @@ impl Application for SystemMonitorApplet {
                                         .apply(container)
                                         .style(base_background);
                                     let tooltip_text = self.format_gpu_tooltip(*idx);
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(tooltip_text),
-                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 }
                                 PercentView::BarLeft {
@@ -750,10 +798,12 @@ impl Application for SystemMonitorApplet {
                                         self.aspect_ratio_container(content, *aspect_ratio);
                                     let tooltip_text =
                                         format!("GPU {} Usage: {:.1}%", idx, data.usage);
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(tooltip_text),
-                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 }
                                 PercentView::BarRight {
@@ -775,10 +825,12 @@ impl Application for SystemMonitorApplet {
                                         self.format_bytes(data.total_vram),
                                         self.format_percentage(data.used_vram, data.total_vram)
                                     );
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(vram_tooltip),
-                                        cosmic::widget::tooltip::Position::Top,
+                                        vram_tooltip,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 }
                                 PercentView::Run {
@@ -802,10 +854,12 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
                                     let tooltip_text = self.format_gpu_tooltip(*idx);
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(tooltip_text),
-                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 }
                                 PercentView::RunBack {
@@ -818,10 +872,12 @@ impl Application for SystemMonitorApplet {
                                         self.aspect_ratio_container(usage, *aspect_ratio);
                                     let tooltip_text =
                                         format!("GPU {} Usage: {:.1}%", idx, data.usage);
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(tooltip_text),
-                                        cosmic::widget::tooltip::Position::FollowCursor,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 }
                                 PercentView::RunFront {
@@ -842,10 +898,12 @@ impl Application for SystemMonitorApplet {
                                         self.format_bytes(data.total_vram),
                                         self.format_percentage(data.used_vram, data.total_vram)
                                     );
-                                    tooltip(
+                                    self.core.applet.applet_tooltip(
                                         container,
-                                        text(vram_tooltip),
-                                        cosmic::widget::tooltip::Position::Top,
+                                        vram_tooltip,
+                                        false,
+                                        Message::Surface,
+                                        None,
                                     )
                                 }
                             })
@@ -883,6 +941,11 @@ impl Application for SystemMonitorApplet {
             Message::TickCpu => {
                 self.sys.refresh_cpu_usage();
                 self.global_cpu.push(self.sys.global_cpu_usage());
+            }
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
             }
             Message::TickMem => {
                 self.sys.refresh_memory();
