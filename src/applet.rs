@@ -231,7 +231,7 @@ impl SystemMonitorApplet {
             let usage_percentage = format!("{:.1}%", gpu_data.usage);
             let vram_percentage = self.format_percentage(gpu_data.used_vram, gpu_data.total_vram);
             format!(
-                "GPU {}: {}% usage, VRAM: {} / {} ({})",
+                "GPU {}: {} usage, VRAM: {} / {} ({})",
                 gpu_index,
                 usage_percentage,
                 self.format_bytes(gpu_data.used_vram),
@@ -814,7 +814,7 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
                                     let vram_tooltip = format!(
-                                        "GPU {} VRAM: {} / {} ({}%)",
+                                        "GPU {} VRAM: {} / {} ({})",
                                         idx,
                                         self.format_bytes(data.used_vram),
                                         self.format_bytes(data.total_vram),
@@ -887,7 +887,7 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(vram, *aspect_ratio);
                                     let vram_tooltip = format!(
-                                        "GPU {} VRAM: {} / {} ({}%)",
+                                        "GPU {} VRAM: {} / {} ({})",
                                         idx,
                                         self.format_bytes(data.used_vram),
                                         self.format_bytes(data.total_vram),
