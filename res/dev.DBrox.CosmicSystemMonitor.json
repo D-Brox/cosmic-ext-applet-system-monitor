@@ -1,0 +1,49 @@
+{
+    "id": "dev.DBrox.CosmicSystemMonitor",
+    "runtime": "org.freedesktop.Platform",
+    "runtime-version": "24.08",
+    "sdk": "org.freedesktop.Sdk",
+    "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+    "base": "com.system76.Cosmic.BaseApp",
+    "base-version": "stable",
+    "command": "cosmic-ext-applet-system-monitor",
+    "finish-args": [
+      "--socket=wayland",
+      "--socket=fallback-x11",
+      "--device=all",
+      "--filesystem=xdg-config/cosmic:ro",
+      "--talk-name=com.system76.CosmicSettingsDaemon",
+      "--filesystem=/sys/class/hwmon:ro",
+      "--filesystem=/sys/class/drm:ro",
+      "--filesystem=/sys/devices:ro",
+      "--share=ipc"
+    ],
+    "build-options": {
+      "append-path": "/usr/lib/sdk/rust-stable/bin",
+      "env": {
+        "CARGO_HOME": "/run/build/cosmic-ext-applet-system-monitor/cargo"
+      }
+    },
+    "modules": [
+      {
+        "name": "cosmic-ext-applet-system-monitor",
+        "buildsystem": "simple",
+        "build-commands": [
+          "cargo --offline fetch --manifest-path Cargo.toml --verbose",
+          "cargo --offline build --release --verbose",
+          "install -Dm0755 ./target/release/cosmic-ext-applet-system-monitor /app/bin/cosmic-ext-applet-system-monitor",
+          "install -Dm0644 ./res/dev.DBrox.CosmicSystemMonitor.desktop /app/share/applications/dev.DBrox.CosmicSystemMonitor.desktop",
+          "install -Dm0644 ./res/dev.DBrox.CosmicSystemMonitor.metainfo.xml /app/share/metainfo/dev.DBrox.CosmicSystemMonitor.metainfo.xml",
+          "install -Dm0644 ./res/dev.DBrox.CosmicSystemMonitor.svg /app/share/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg"
+        ],
+        "sources": [
+          {
+             "type": "git",
+             "url": "https://github.com/D-Brox/cosmic-ext-applet-system-monitor.git",
+             "commit": "5e57803eaab5a2bb65fd9ec3e372c481a83a13d5"
+           },
+          "generated-sources.json"
+        ]
+      }
+    ]
+  }
