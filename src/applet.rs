@@ -15,7 +15,7 @@ use sysinfo::{Cpu, CpuRefreshKind, Disk, Disks, MemoryRefreshKind, Networks, Ref
 use crate::{
     components::{
         bar::PercentageBar,
-        gpu::Gpus,
+        gpu::{GpuData, Gpus},
         run::{HistoryChart, SimpleHistoryChart, SuperimposedHistoryChart},
     },
     config::{
@@ -157,9 +157,9 @@ impl SystemMonitorApplet {
         }
 
         if unit_index == 0 {
-            format!("{} {}", bytes, UNITS[unit_index])
+            format!("{}{}", bytes, UNITS[unit_index])
         } else {
-            format!("{:.1} {}", size, UNITS[unit_index])
+            format!("{:.1}{}", size, UNITS[unit_index])
         }
     }
 
@@ -176,7 +176,15 @@ impl SystemMonitorApplet {
         format!("CPU: {:.1}%", usage)
     }
 
-    fn format_memory_tooltip(&self) -> String {
+    fn format_mem_tooltip(&self) -> String {
+        format!(
+            "{}\n{}",
+            self.format_ram_tooltip(),
+            self.format_swap_tooltip()
+        )
+    }
+
+    fn format_ram_tooltip(&self) -> String {
         let used = self.sys.used_memory();
         let total = self.sys.total_memory();
         let percentage = self.format_percentage(used, total);
@@ -204,7 +212,15 @@ impl SystemMonitorApplet {
         }
     }
 
-    fn format_network_tooltip(&self, is_upload: bool) -> String {
+    fn format_network_tooltip(&self) -> String {
+        format!(
+            "{}\n{}",
+            self.format_network_tooltip_inner(false),
+            self.format_network_tooltip_inner(true)
+        )
+    }
+
+    fn format_network_tooltip_inner(&self, is_upload: bool) -> String {
         let history = if is_upload {
             &self.upload
         } else {
@@ -226,21 +242,27 @@ impl SystemMonitorApplet {
         format!("Disk {}: {}/s", operation, self.format_bytes(current_rate))
     }
 
-    fn format_gpu_tooltip(&self, gpu_index: usize) -> String {
-        if let Some(gpu_data) = self.gpus.data().get(gpu_index) {
-            let usage_percentage = format!("{:.1}%", gpu_data.usage);
-            let vram_percentage = self.format_percentage(gpu_data.used_vram, gpu_data.total_vram);
-            format!(
-                "GPU {}: {} usage, VRAM: {} / {} ({})",
-                gpu_index,
-                usage_percentage,
-                self.format_bytes(gpu_data.used_vram),
-                self.format_bytes(gpu_data.total_vram),
-                vram_percentage
-            )
-        } else {
-            format!("GPU {}: No data available", gpu_index)
-        }
+    fn format_gpu_tooltip(&self, gpu_index: usize, gpu_data: &GpuData) -> String {
+        format!(
+            "{}\n{}",
+            self.format_gpu_usage_tooltip(gpu_index, gpu_data),
+            self.format_gpu_vram_tooltip(gpu_index, gpu_data)
+        )
+    }
+
+    fn format_gpu_usage_tooltip(&self, gpu_index: usize, gpu_data: &GpuData) -> String {
+        format!("GPU{} Usage: {}%", gpu_index, gpu_data.usage)
+    }
+
+    fn format_gpu_vram_tooltip(&self, gpu_index: usize, gpu_data: &GpuData) -> String {
+        let vram_percentage = self.format_percentage(gpu_data.used_vram, gpu_data.total_vram);
+        format!(
+            "GPU{} VRAM: {}/{} ({})",
+            gpu_index,
+            self.format_bytes(gpu_data.used_vram),
+            self.format_bytes(gpu_data.total_vram),
+            vram_percentage
+        )
     }
 }
 
@@ -357,8 +379,7 @@ impl Application for SystemMonitorApplet {
                                         PercentageBar::new(self.is_horizontal(), usage, *color),
                                         *aspect_ratio,
                                     );
-                                    let tooltip_text =
-                                        format!("CPU Core {}: {:.1}%", core_idx, usage);
+                                    let tooltip_text = format!("CPU{}: {:.1}%", core_idx, usage);
                                     self.core.applet.applet_tooltip(
                                         container,
                                         tooltip_text,
@@ -374,7 +395,7 @@ impl Application for SystemMonitorApplet {
                                 .apply(container)
                                 .style(base_background);
                             let tooltip_text =
-                                format!("CPU Cores: {} cores total", self.sys.cpus().len());
+                                format!("CPU: {} cores total", self.sys.cpus().len());
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -420,7 +441,7 @@ impl Application for SystemMonitorApplet {
                                         ),
                                         *aspect_ratio,
                                     );
-                                    let tooltip_text = self.format_memory_tooltip();
+                                    let tooltip_text = self.format_ram_tooltip();
                                     self.core.applet.applet_tooltip(
                                         container,
                                         tooltip_text,
@@ -453,11 +474,7 @@ impl Application for SystemMonitorApplet {
                                 .panel_collection(bars, *spacing, 0.0)
                                 .apply(container)
                                 .style(base_background);
-                            let tooltip_text = format!(
-                                "{}\n{}",
-                                self.format_memory_tooltip(),
-                                self.format_swap_tooltip()
-                            );
+                            let tooltip_text = self.format_mem_tooltip();
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -477,7 +494,7 @@ impl Application for SystemMonitorApplet {
                                 *color,
                             );
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
-                            let tooltip_text = self.format_memory_tooltip();
+                            let tooltip_text = self.format_ram_tooltip();
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -522,11 +539,7 @@ impl Application for SystemMonitorApplet {
                             };
 
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
-                            let tooltip_text = format!(
-                                "{}\n{}",
-                                self.format_memory_tooltip(),
-                                self.format_swap_tooltip()
-                            );
+                            let tooltip_text = self.format_mem_tooltip();
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -542,7 +555,7 @@ impl Application for SystemMonitorApplet {
                             let ram =
                                 SimpleHistoryChart::new(&self.ram, self.sys.total_memory(), *color);
                             let container = self.aspect_ratio_container(ram, *aspect_ratio);
-                            let tooltip_text = self.format_memory_tooltip();
+                            let tooltip_text = self.format_ram_tooltip();
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -588,11 +601,7 @@ impl Application for SystemMonitorApplet {
 
                             let container =
                                 self.aspect_ratio_container_with_padding(content, *aspect_ratio);
-                            let tooltip_text = format!(
-                                "{}\n{}",
-                                self.format_network_tooltip(false),
-                                self.format_network_tooltip(true)
-                            );
+                            let tooltip_text = self.format_network_tooltip();
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -609,7 +618,7 @@ impl Application for SystemMonitorApplet {
 
                             let container =
                                 self.aspect_ratio_container_with_padding(down, *aspect_ratio);
-                            let tooltip_text = self.format_network_tooltip(false);
+                            let tooltip_text = self.format_network_tooltip_inner(false);
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -625,7 +634,7 @@ impl Application for SystemMonitorApplet {
                             let up = SimpleHistoryChart::auto_max(&self.upload, *color);
                             let container =
                                 self.aspect_ratio_container_with_padding(up, *aspect_ratio);
-                            let tooltip_text = self.format_network_tooltip(true);
+                            let tooltip_text = self.format_network_tooltip_inner(true);
                             self.core.applet.applet_tooltip(
                                 container,
                                 tooltip_text,
@@ -728,7 +737,7 @@ impl Application for SystemMonitorApplet {
                                                 *aspect_ratio,
                                             );
                                             let tooltip_text =
-                                                format!("GPU {} Usage: {:.1}%", idx, data.usage);
+                                                self.format_gpu_usage_tooltip(*idx, data);
                                             self.core.applet.applet_tooltip(
                                                 container,
                                                 tooltip_text,
@@ -747,16 +756,8 @@ impl Application for SystemMonitorApplet {
                                                 ),
                                                 *aspect_ratio,
                                             );
-                                            let vram_tooltip = format!(
-                                                "GPU {} VRAM: {} / {} ({}%)",
-                                                idx,
-                                                self.format_bytes(data.used_vram),
-                                                self.format_bytes(data.total_vram),
-                                                self.format_percentage(
-                                                    data.used_vram,
-                                                    data.total_vram
-                                                )
-                                            );
+                                            let vram_tooltip =
+                                                self.format_gpu_vram_tooltip(*idx, data);
                                             self.core.applet.applet_tooltip(
                                                 container,
                                                 vram_tooltip,
@@ -770,7 +771,7 @@ impl Application for SystemMonitorApplet {
                                         .panel_collection(bars, *spacing, 0.0)
                                         .apply(container)
                                         .style(base_background);
-                                    let tooltip_text = self.format_gpu_tooltip(*idx);
+                                    let tooltip_text = self.format_gpu_tooltip(*idx, data);
                                     self.core.applet.applet_tooltip(
                                         container,
                                         tooltip_text,
@@ -778,6 +779,7 @@ impl Application for SystemMonitorApplet {
                                         Message::Surface,
                                         None,
                                     )
+                                    // todoo
                                 }
                                 PercentView::BarLeft {
                                     color,
@@ -791,8 +793,7 @@ impl Application for SystemMonitorApplet {
                                     );
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
-                                    let tooltip_text =
-                                        format!("GPU {} Usage: {:.1}%", idx, data.usage);
+                                    let tooltip_text = self.format_gpu_usage_tooltip(*idx, data);
                                     self.core.applet.applet_tooltip(
                                         container,
                                         tooltip_text,
@@ -813,13 +814,7 @@ impl Application for SystemMonitorApplet {
                                     );
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
-                                    let vram_tooltip = format!(
-                                        "GPU {} VRAM: {} / {} ({})",
-                                        idx,
-                                        self.format_bytes(data.used_vram),
-                                        self.format_bytes(data.total_vram),
-                                        self.format_percentage(data.used_vram, data.total_vram)
-                                    );
+                                    let vram_tooltip = self.format_gpu_vram_tooltip(*idx, data);
                                     self.core.applet.applet_tooltip(
                                         container,
                                         vram_tooltip,
@@ -848,7 +843,7 @@ impl Application for SystemMonitorApplet {
 
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
-                                    let tooltip_text = self.format_gpu_tooltip(*idx);
+                                    let tooltip_text = self.format_gpu_tooltip(*idx, data);
                                     self.core.applet.applet_tooltip(
                                         container,
                                         tooltip_text,
@@ -865,8 +860,7 @@ impl Application for SystemMonitorApplet {
                                         SimpleHistoryChart::new(&self.gpu_usage[*idx], 100, *color);
                                     let container =
                                         self.aspect_ratio_container(usage, *aspect_ratio);
-                                    let tooltip_text =
-                                        format!("GPU {} Usage: {:.1}%", idx, data.usage);
+                                    let tooltip_text = self.format_gpu_usage_tooltip(*idx, data);
                                     self.core.applet.applet_tooltip(
                                         container,
                                         tooltip_text,
@@ -886,13 +880,7 @@ impl Application for SystemMonitorApplet {
                                     );
                                     let container =
                                         self.aspect_ratio_container(vram, *aspect_ratio);
-                                    let vram_tooltip = format!(
-                                        "GPU {} VRAM: {} / {} ({})",
-                                        idx,
-                                        self.format_bytes(data.used_vram),
-                                        self.format_bytes(data.total_vram),
-                                        self.format_percentage(data.used_vram, data.total_vram)
-                                    );
+                                    let vram_tooltip = self.format_gpu_vram_tooltip(*idx, data);
                                     self.core.applet.applet_tooltip(
                                         container,
                                         vram_tooltip,
