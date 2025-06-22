@@ -5,25 +5,38 @@
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
   <developer_name>D-Brox</developer_name>
-  <update_contact>davidfbg0@gmail.com</update_contact>
-  <url type="homepage"></url>
-  <url type="bugtracker"></url>
+  <update_contact>davidfbg00@gmail.com</update_contact>
+  <url type="homepage">https://github.com/D-Brox/cosmic-ext-applet-system-monitor</url>
+  <url type="bugtracker">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/issues</url>
+  <url type="contribute">https://github.com/D-Brox/cosmic-ext-applet-system-monitor</url>
+  <url type="translate">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/tree/main/i18n</url>
   <name>System Monitor</name>
-  <summary>System monitor applet for the COSMIC DE</summary>
+  <summary>A highly configurable system resource monitor for the COSMIC DE</summary>
   <description>
-    <p>System monitor applet for the COSMIC DE</p>
+    <p>A highly configurable system resource monitor for the COSMIC DE </p>
   </description>
   <launchable type="desktop-id">dev.DBrox.CosmicSystemMonitor.desktop</launchable>
-  <icon type="remote" width="256" height="256">https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/master/res/icons/hicolor/scalable/apps/dev.DBrox.CosmicSystemMonitor.svg</icon>
+  <icon type="stock">dev.DBrox.CosmicSystemMonitor.svg</icon>
   <screenshots>
   </screenshots>
   <provides>
     <id>com.system76.CosmicApplet</id>
-    <mimetypes>
-      <mimetype>text/plain</mimetype>
-    </mimetypes>
     <binaries>
       <binary>cosmic-ext-applet-system-monitor</binary>
     </binaries>
   </provides>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <recommends>
+    <internet>always</internet>
+  </recommends>
+   <releases>
+    <release version="0.2.5" date="2025-06-22">
+    <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.5</url>
+      <description>
+        <p>First Flatpak release</p>
+      </description>
+    </release>
+  </releases>
 </component>

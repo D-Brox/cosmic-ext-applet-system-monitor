@@ -1046,7 +1046,7 @@ dependencies = [
 [[package]]
 name = "cosmic-text"
 version = "0.14.2"
-source = "git+https://github.com/pop-os/cosmic-text.git#c597f3755b5480678053dce1f47bb11b98b43aa2"
+source = "git+https://github.com/pop-os/cosmic-text.git#bcfb05a3909b04f76aa954058d06939535010dcb"
 dependencies = [
  "bitflags 2.9.1",
  "fontdb 0.23.0",
@@ -3189,18 +3189,19 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e613fc340b2220f734a8595782c551f1250e969d87d3be1ae0579e8d4065179"
+checksum = "a973b4e44ce6cad84ce69d797acf9a044532e4184c4f267913d1b546a0727b7a"
 dependencies = [
  "num_enum_derive",
+ "rustversion",
 ]
 
 [[package]]
 name = "num_enum_derive"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
+checksum = "77e878c846a8abae00dd069496dbe8751b16ac1c3d6bd2a7283a938e8228f90d"
 dependencies = [
  "proc-macro-crate 3.3.0",
  "proc-macro2",
@@ -3210,8 +3211,9 @@ dependencies = [
 
 [[package]]
 name = "nvml-wrapper"
-version = "0.10.0"
-source = "git+https://github.com/rust-nvml/nvml-wrapper?rev=6856c2d1#6856c2d1c8c6f1523d37c6a1d3a0a184b0ead03f"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d5c6c0ef9702176a570f06ad94f3198bc29c524c8b498f1b9346e1b1bdcbb3a"
 dependencies = [
  "bitflags 2.9.1",
  "libloading",
@@ -3223,8 +3225,9 @@ dependencies = [
 
 [[package]]
 name = "nvml-wrapper-sys"
-version = "0.8.0"
-source = "git+https://github.com/rust-nvml/nvml-wrapper?rev=6856c2d1#6856c2d1c8c6f1523d37c6a1d3a0a184b0ead03f"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd23dbe2eb8d8335d2bce0299e0a07d6a63c089243d626ca75b770a962ff49e6"
 dependencies = [
  "libloading",
 ]

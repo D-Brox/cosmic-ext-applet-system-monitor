@@ -41,5 +41,5 @@ run-logs *args:
     env RUST_LOG=cosmic_tasks=info RUST_BACKTRACE=full cargo run --release {{args}}
 
 spellcheck *args:
-	@codespell --skip="./i18n" --skip="./.git" --skip="./target" --builtin clear,rare,informal,code --ignore-words-list mut,crate {{args}}
+	@codespell --skip="./i18n" --skip="./.git" --skip="./target" --builtin clear,rare,informal,code --ignore-words-list mut,crate,ro {{args}}
 	@echo Spellings look good!

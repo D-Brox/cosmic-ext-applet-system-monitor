@@ -1,12 +1,12 @@
 [Desktop Entry]
 Name=System Monitor
-Exec=cosmic-ext-applet-system-monitor %F
+Exec=cosmic-ext-applet-system-monitor
 Terminal=false
 Type=Application
 StartupNotify=true
 Icon=dev.DBrox.CosmicSystemMonitor-symbolic
-Categories=COSMIC;Iced;System;Monitor;
-Keywords=Monitor;System;Process;CPU;Memory;Network;History;Usage;
-NoDisplay=true
+Categories=COSMIC
+Keywords=Monitor;System;Process;CPU;GPU;Memory;Network;Disk;History;Usage;
+NotShowIn=COSMIC
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
