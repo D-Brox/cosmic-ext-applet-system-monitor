@@ -10,7 +10,10 @@ use cosmic::{
     Application, Apply as _, Element, Renderer, Theme,
 };
 use std::time::Duration;
-use sysinfo::{Cpu, CpuRefreshKind, Disk, Disks, MemoryRefreshKind, Networks, RefreshKind, System};
+use sysinfo::{
+    Cpu, CpuRefreshKind, Disk, DiskRefreshKind, Disks, MemoryRefreshKind, Networks, RefreshKind,
+    System,
+};
 
 use crate::{
     components::{
@@ -327,7 +330,7 @@ impl Application for SystemMonitorApplet {
                     .with_memory(MemoryRefreshKind::everything()),
             ),
             nets: Networks::new_with_refreshed_list(),
-            disks: Disks::new_with_refreshed_list(),
+            disks: Disks::new_with_refreshed_list_specifics(DiskRefreshKind::nothing().with_io_usage()),
             gpus,
         };
 
@@ -945,7 +948,8 @@ impl Application for SystemMonitorApplet {
                 self.download.push(received);
             }
             Message::TickDisk => {
-                self.disks.refresh(true);
+                self.disks
+                    .refresh_specifics(true, DiskRefreshKind::nothing().with_io_usage());
                 let (read, written) = self
                     .disks
                     .iter()
