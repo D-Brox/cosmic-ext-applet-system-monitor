@@ -7,6 +7,6 @@ StartupNotify=true
 Icon=dev.DBrox.CosmicSystemMonitor-symbolic
 Categories=COSMIC
 Keywords=Monitor;System;Process;CPU;GPU;Memory;Network;Disk;History;Usage;
-NotShowIn=COSMIC
+NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
