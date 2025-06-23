@@ -317,16 +317,10 @@ impl ComponentConfig {
         let color = Color::accent_blue;
 
         ComponentConfig::Cpu(
-            [
-                CpuView::Run {
-                    aspect_ratio: 1.5,
-                    color,
-                },
-                CpuView::BarGlobal {
-                    aspect_ratio: 0.5,
-                    color,
-                },
-            ]
+            [CpuView::Run {
+                aspect_ratio: 1.5,
+                color,
+            }]
             .into(),
         )
     }
@@ -335,19 +329,11 @@ impl ComponentConfig {
         let color_back = Color::accent_green;
         let color_front = Color::accent_purple;
         ComponentConfig::Mem(
-            [
-                PercentView::Run {
-                    color_back,
-                    color_front,
-                    aspect_ratio: 1.5,
-                },
-                PercentView::Bar {
-                    color_left: color_back,
-                    color_right: color_front,
-                    aspect_ratio: 0.5,
-                    spacing: 2.5,
-                },
-            ]
+            [PercentView::Run {
+                color_back,
+                color_front,
+                aspect_ratio: 1.5,
+            }]
             .into(),
         )
     }
@@ -378,19 +364,11 @@ impl ComponentConfig {
         let color_usage = Color::accent_warm_grey;
         let color_vram = Color::accent_indigo;
         ComponentConfig::Gpu(
-            [
-                PercentView::Run {
-                    color_back: color_usage,
-                    color_front: color_vram,
-                    aspect_ratio: 1.5,
-                },
-                PercentView::Bar {
-                    color_left: color_usage,
-                    color_right: color_vram,
-                    aspect_ratio: 0.5,
-                    spacing: 2.5,
-                },
-            ]
+            [PercentView::Run {
+                color_back: color_usage,
+                color_front: color_vram,
+                aspect_ratio: 1.5,
+            }]
             .into(),
         )
     }

@@ -330,7 +330,9 @@ impl Application for SystemMonitorApplet {
                     .with_memory(MemoryRefreshKind::everything()),
             ),
             nets: Networks::new_with_refreshed_list(),
-            disks: Disks::new_with_refreshed_list_specifics(DiskRefreshKind::nothing().with_io_usage()),
+            disks: Disks::new_with_refreshed_list_specifics(
+                DiskRefreshKind::nothing().with_io_usage(),
+            ),
             gpus,
         };
 
