@@ -4,38 +4,57 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
-  <developer_name>D-Brox</developer_name>
+  <developer id="io.github.D-Brox">
+    <name>D-Brox</name>
+  </developer>
   <update_contact>davidfbg00@gmail.com</update_contact>
   <url type="homepage">https://github.com/D-Brox/cosmic-ext-applet-system-monitor</url>
+  <url type="help">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/tree/master/docs</url>
   <url type="bugtracker">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/issues</url>
   <url type="contribute">https://github.com/D-Brox/cosmic-ext-applet-system-monitor</url>
-  <url type="translate">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/tree/main/i18n</url>
+  <url type="translate">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/tree/master/i18n</url>
+  <content_rating type="oars-1.1" />
   <name>System Monitor</name>
   <summary>A highly configurable system resource monitor for the COSMIC DE</summary>
   <description>
-    <p>A highly configurable system resource monitor for the COSMIC DE </p>
+    <p>A highly configurable system resource monitor applet for the COSMIC desktop environment. Customize everything from the visual theme and layout of components to paddings and sampling rates. Supports vertical bar charts, run charts, and a minimalist design for seamless panel integration.</p>
+    <p>Monitors a variety of system resources:</p>
+    <ul>
+      <li>CPU usage (global and per core)</li>
+      <li>Memory usage (RAM and Swap)</li>
+      <li>Network I/O</li>
+      <li>Disk I/O</li>
+      <li>GPU (usage and VRAM)</li>
+    </ul>
   </description>
   <launchable type="desktop-id">dev.DBrox.CosmicSystemMonitor.desktop</launchable>
   <icon type="stock">dev.DBrox.CosmicSystemMonitor.svg</icon>
   <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/refs/heads/master/res/screenshot.png</image>
+      <caption>Default configuration of the applet, styled with the catppuccin palette</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/refs/heads/master/res/screenshot_components.png</image>
+      <caption>Applet with large padding with multiple run chart and bar chart components</caption>
+    </screenshot>
+      <screenshot>
+      <image>https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/refs/heads/master/res/screenshot_bars.png</image>
+      <caption>A styled instance of the applet with both types of charts side by side.</caption>
+    </screenshot>
   </screenshots>
   <provides>
     <id>com.system76.CosmicApplet</id>
-    <binaries>
-      <binary>cosmic-ext-applet-system-monitor</binary>
-    </binaries>
+    <binary>cosmic-ext-applet-system-monitor</binary>
   </provides>
   <categories>
     <category>Utility</category>
   </categories>
-  <recommends>
-    <internet>always</internet>
-  </recommends>
-   <releases>
+  <releases>
     <release version="0.2.5" date="2025-06-22">
     <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.5</url>
       <description>
-        <p>First Flatpak release</p>
+        <p>First Flatpak release. Added tooltips to the chart components.</p>
       </description>
     </release>
   </releases>
