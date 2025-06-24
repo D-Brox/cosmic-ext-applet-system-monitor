@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=System Monitor
+Name[hu]=Rendszerfigyelő
 Exec=cosmic-ext-applet-system-monitor
 Terminal=false
 Type=Application
