@@ -17,24 +17,33 @@
   <content_rating type="oars-1.1" />
   <name>System Monitor</name>
   <name xml:lang="cs">Monitor systému</name>
+  <name xml:lang="hu">Rendszerfigyelő</name>
   <summary>A highly configurable system resource monitor for the COSMIC DE</summary>
   <summary xml:lang="cs">Vysoce přizpůsobitelný monitor využití systému pro prostředí COSMIC</summary>
+  <summary xml:lang="hu">Egy rendkívül testreszabható rendszererőforrás-figyelő a COSMIC asztali környezethez</summary>
   <description>
     <p>A highly configurable system resource monitor applet for the COSMIC desktop environment. Customize everything from the visual theme and layout of components to paddings and sampling rates. Supports vertical bar charts, run charts, and a minimalist design for seamless panel integration.</p>
     <p xml:lang="cs">Vysoce přizpůsobitelný applet pro sledování využití systému v prostředí COSMIC. Přizpůsobte si vše od vizuálního motivu a rozložení komponent až po odsazení a frekvenci vzorkování. Podporuje vertikální sloupcové grafy, grafy běhu a minimalistický design pro hladkou integraci přímo do panelu.</p>
+    <p xml:lang="hu">Egy rendkívül testreszabható rendszererőforrás-figyelő kisalkalmazás a COSMIC asztali környezethez. Minden testreszabható a vizuális témától és az elemek elrendezésétől kezdve a margókon és a mintavételi gyakoriságon át. Támogatja a függőleges oszlopdiagramokat, a vonaldiagramokat, valamint a minimalista dizájnt a zökkenőmentes panelintegrációhoz.</p>
     <p>Monitors a variety of system resources:</p>
     <p xml:lang="cs">Sleduje různé systémové prostředky:</p>  
+    <p xml:lang="hu">A következő rendszererőforrásokat figyeli:</p>
     <ul>
       <li>CPU usage (global and per core)</li>
       <li xml:lang="cs">Využití CPU (globální a pro každé jádro)</li>
+      <li xml:lang="hu">CPU-használat (összes és magonkénti)</li>
       <li>Memory usage (RAM and Swap)</li>
       <li xml:lang="cs">Využití paměti (RAM a Swap)</li>
+      <li xml:lang="hu">Memóriahasználat (RAM és cserehely)</li>
       <li>Network I/O</li>
       <li xml:lang="cs">I/O sítě</li>
+      <li xml:lang="hu">Hálózati adatforgalom</li>
       <li>Disk I/O</li>
       <li xml:lang="cs">I/O disku</li>
+      <li xml:lang="hu">Lemez I/O</li>
       <li>GPU (usage and VRAM)</li>
       <li xml:lang="cs">GPU (využití a VRAM)</li>
+      <li xml:lang="hu">GPU (kihasználtság és VRAM)</li>
     </ul>
   </description>
   <launchable type="desktop-id">dev.DBrox.CosmicSystemMonitor.desktop</launchable>
@@ -44,16 +53,19 @@
       <image>https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/refs/heads/master/res/screenshot.png</image>
       <caption>Default configuration of the applet, styled with the catppuccin palette</caption>
       <caption xml:lang="cs">Výchozí nastavení appletu, stylizované paletou Catppuccin</caption>
+      <caption xml:lang="hu">A kisalkalmazás alapértelemezett beállítása, Catppuccin színpalettával</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/refs/heads/master/res/screenshot_components.png</image>
       <caption>Applet with large padding with multiple run chart and bar chart components</caption>
       <caption xml:lang="cs">Applet s velkým odsazením a několika komponentami sloupcových grafů a grafů běhu</caption>
+      <caption xml:lang="hu">Nagy margókkal rendelkező kisalkalmazás több vonaldiagram- és oszlopdiagram-elemmel</caption>
     </screenshot>
       <screenshot>
       <image>https://raw.githubusercontent.com/D-Brox/cosmic-ext-applet-system-monitor/refs/heads/master/res/screenshot_bars.png</image>
       <caption>A styled instance of the applet with both types of charts side by side.</caption>
       <caption xml:lang="cs">Stylizovaná instance appletu s oběma typy grafů vedle sebe</caption>
+      <caption xml:lang="hu">Stílusos kisalkalmazás, ahol a kétféle diagram egymás mellett jelenik meg</caption>
     </screenshot>
   </screenshots>
   <provides>
