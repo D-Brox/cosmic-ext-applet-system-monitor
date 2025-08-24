@@ -340,7 +340,7 @@ impl Application for SystemMonitorApplet {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn view(&self) -> Element<Message> {
+    fn view(&'_ self) -> Element<'_, Message> {
         let item_iter = self.config.components.iter().map(|module| {
             match module {
                 ComponentConfig::Cpu(vis) => vis
@@ -357,13 +357,20 @@ impl Application for SystemMonitorApplet {
                             );
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
                             let tooltip_text = self.format_cpu_tooltip(self.sys.global_cpu_usage());
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         CpuView::BarCores {
                             aspect_ratio,
@@ -376,7 +383,7 @@ impl Application for SystemMonitorApplet {
 
                             cpus.sort_by(sorting.method());
 
-                            let bars: Vec<_> = cpus
+                            let bars: Vec<Element<_>> = cpus
                                 .into_iter()
                                 .enumerate()
                                 .map(|(core_idx, usage)| {
@@ -385,13 +392,20 @@ impl Application for SystemMonitorApplet {
                                         *aspect_ratio,
                                     );
                                     let tooltip_text = format!("CPU{}: {:.1}%", core_idx, usage);
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        tooltip_text,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 })
                                 .collect();
 
@@ -401,13 +415,20 @@ impl Application for SystemMonitorApplet {
                                 .style(base_background);
                             let tooltip_text =
                                 format!("CPU: {} cores total", self.sys.cpus().len());
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         CpuView::Run {
                             aspect_ratio,
@@ -416,16 +437,23 @@ impl Application for SystemMonitorApplet {
                             let chart = SimpleHistoryChart::new(&self.global_cpu, 100.0, *color);
                             let container = self.aspect_ratio_container(chart, *aspect_ratio);
                             let tooltip_text = self.format_cpu_tooltip(self.sys.global_cpu_usage());
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                     })
-                    .collect::<Vec<_>>(),
+                    .collect::<Vec<Element<_>>>(),
                 ComponentConfig::Mem(vis) => vis
                     .iter()
                     .map(|v| match v {
@@ -435,7 +463,7 @@ impl Application for SystemMonitorApplet {
                             spacing,
                             aspect_ratio,
                         } => {
-                            let bars = vec![
+                            let bars: Vec<Element<_>> = vec![
                                 {
                                     let container = self.aspect_ratio_container(
                                         PercentageBar::from_pair(
@@ -447,13 +475,20 @@ impl Application for SystemMonitorApplet {
                                         *aspect_ratio,
                                     );
                                     let tooltip_text = self.format_ram_tooltip();
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        tooltip_text,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 },
                                 {
                                     let container = self.aspect_ratio_container(
@@ -466,13 +501,20 @@ impl Application for SystemMonitorApplet {
                                         *aspect_ratio,
                                     );
                                     let tooltip_text = self.format_swap_tooltip();
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        tooltip_text,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 },
                             ];
                             let container = self
@@ -480,13 +522,20 @@ impl Application for SystemMonitorApplet {
                                 .apply(container)
                                 .style(base_background);
                             let tooltip_text = self.format_mem_tooltip();
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         PercentView::BarLeft {
                             color,
@@ -500,13 +549,20 @@ impl Application for SystemMonitorApplet {
                             );
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
                             let tooltip_text = self.format_ram_tooltip();
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         PercentView::BarRight {
                             color,
@@ -520,13 +576,20 @@ impl Application for SystemMonitorApplet {
                             );
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
                             let tooltip_text = self.format_swap_tooltip();
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         PercentView::Run {
                             aspect_ratio,
@@ -545,13 +608,20 @@ impl Application for SystemMonitorApplet {
 
                             let container = self.aspect_ratio_container(content, *aspect_ratio);
                             let tooltip_text = self.format_mem_tooltip();
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         PercentView::RunBack {
                             color,
@@ -561,13 +631,20 @@ impl Application for SystemMonitorApplet {
                                 SimpleHistoryChart::new(&self.ram, self.sys.total_memory(), *color);
                             let container = self.aspect_ratio_container(ram, *aspect_ratio);
                             let tooltip_text = self.format_ram_tooltip();
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         PercentView::RunFront {
                             color,
@@ -577,13 +654,20 @@ impl Application for SystemMonitorApplet {
                                 SimpleHistoryChart::new(&self.swap, self.sys.total_swap(), *color);
                             let container = self.aspect_ratio_container(swap, *aspect_ratio);
                             let tooltip_text = self.format_swap_tooltip();
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                     })
                     .collect(),
@@ -607,13 +691,20 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(content, *aspect_ratio);
                             let tooltip_text = self.format_network_tooltip();
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         IoView::RunBack {
                             color,
@@ -624,13 +715,20 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(down, *aspect_ratio);
                             let tooltip_text = self.format_network_tooltip_inner(false);
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         IoView::RunFront {
                             color,
@@ -640,13 +738,20 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(up, *aspect_ratio);
                             let tooltip_text = self.format_network_tooltip_inner(true);
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                     })
                     .collect(),
@@ -673,13 +778,20 @@ impl Application for SystemMonitorApplet {
                                 self.format_disk_tooltip(false),
                                 self.format_disk_tooltip(true)
                             );
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         IoView::RunBack {
                             color,
@@ -689,13 +801,20 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(read, *aspect_ratio);
                             let tooltip_text = self.format_disk_tooltip(false);
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                         IoView::RunFront {
                             color,
@@ -705,13 +824,20 @@ impl Application for SystemMonitorApplet {
                             let container =
                                 self.aspect_ratio_container_with_padding(write, *aspect_ratio);
                             let tooltip_text = self.format_disk_tooltip(true);
-                            self.core.applet.applet_tooltip(
-                                container,
-                                tooltip_text,
-                                false,
-                                Message::Surface,
-                                None,
-                            )
+                            if self.config.tooltip_enabled {
+                                self.core
+                                    .applet
+                                    .applet_tooltip(
+                                        container,
+                                        tooltip_text,
+                                        false,
+                                        Message::Surface,
+                                        None,
+                                    )
+                                    .into()
+                            } else {
+                                container.into()
+                            }
                         }
                     })
                     .collect(),
@@ -730,7 +856,7 @@ impl Application for SystemMonitorApplet {
                                     spacing,
                                     aspect_ratio,
                                 } => {
-                                    let bars = vec![
+                                    let bars: Vec<Element<_>> = vec![
                                         {
                                             let container = self.aspect_ratio_container(
                                                 PercentageBar::from_pair(
@@ -743,13 +869,20 @@ impl Application for SystemMonitorApplet {
                                             );
                                             let tooltip_text =
                                                 self.format_gpu_usage_tooltip(*idx, data);
-                                            self.core.applet.applet_tooltip(
-                                                container,
-                                                tooltip_text,
-                                                false,
-                                                Message::Surface,
-                                                None,
-                                            )
+                                            if self.config.tooltip_enabled {
+                                                self.core
+                                                    .applet
+                                                    .applet_tooltip(
+                                                        container,
+                                                        tooltip_text,
+                                                        false,
+                                                        Message::Surface,
+                                                        None,
+                                                    )
+                                                    .into()
+                                            } else {
+                                                container.into()
+                                            }
                                         },
                                         {
                                             let container = self.aspect_ratio_container(
@@ -763,13 +896,20 @@ impl Application for SystemMonitorApplet {
                                             );
                                             let vram_tooltip =
                                                 self.format_gpu_vram_tooltip(*idx, data);
-                                            self.core.applet.applet_tooltip(
-                                                container,
-                                                vram_tooltip,
-                                                false,
-                                                Message::Surface,
-                                                None,
-                                            )
+                                            if self.config.tooltip_enabled {
+                                                self.core
+                                                    .applet
+                                                    .applet_tooltip(
+                                                        container,
+                                                        vram_tooltip,
+                                                        false,
+                                                        Message::Surface,
+                                                        None,
+                                                    )
+                                                    .into()
+                                            } else {
+                                                container.into()
+                                            }
                                         },
                                     ];
                                     let container = self
@@ -777,14 +917,20 @@ impl Application for SystemMonitorApplet {
                                         .apply(container)
                                         .style(base_background);
                                     let tooltip_text = self.format_gpu_tooltip(*idx, data);
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        tooltip_text,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
-                                    // todoo
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 }
                                 PercentView::BarLeft {
                                     color,
@@ -799,13 +945,20 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
                                     let tooltip_text = self.format_gpu_usage_tooltip(*idx, data);
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        tooltip_text,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 }
                                 PercentView::BarRight {
                                     color,
@@ -820,13 +973,20 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
                                     let vram_tooltip = self.format_gpu_vram_tooltip(*idx, data);
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        vram_tooltip,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                vram_tooltip,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 }
                                 PercentView::Run {
                                     aspect_ratio,
@@ -849,13 +1009,20 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(content, *aspect_ratio);
                                     let tooltip_text = self.format_gpu_tooltip(*idx, data);
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        tooltip_text,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 }
                                 PercentView::RunBack {
                                     color,
@@ -866,13 +1033,20 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(usage, *aspect_ratio);
                                     let tooltip_text = self.format_gpu_usage_tooltip(*idx, data);
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        tooltip_text,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                tooltip_text,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 }
                                 PercentView::RunFront {
                                     color,
@@ -886,13 +1060,20 @@ impl Application for SystemMonitorApplet {
                                     let container =
                                         self.aspect_ratio_container(vram, *aspect_ratio);
                                     let vram_tooltip = self.format_gpu_vram_tooltip(*idx, data);
-                                    self.core.applet.applet_tooltip(
-                                        container,
-                                        vram_tooltip,
-                                        false,
-                                        Message::Surface,
-                                        None,
-                                    )
+                                    if self.config.tooltip_enabled {
+                                        self.core
+                                            .applet
+                                            .applet_tooltip(
+                                                container,
+                                                vram_tooltip,
+                                                false,
+                                                Message::Surface,
+                                                None,
+                                            )
+                                            .into()
+                                    } else {
+                                        container.into()
+                                    }
                                 }
                             })
                             .collect::<Vec<_>>()

@@ -34,7 +34,7 @@ impl<T: Default + Copy> History<T> {
         self.insertion_index = (self.insertion_index + 1) % self.capacity;
     }
 
-    pub fn iter(&self) -> Chain<Iter<T>, Iter<T>> {
+    pub fn iter(&'_ self) -> Chain<Iter<'_, T>, Iter<'_, T>> {
         let (a, b) = self.data.split_at(self.insertion_index);
         b.iter().chain(a.iter())
     }

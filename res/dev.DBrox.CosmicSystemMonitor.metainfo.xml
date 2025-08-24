@@ -7,6 +7,7 @@
   <developer id="io.github.D-Brox">
     <name>D-Brox</name>
   </developer>
+  <developer_name>D-Brox</developer_name>
   <update_contact>davidfbg00@gmail.com</update_contact>
   <url type="homepage">https://github.com/D-Brox/cosmic-ext-applet-system-monitor</url>
   <url type="help">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/tree/master/docs</url>
@@ -51,6 +52,12 @@
     <category>Utility</category>
   </categories>
   <releases>
+    <release version="0.2.6" date="2025-08-23">
+    <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.6</url>
+      <description>
+        <p>Updated dependencies. Added option to disable tooltips.</p>
+      </description>
+    </release>
     <release version="0.2.5" date="2025-06-22">
     <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.5</url>
       <description>

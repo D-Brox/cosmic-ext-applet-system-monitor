@@ -22,6 +22,7 @@ pub struct Config {
     pub sampling: SamplingConfig,
     pub components: Box<[ComponentConfig]>,
     pub layout: LayoutConfig,
+    pub tooltip_enabled: bool,
 }
 
 impl CosmicConfigEntry for Config {
@@ -31,6 +32,7 @@ impl CosmicConfigEntry for Config {
         ConfigSet::set(&tx, "sampling", &self.sampling)?;
         ConfigSet::set(&tx, "components", &self.components)?;
         ConfigSet::set(&tx, "layout", &self.layout)?;
+        ConfigSet::set(&tx, "tooltip_enabled", &self.tooltip_enabled)?;
         tx.commit()
     }
     fn get_entry(config: &CosmicConfig) -> Result<Self, (Vec<ConfigError>, Self)> {
@@ -56,6 +58,7 @@ impl CosmicConfigEntry for Config {
         config_get!(sampling, SamplingConfig);
         config_get!(components, Box<[ComponentConfig]>);
         config_get!(layout, LayoutConfig);
+        config_get!(tooltip_enabled, bool);
 
         if errors.is_empty() {
             Ok(default)
@@ -93,6 +96,7 @@ impl CosmicConfigEntry for Config {
                 "sampling" => config_set!(sampling, SamplingConfig),
                 "components" => config_set!(components, Box<[ComponentConfig]>),
                 "layout" => config_set!(layout, LayoutConfig),
+                "tooltip_enabled" => config_set!(tooltip_enabled, bool),
                 _ => {}
             }
         }
@@ -271,6 +275,7 @@ impl Default for Config {
             ]
             .into(),
             sampling: SamplingConfig::default(),
+            tooltip_enabled: false,
         }
     }
 }
