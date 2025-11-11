@@ -146,15 +146,6 @@ pub enum ComponentConfig {
     Gpu(Box<[PercentView]>),
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Graphics {
-    pub update_interval: u64,
-    pub samples: usize,
-    pub color_usage: Color,
-    pub color_vram: Color,
-    pub aspect_ratio: f32,
-}
-
 pub fn config_subscription() -> Subscription<Message> {
     struct ConfigSubscription;
     cosmic_config::config_subscription(
