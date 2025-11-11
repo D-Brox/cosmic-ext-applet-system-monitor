@@ -1,5 +1,4 @@
-use nvml_wrapper::{error::NvmlError, Device, Nvml};
-use regex::Regex;
+use nvml_wrapper::{Device, Nvml, error::NvmlError};
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
@@ -31,7 +30,6 @@ enum GpuType {
 
 impl Gpus {
     pub fn new() -> Self {
-        let re_cards = Regex::new(r"card(\d+)/device$").unwrap();
         let gpus = read_dir("/sys/class/drm")
             .map(|dir_entries| {
                 dir_entries
@@ -41,7 +39,7 @@ impl Gpus {
                         // Check if it's a card or a display output
                         let entry = dir_entry.ok()?;
                         let sysfs_path = entry.path().join("device");
-                        let _ = re_cards.captures(sysfs_path.to_str().unwrap())?;
+                        match_card_device(sysfs_path.to_str()?)?;
 
                         // Next get the uevent info of the card if it exists
                         let device_uevent_path = sysfs_path.join("uevent");
@@ -105,6 +103,18 @@ fn read_syspath(sysfs_path: &Path, file: &str) -> Option<u64> {
     std::fs::read_to_string(sysfs_path.join(file))
         .ok()
         .and_then(|s| s.trim_end().parse().ok())
+}
+
+fn match_card_device(s: &str) -> Option<()> {
+    let before_device = s.strip_suffix("/device")?;
+    let start_card = before_device.rfind("card")?;
+    let digits = &before_device[start_card + 4..]; // slice after "card"
+
+    if !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()) {
+        Some(())
+    } else {
+        None
+    }
 }
 
 impl Gpu {

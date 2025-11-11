@@ -1,11 +1,11 @@
 use cosmic::{
-    cosmic_theme::palette::WithAlpha,
-    iced::{core::mouse, Point, Rectangle},
-    widget::{
-        canvas::{path, stroke, Fill, Frame, Geometry, Program, Stroke},
-        Canvas,
-    },
     Element, Renderer, Theme,
+    cosmic_theme::palette::WithAlpha,
+    iced::{Point, Rectangle, core::mouse},
+    widget::{
+        Canvas,
+        canvas::{Fill, Frame, Geometry, Program, Stroke, path, stroke},
+    },
 };
 
 use crate::{applet::Message, color::Color, history::History};
@@ -176,6 +176,33 @@ impl<'a, T> SimpleHistoryChart<'a, T> {
 pub struct SuperimposedHistoryChart<'a> {
     pub back: HistoryChart<'a>,
     pub front: HistoryChart<'a>,
+}
+
+impl<'a> SuperimposedHistoryChart<'a> {
+    pub fn new(
+        data_front: &'a History,
+        max_front: u64,
+        color_front: &Color,
+        data_back: &'a History,
+        max_back: u64,
+        color_back: &Color,
+    ) -> Self {
+        let back = HistoryChart::new(data_back, max_back, *color_back);
+        let front = HistoryChart::new(data_front, max_front, *color_front);
+        Self { back, front }
+    }
+
+    pub fn new_linked(
+        data_front: &'a History<u64>,
+        color_front: &Color,
+        data_back: &'a History<u64>,
+        color_back: &Color,
+    ) -> Self {
+        let mut back = HistoryChart::auto_max(data_back, *color_back);
+        let mut front = HistoryChart::auto_max(data_front, *color_front);
+        HistoryChart::link_max(&mut front, &mut back);
+        Self { back, front }
+    }
 }
 
 impl<'a> From<SuperimposedHistoryChart<'a>> for Element<'a, Message> {

@@ -2,14 +2,14 @@ use std::cmp::Ordering;
 
 use crate::{applet::Message, color::Color};
 use cosmic::{
+    Element, Renderer, Theme,
     cosmic_theme::palette::WithAlpha,
     iced::{
         self,
-        core::{layout, mouse, renderer, widget::Tree, Layout, Length, Rectangle, Size},
         Length::Fill,
+        core::{Layout, Length, Rectangle, Size, layout, mouse, renderer, widget::Tree},
     },
     widget::Widget,
-    Element, Renderer, Theme,
 };
 use renderer::Style;
 use serde::{Deserialize, Serialize};

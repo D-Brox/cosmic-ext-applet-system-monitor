@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 
-use cosmic::theme::CosmicColor;
 use cosmic::Theme;
+use cosmic::theme::CosmicColor;
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]

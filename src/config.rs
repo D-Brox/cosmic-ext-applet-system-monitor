@@ -10,7 +10,7 @@ use cosmic::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    applet::{Message, ID},
+    applet::{ID, Message},
     color::Color,
     components::bar::SortMethod,
 };
@@ -32,7 +32,7 @@ impl CosmicConfigEntry for Config {
         ConfigSet::set(&tx, "sampling", &self.sampling)?;
         ConfigSet::set(&tx, "components", &self.components)?;
         ConfigSet::set(&tx, "layout", &self.layout)?;
-        ConfigSet::set(&tx, "tooltip_enabled", &self.tooltip_enabled)?;
+        ConfigSet::set(&tx, "tooltip_enabled", self.tooltip_enabled)?;
         tx.commit()
     }
     fn get_entry(config: &CosmicConfig) -> Result<Self, (Vec<ConfigError>, Self)> {

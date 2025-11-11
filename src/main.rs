@@ -6,13 +6,15 @@ mod components {
     pub mod gpu;
     pub mod run;
 }
+mod views;
+
 mod color;
 mod config;
 mod history;
 mod localization;
 
-use applet::{Flags, SystemMonitorApplet, ID};
-use config::{Config, CONFIG_VERSION};
+use applet::{Flags, ID, SystemMonitorApplet};
+use config::{CONFIG_VERSION, Config};
 use cosmic::cosmic_config::{Config as CosmicConfig, CosmicConfigEntry};
 
 fn main() -> cosmic::iced::Result {

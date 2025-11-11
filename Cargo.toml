@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-ext-applet-system-monitor"
-version = "0.2.6"
+version = "0.2.7"
 edition = "2024"
 authors = ["D-Brox <davidfbg00@gmail.com>"]
 description = "System monitor applet for the COSMIC DE"
@@ -8,15 +8,14 @@ readme = "README.md"
 license = "GPL-3.0"
 homepage = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor"
 repository = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor.git"
-rust-version = "1.87"
+rust-version = "1.89"
 
 [dependencies]
 i18n-embed-fl = "0.10.0"
 nvml-wrapper = "0.11.0"
-regex = "1.11.1"
 rust-embed = "8.7.2"
 serde = "1"
-sysinfo = "0.36.1"
+sysinfo = "0.37.2"
 
 [profile.release]
 lto = true
@@ -29,7 +28,7 @@ wgpu = ["libcosmic/wgpu"]
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
-features = ["applet", "tokio", "wayland"]
+features = ["applet"]
 
 [dependencies.i18n-embed]
 version = "0.16"
