@@ -52,6 +52,12 @@
     <category>Utility</category>
   </categories>
   <releases>
+    <release version="0.2.8" date="2026-01-30">
+    <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.8</url>
+    <description>
+      <p>Fix config not loading due to upstream changes. Updated dependencies.</p>
+    </description>
+    </release>
     <release version="0.2.7" date="2025-11-11">
     <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.7</url>
       <description>

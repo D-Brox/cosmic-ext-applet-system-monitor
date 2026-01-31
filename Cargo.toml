@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-ext-applet-system-monitor"
-version = "0.2.7"
+version = "0.2.8"
 edition = "2024"
 authors = ["D-Brox <davidfbg00@gmail.com>"]
 description = "System monitor applet for the COSMIC DE"
@@ -10,12 +10,44 @@ homepage = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor"
 repository = "https://github.com/D-Brox/cosmic-ext-applet-system-monitor.git"
 rust-version = "1.89"
 
-[dependencies]
-i18n-embed-fl = "0.10.0"
-nvml-wrapper = "0.11.0"
-rust-embed = "8.7.2"
-serde = "1"
-sysinfo = "0.37.2"
+[package.metadata.deb]
+license-file = "LICENSE"
+assets = [
+  [
+    "target/release/cosmic-ext-applet-system-monitor",
+    "usr/bin/",
+    "755",
+  ],
+  [
+    "res/dev.DBrox.CosmicSystemMonitor.desktop",
+    "usr/share/applications/",
+    "644",
+  ],
+  [
+    "res/dev.DBrox.CosmicSystemMonitor.metainfo.xml",
+    "usr/share/metainfo/",
+    "644",
+  ],
+  [
+    "res/dev.DBrox.CosmicSystemMonitor.svg",
+    "usr/share/icons/hicolor/scalable/apps/",
+    "644",
+  ],
+]
+depends = ["libc6", "libxkbcommon0"]
+
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/cosmic-ext-applet-system-monitor", dest = "/usr/bin/", mode = "755" },
+  { source = "LICENSE", dest = "/usr/share/doc/cosmic-ext-applet-system-monitor/LICENSE", doc = true, mode = "644" },
+  { source = "res/*.desktop", dest = "/usr/share/applications/", mode = "644" },
+  { source = "res/*.svg", dest = "/usr/share/icons/scalable/apps/", mode = "644" },
+]
+
+[package.metadata.generate-rpm.requires]
+glibc = "*"
+libxkbcommon = "*"
+
 
 [profile.release]
 lto = true
@@ -24,6 +56,13 @@ strip = true
 [features]
 default = ["wgpu"]
 wgpu = ["libcosmic/wgpu"]
+
+[dependencies]
+i18n-embed-fl = "0.10.0"
+nvml-wrapper = "0.11.0"
+rust-embed = "8.11.0"
+serde = "1"
+sysinfo = "0.38.0"
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
@@ -36,41 +75,3 @@ features = ["fluent-system", "desktop-requester"]
 
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
-
-[package.metadata.deb]
-license-file = "LICENSE"
-assets = [
-    [
-        "target/release/cosmic-ext-applet-system-monitor",
-        "usr/bin/",
-        "755",
-    ],
-    [
-        "res/dev.DBrox.CosmicSystemMonitor.desktop",
-        "usr/share/applications/",
-        "644",
-    ],
-    [
-        "res/dev.DBrox.CosmicSystemMonitor.metainfo.xml",
-        "usr/share/metainfo/",
-        "644",
-    ],
-    [
-        "res/dev.DBrox.CosmicSystemMonitor.svg",
-        "usr/share/icons/hicolor/scalable/apps/",
-        "644",
-    ],
-]
-depends = ["libc6", "libxkbcommon0"]
-
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/release/cosmic-ext-applet-system-monitor", dest = "/usr/bin/", mode = "755" },
-    { source = "LICENSE", dest = "/usr/share/doc/cosmic-ext-applet-system-monitor/LICENSE", doc = true, mode = "644" },
-    { source = "res/*.desktop", dest = "/usr/share/applications/", mode = "644" },
-    { source = "res/*.svg", dest = "/usr/share/icons/scalable/apps/", mode = "644" },
-]
-
-[package.metadata.generate-rpm.requires]
-glibc = "*"
-libxkbcommon = "*"

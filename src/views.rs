@@ -177,10 +177,11 @@ impl SystemMonitorApplet {
 
     pub fn padding(&self) -> Padding {
         match self.config.layout.padding {
-            PaddingOption::Suggested => self.core.applet.suggested_padding(false).into(),
-            PaddingOption::Custom(p) => p,
+            PaddingOption::Suggested => {
+                Into::<[u16; 2]>::into(self.core.applet.suggested_padding(false)).into()
+            }
+            PaddingOption::Custom(p) => p.into(),
         }
-        .into()
     }
 
     fn aspect_ratio_container<'a>(
