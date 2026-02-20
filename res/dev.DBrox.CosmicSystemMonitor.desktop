@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=System Monitor
+Name[cs]=Monitor systému
 Name[hu]=Rendszerfigyelő
 Exec=cosmic-ext-applet-system-monitor
 Terminal=false
@@ -8,6 +9,7 @@ StartupNotify=true
 Icon=dev.DBrox.CosmicSystemMonitor-symbolic
 Categories=COSMIC
 Keywords=Monitor;System;Process;CPU;GPU;Memory;Network;Disk;History;Usage;
+Keywords[cs]=Sledování;Monitor;Systém;Proces;CPU;GPU;Paměť;Síť;Disk;Historie;Využití;
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
