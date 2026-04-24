@@ -26,7 +26,7 @@
     <p xml:lang="cs">Vysoce přizpůsobitelný applet pro sledování využití systému v prostředí COSMIC. Přizpůsobte si vše od vizuálního motivu a rozložení komponent až po odsazení a frekvenci vzorkování. Podporuje vertikální sloupcové grafy, grafy běhu a minimalistický design pro hladkou integraci přímo do panelu.</p>
     <p xml:lang="hu">Egy rendkívül testreszabható rendszererőforrás-figyelő kisalkalmazás a COSMIC asztali környezethez. Minden testreszabható a vizuális témától és az elemek elrendezésétől kezdve a margókon és a mintavételi gyakoriságon át. Támogatja a függőleges oszlopdiagramokat, a vonaldiagramokat, valamint a minimalista dizájnt a zökkenőmentes panelintegrációhoz.</p>
     <p>Monitors a variety of system resources:</p>
-    <p xml:lang="cs">Sleduje různé systémové prostředky:</p>  
+    <p xml:lang="cs">Sleduje různé systémové prostředky:</p>
     <p xml:lang="hu">A következő rendszererőforrásokat figyeli:</p>
     <ul>
       <li>CPU usage (global and per core)</li>
@@ -77,9 +77,9 @@
   </categories>
   <releases>
     <release version="0.2.9" date="2026-04-24">
-      <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.8</url>
+      <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.9</url>
       <description>
-        <p>Remove the need for wgpu, fixed upstream. Updated dependencies.</p>
+        <p>Fix gpu refresh rate. Remove the need for wgpu, fixed upstream. Updated dependencies.</p>
       </description>
     </release>
     <release version="0.2.8" date="2026-01-30">
