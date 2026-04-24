@@ -161,13 +161,13 @@ impl SystemMonitorApplet {
 
         #[allow(clippy::cast_precision_loss)]
         if self.is_horizontal() {
-            let height = bounds_height.get() as f32 - (padding.top + padding.bottom);
+            let height = bounds_height.get() as f32 - padding;
             Size {
                 width: height * aspect_ratio,
                 height,
             }
         } else {
-            let width = bounds_width.get() as f32 - (padding.left + padding.right);
+            let width = bounds_width.get() as f32 - padding;
             Size {
                 width,
                 height: width * aspect_ratio,
@@ -175,12 +175,10 @@ impl SystemMonitorApplet {
         }
     }
 
-    pub fn padding(&self) -> Padding {
+    pub fn padding(&self) -> f32 {
         match self.config.layout.padding {
-            PaddingOption::Suggested => {
-                Into::<[u16; 2]>::into(self.core.applet.suggested_padding(false)).into()
-            }
-            PaddingOption::Custom(p) => p.into(),
+            PaddingOption::Suggested => self.core.applet.suggested_padding(false).1.into(),
+            PaddingOption::Custom(p) => p,
         }
     }
 
