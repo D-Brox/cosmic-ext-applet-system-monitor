@@ -149,17 +149,17 @@ impl Application for SystemMonitorApplet {
         match message {
             Message::Config(config) => {
                 self.config = config;
-                let sampĺing = &self.config.sampling;
-                self.global_cpu.resize(sampĺing.cpu.sampling_window);
-                self.ram.resize(sampĺing.mem.sampling_window);
-                self.swap.resize(sampĺing.mem.sampling_window);
-                self.upload.resize(sampĺing.net.sampling_window);
-                self.download.resize(sampĺing.net.sampling_window);
-                self.disk_read.resize(sampĺing.disk.sampling_window);
-                self.disk_write.resize(sampĺing.disk.sampling_window);
+                let sampling = &self.config.sampling;
+                self.global_cpu.resize(sampling.cpu.sampling_window);
+                self.ram.resize(sampling.mem.sampling_window);
+                self.swap.resize(sampling.mem.sampling_window);
+                self.upload.resize(sampling.net.sampling_window);
+                self.download.resize(sampling.net.sampling_window);
+                self.disk_read.resize(sampling.disk.sampling_window);
+                self.disk_write.resize(sampling.disk.sampling_window);
                 for i in 0..self.gpus.num_gpus() {
-                    self.gpu_usage[i].resize(sampĺing.gpu.sampling_window);
-                    self.vram[i].resize(sampĺing.gpu.sampling_window);
+                    self.gpu_usage[i].resize(sampling.gpu.sampling_window);
+                    self.vram[i].resize(sampling.gpu.sampling_window);
                 }
             }
             Message::TickCpu => {
