@@ -266,7 +266,7 @@ impl Default for Config {
             ]
             .into(),
             sampling: SamplingConfig::default(),
-            tooltip_enabled: false,
+            tooltip_enabled: true,
         }
     }
 }
