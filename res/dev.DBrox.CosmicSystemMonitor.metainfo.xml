@@ -76,26 +76,32 @@
     <category>Utility</category>
   </categories>
   <releases>
-    <release version="0.2.8" date="2026-01-30">
-    <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.8</url>
-    <description>
-      <p>Fix config not loading due to upstream changes. Updated dependencies.</p>
-    </description>
+    <release version="0.2.9" date="2026-04-24">
+      <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.8</url>
+      <description>
+        <p>Remove the need for wgpu, fixed upstream. Updated dependencies.</p>
+      </description>
     </release>
+    <release version="0.2.8" date="2026-01-30">
+      <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.8</url>
+      <description>
+        <p>Fix config not loading due to upstream changes. Updated dependencies.</p>
+      </description>
+      </release>
     <release version="0.2.7" date="2025-11-11">
-    <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.7</url>
+      <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.7</url>
       <description>
         <p>Rework on the view logic. Updated dependencies. Removed regex.</p>
       </description>
     </release>
     <release version="0.2.6" date="2025-08-23">
-    <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.6</url>
+      <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.6</url>
       <description>
         <p>Updated dependencies. Added option to disable tooltips.</p>
       </description>
     </release>
     <release version="0.2.5" date="2025-06-22">
-    <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.5</url>
+      <url type="details">https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/tag/v0.2.5</url>
       <description>
         <p>First Flatpak release. Added tooltips to the chart components.</p>
       </description>
