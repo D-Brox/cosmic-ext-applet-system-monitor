@@ -68,7 +68,7 @@ impl Widget<Message, Theme, Renderer> for PercentageBar {
     }
 
     fn layout(
-        &self,
+        &mut self,
         tree: &mut Tree,
         renderer: &Renderer,
         limits: &layout::Limits,
@@ -131,7 +131,7 @@ impl Widget<Message, Theme, Renderer> for VerticalPercentageBar {
     }
 
     fn layout(
-        &self,
+        &mut self,
         _tree: &mut Tree,
         _renderer: &Renderer,
         limits: &layout::Limits,
@@ -216,7 +216,7 @@ impl Widget<Message, Theme, Renderer> for HorizontalPercentageBar {
     }
 
     fn layout(
-        &self,
+        &mut self,
         _tree: &mut Tree,
         _renderer: &Renderer,
         limits: &layout::Limits,

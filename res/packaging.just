@@ -25,9 +25,6 @@ icon-dst := base-dir / 'share' / icon-path
 build-debug *args:
     cargo build {{args}}
 
-# Compiles with release profile with wgpu disabled
-build-no-wgpu *args: (build-debug '--release --no-default-features' args)
-
 # Compiles with release profile
 build-release *args: (build-debug '--release' args)
 

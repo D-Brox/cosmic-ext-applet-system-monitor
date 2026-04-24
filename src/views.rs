@@ -161,13 +161,13 @@ impl SystemMonitorApplet {
 
         #[allow(clippy::cast_precision_loss)]
         if self.is_horizontal() {
-            let height = bounds_height.get() as f32 - padding.vertical();
+            let height = bounds_height.get() as f32 - (padding.top + padding.bottom);
             Size {
                 width: height * aspect_ratio,
                 height,
             }
         } else {
-            let width = bounds_width.get() as f32 - padding.horizontal();
+            let width = bounds_width.get() as f32 - (padding.left + padding.right);
             Size {
                 width,
                 height: width * aspect_ratio,

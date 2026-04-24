@@ -158,8 +158,8 @@ impl Application for SystemMonitorApplet {
                 self.disk_read.resize(sampĺing.disk.sampling_window);
                 self.disk_write.resize(sampĺing.disk.sampling_window);
                 for i in 0..self.gpus.num_gpus() {
-                    self.gpu_usage[i].resize(sampĺing.cpu.sampling_window);
-                    self.vram[i].resize(sampĺing.cpu.sampling_window);
+                    self.gpu_usage[i].resize(sampĺing.gpu.sampling_window);
+                    self.vram[i].resize(sampĺing.gpu.sampling_window);
                 }
             }
             Message::TickCpu => {
@@ -245,7 +245,7 @@ impl Application for SystemMonitorApplet {
         Subscription::batch(subs)
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 }
