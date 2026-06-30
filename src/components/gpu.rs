@@ -1,11 +1,9 @@
-use nvml_wrapper::{Device, Nvml, error::NvmlError};
+use nvml_wrapper::Nvml;
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
 
 const NV_VENDOR_ID: u16 = 0x10DE;
-static NVML: LazyLock<Result<Nvml, NvmlError>> = LazyLock::new(Nvml::init);
 
 pub struct Gpus {
     inner: Vec<Gpu>,
@@ -24,8 +22,11 @@ struct Gpu {
 }
 
 enum GpuType {
-    PrayAndHope { device: Device<'static> }, // Nvidia
-    PlugAndPlay { sysfs_path: PathBuf },     // Anything else
+    // Nvidia. We keep the sysfs `device/` path (for the RTD3 power gate) and the PCI slot
+    // (to re-acquire the NVML device lazily), but never hold an NVML handle across ticks so
+    // the dGPU is free to runtime-suspend (RTD3).
+    PrayAndHope { sysfs_path: PathBuf, pci_slot: String },
+    PlugAndPlay { sysfs_path: PathBuf }, // Anything else
 }
 
 impl Gpus {
@@ -73,7 +74,7 @@ impl Gpus {
 
                         if vendor == Some(NV_VENDOR_ID) || driver == Some("nvidia") {
                             let pci_slot = uevent.get("PCI_SLOT_NAME").cloned()?;
-                            Gpu::new_nvidia(pci_slot)
+                            Gpu::new_nvidia(sysfs_path, pci_slot)
                         } else {
                             Gpu::new(sysfs_path)
                         }
@@ -86,8 +87,7 @@ impl Gpus {
 
     pub fn refresh(&mut self) {
         for gpu in &mut self.inner {
-            gpu.refresh_usage();
-            gpu.refresh_vram();
+            gpu.refresh();
         }
     }
 
@@ -117,6 +117,23 @@ fn match_card_device(s: &str) -> Option<()> {
     }
 }
 
+/// `false` only when the dGPU is asleep (or going to sleep), so we never resume a
+/// suspended Nvidia dGPU just to read stats. `power/runtime_status` is one of
+/// `active` / `suspended` / `suspending` / `resuming` / `unsupported`.
+fn is_runtime_active(status: &str) -> bool {
+    !matches!(status.trim(), "suspended" | "suspending")
+}
+
+/// Read the dGPU's runtime power state from sysfs. This is a plain file read and never
+/// touches NVML, so it cannot wake the device. A missing/unreadable file (e.g. a desktop
+/// without runtime PM) is treated as active so live stats keep working there.
+fn nvidia_runtime_active(sysfs_path: &Path) -> bool {
+    match std::fs::read_to_string(sysfs_path.join("power/runtime_status")) {
+        Ok(status) => is_runtime_active(&status),
+        Err(_) => true,
+    }
+}
+
 impl Gpu {
     fn new(sysfs_path: PathBuf) -> Option<Self> {
         Some(Self {
@@ -129,48 +146,77 @@ impl Gpu {
         })
     }
 
-    fn new_nvidia(pci_slot: String) -> Option<Self> {
-        let device = NVML.as_ref().ok()?.device_by_pci_bus_id(pci_slot).ok()?;
-        let utilization = device.utilization_rates().ok()?;
-        let meminfo = device.memory_info().ok()?;
-
+    fn new_nvidia(sysfs_path: PathBuf, pci_slot: String) -> Option<Self> {
+        // Don't touch NVML here: opening it at startup would pin/wake the dGPU. Start at
+        // zero; the first refresh while the dGPU is active fills in real values.
         Some(Self {
-            vendor: GpuType::PrayAndHope { device },
+            vendor: GpuType::PrayAndHope {
+                sysfs_path,
+                pci_slot,
+            },
             data: GpuData {
-                usage: u64::from(utilization.gpu),
-                used_vram: meminfo.total - meminfo.free,
-                total_vram: meminfo.total,
+                usage: 0,
+                used_vram: 0,
+                total_vram: 0,
             },
         })
     }
 
-    fn refresh_usage(&mut self) {
+    fn refresh(&mut self) {
         match &self.vendor {
-            GpuType::PrayAndHope { device } => {
-                _ = device
-                    .utilization_rates()
-                    .map(|utilization| self.data.usage = u64::from(utilization.gpu));
+            GpuType::PrayAndHope {
+                sysfs_path,
+                pci_slot,
+            } => {
+                // RTD3 gate: if the dGPU is suspended, leave it alone (a suspended GPU is
+                // idle, so report 0% usage and keep the last known VRAM).
+                if !nvidia_runtime_active(sysfs_path) {
+                    self.data.usage = 0;
+                    return;
+                }
+
+                // Acquire an NVML handle, read, then drop it before returning. Holding it
+                // across ticks would keep `/dev/nvidia*` open and pin runtime_usage > 0,
+                // preventing the dGPU from ever suspending.
+                if let Ok(nvml) = Nvml::init() {
+                    if let Ok(device) = nvml.device_by_pci_bus_id(pci_slot.clone()) {
+                        if let Ok(utilization) = device.utilization_rates() {
+                            self.data.usage = u64::from(utilization.gpu);
+                        }
+                        if let Ok(meminfo) = device.memory_info() {
+                            self.data.used_vram = meminfo.total - meminfo.free;
+                            self.data.total_vram = meminfo.total;
+                        }
+                    }
+                }
             }
 
             GpuType::PlugAndPlay { sysfs_path } => {
                 _ = read_syspath(sysfs_path, "gpu_busy_percent")
                     .map(|usage| self.data.usage = usage);
-            }
-        }
-    }
-
-    fn refresh_vram(&mut self) {
-        match &self.vendor {
-            GpuType::PrayAndHope { device } => {
-                _ = device
-                    .memory_info()
-                    .map(|meminfo| self.data.used_vram = meminfo.total - meminfo.free);
-            }
-
-            GpuType::PlugAndPlay { sysfs_path } => {
                 _ = read_syspath(sysfs_path, "mem_info_vram_used")
                     .map(|used_vram| self.data.used_vram = used_vram);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_runtime_active;
+
+    #[test]
+    fn active_states_are_queried() {
+        assert!(is_runtime_active("active"));
+        assert!(is_runtime_active("active\n"));
+        assert!(is_runtime_active("unsupported"));
+        assert!(is_runtime_active("resuming"));
+    }
+
+    #[test]
+    fn suspended_states_are_skipped() {
+        assert!(!is_runtime_active("suspended"));
+        assert!(!is_runtime_active("suspended\n"));
+        assert!(!is_runtime_active("suspending"));
     }
 }
