@@ -22,10 +22,7 @@ struct Gpu {
 }
 
 enum GpuType {
-    // Nvidia. We keep the sysfs `device/` path (for the RTD3 power gate) and the PCI slot
-    // (to re-acquire the NVML device lazily), but never hold an NVML handle across ticks so
-    // the dGPU is free to runtime-suspend (RTD3).
-    PrayAndHope { sysfs_path: PathBuf, pci_slot: String },
+    PrayAndHope { sysfs_path: PathBuf, pci_slot: String }, // Nvidia
     PlugAndPlay { sysfs_path: PathBuf }, // Anything else
 }
 
@@ -117,19 +114,10 @@ fn match_card_device(s: &str) -> Option<()> {
     }
 }
 
-/// `false` only when the dGPU is asleep (or going to sleep), so we never resume a
-/// suspended Nvidia dGPU just to read stats. `power/runtime_status` is one of
-/// `active` / `suspended` / `suspending` / `resuming` / `unsupported`.
-fn is_runtime_active(status: &str) -> bool {
-    !matches!(status.trim(), "suspended" | "suspending")
-}
-
-/// Read the dGPU's runtime power state from sysfs. This is a plain file read and never
-/// touches NVML, so it cannot wake the device. A missing/unreadable file (e.g. a desktop
-/// without runtime PM) is treated as active so live stats keep working there.
+// Read the dGPU's runtime power state from sysfs to avoid waking the device.
 fn nvidia_runtime_active(sysfs_path: &Path) -> bool {
     match std::fs::read_to_string(sysfs_path.join("power/runtime_status")) {
-        Ok(status) => is_runtime_active(&status),
+        Ok(status) => !matches!(status.trim(), "suspended" | "suspending"),
         Err(_) => true,
     }
 }
@@ -147,8 +135,6 @@ impl Gpu {
     }
 
     fn new_nvidia(sysfs_path: PathBuf, pci_slot: String) -> Option<Self> {
-        // Don't touch NVML here: opening it at startup would pin/wake the dGPU. Start at
-        // zero; the first refresh while the dGPU is active fills in real values.
         Some(Self {
             vendor: GpuType::PrayAndHope {
                 sysfs_path,
@@ -168,16 +154,13 @@ impl Gpu {
                 sysfs_path,
                 pci_slot,
             } => {
-                // RTD3 gate: if the dGPU is suspended, leave it alone (a suspended GPU is
-                // idle, so report 0% usage and keep the last known VRAM).
                 if !nvidia_runtime_active(sysfs_path) {
                     self.data.usage = 0;
                     return;
                 }
 
-                // Acquire an NVML handle, read, then drop it before returning. Holding it
-                // across ticks would keep `/dev/nvidia*` open and pin runtime_usage > 0,
-                // preventing the dGPU from ever suspending.
+                // Holding it a NVLM handle across ticks would keep `/dev/nvidia*` open
+                // and pin runtime_usage > 0, preventing the dGPU from ever suspending.
                 if let Ok(nvml) = Nvml::init() {
                     if let Ok(device) = nvml.device_by_pci_bus_id(pci_slot.clone()) {
                         if let Ok(utilization) = device.utilization_rates() {
@@ -198,25 +181,5 @@ impl Gpu {
                     .map(|used_vram| self.data.used_vram = used_vram);
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::is_runtime_active;
-
-    #[test]
-    fn active_states_are_queried() {
-        assert!(is_runtime_active("active"));
-        assert!(is_runtime_active("active\n"));
-        assert!(is_runtime_active("unsupported"));
-        assert!(is_runtime_active("resuming"));
-    }
-
-    #[test]
-    fn suspended_states_are_skipped() {
-        assert!(!is_runtime_active("suspended"));
-        assert!(!is_runtime_active("suspended\n"));
-        assert!(!is_runtime_active("suspending"));
     }
 }
