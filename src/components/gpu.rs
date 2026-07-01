@@ -1,11 +1,9 @@
-use nvml_wrapper::{Device, Nvml, error::NvmlError};
+use nvml_wrapper::Nvml;
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
 
 const NV_VENDOR_ID: u16 = 0x10DE;
-static NVML: LazyLock<Result<Nvml, NvmlError>> = LazyLock::new(Nvml::init);
 
 pub struct Gpus {
     inner: Vec<Gpu>,
@@ -24,8 +22,8 @@ struct Gpu {
 }
 
 enum GpuType {
-    PrayAndHope { device: Device<'static> }, // Nvidia
-    PlugAndPlay { sysfs_path: PathBuf },     // Anything else
+    PrayAndHope { sysfs_path: PathBuf, pci_slot: String }, // Nvidia
+    PlugAndPlay { sysfs_path: PathBuf }, // Anything else
 }
 
 impl Gpus {
@@ -73,7 +71,7 @@ impl Gpus {
 
                         if vendor == Some(NV_VENDOR_ID) || driver == Some("nvidia") {
                             let pci_slot = uevent.get("PCI_SLOT_NAME").cloned()?;
-                            Gpu::new_nvidia(pci_slot)
+                            Gpu::new_nvidia(sysfs_path, pci_slot)
                         } else {
                             Gpu::new(sysfs_path)
                         }
@@ -86,8 +84,7 @@ impl Gpus {
 
     pub fn refresh(&mut self) {
         for gpu in &mut self.inner {
-            gpu.refresh_usage();
-            gpu.refresh_vram();
+            gpu.refresh();
         }
     }
 
@@ -117,6 +114,14 @@ fn match_card_device(s: &str) -> Option<()> {
     }
 }
 
+// Read the dGPU's runtime power state from sysfs to avoid waking the device.
+fn nvidia_runtime_active(sysfs_path: &Path) -> bool {
+    match std::fs::read_to_string(sysfs_path.join("power/runtime_status")) {
+        Ok(status) => !matches!(status.trim(), "suspended" | "suspending"),
+        Err(_) => true,
+    }
+}
+
 impl Gpu {
     fn new(sysfs_path: PathBuf) -> Option<Self> {
         Some(Self {
@@ -129,45 +134,49 @@ impl Gpu {
         })
     }
 
-    fn new_nvidia(pci_slot: String) -> Option<Self> {
-        let device = NVML.as_ref().ok()?.device_by_pci_bus_id(pci_slot).ok()?;
-        let utilization = device.utilization_rates().ok()?;
-        let meminfo = device.memory_info().ok()?;
-
+    fn new_nvidia(sysfs_path: PathBuf, pci_slot: String) -> Option<Self> {
         Some(Self {
-            vendor: GpuType::PrayAndHope { device },
+            vendor: GpuType::PrayAndHope {
+                sysfs_path,
+                pci_slot,
+            },
             data: GpuData {
-                usage: u64::from(utilization.gpu),
-                used_vram: meminfo.total - meminfo.free,
-                total_vram: meminfo.total,
+                usage: 0,
+                used_vram: 0,
+                total_vram: 0,
             },
         })
     }
 
-    fn refresh_usage(&mut self) {
+    fn refresh(&mut self) {
         match &self.vendor {
-            GpuType::PrayAndHope { device } => {
-                _ = device
-                    .utilization_rates()
-                    .map(|utilization| self.data.usage = u64::from(utilization.gpu));
+            GpuType::PrayAndHope {
+                sysfs_path,
+                pci_slot,
+            } => {
+                if !nvidia_runtime_active(sysfs_path) {
+                    self.data.usage = 0;
+                    return;
+                }
+
+                // Holding it a NVLM handle across ticks would keep `/dev/nvidia*` open
+                // and pin runtime_usage > 0, preventing the dGPU from ever suspending.
+                if let Ok(nvml) = Nvml::init() {
+                    if let Ok(device) = nvml.device_by_pci_bus_id(pci_slot.clone()) {
+                        if let Ok(utilization) = device.utilization_rates() {
+                            self.data.usage = u64::from(utilization.gpu);
+                        }
+                        if let Ok(meminfo) = device.memory_info() {
+                            self.data.used_vram = meminfo.total - meminfo.free;
+                            self.data.total_vram = meminfo.total;
+                        }
+                    }
+                }
             }
 
             GpuType::PlugAndPlay { sysfs_path } => {
                 _ = read_syspath(sysfs_path, "gpu_busy_percent")
                     .map(|usage| self.data.usage = usage);
-            }
-        }
-    }
-
-    fn refresh_vram(&mut self) {
-        match &self.vendor {
-            GpuType::PrayAndHope { device } => {
-                _ = device
-                    .memory_info()
-                    .map(|meminfo| self.data.used_vram = meminfo.total - meminfo.free);
-            }
-
-            GpuType::PlugAndPlay { sysfs_path } => {
                 _ = read_syspath(sysfs_path, "mem_info_vram_used")
                     .map(|used_vram| self.data.used_vram = used_vram);
             }
