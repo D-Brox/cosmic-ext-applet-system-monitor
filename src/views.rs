@@ -467,7 +467,7 @@ impl SystemMonitorApplet {
                     aspect_ratio,
                 } => self.single_run_view(
                     SimpleHistoryChart::auto_max(&self.download, *color),
-                    self.format_swap_tooltip(),
+                    self.format_network_tooltip_inner(false),
                     *aspect_ratio,
                 ),
                 IoView::RunFront {
@@ -475,7 +475,7 @@ impl SystemMonitorApplet {
                     aspect_ratio,
                 } => self.single_run_view(
                     SimpleHistoryChart::auto_max(&self.upload, *color),
-                    self.format_swap_tooltip(),
+                    self.format_network_tooltip_inner(true),
                     *aspect_ratio,
                 ),
             })
@@ -504,7 +504,7 @@ impl SystemMonitorApplet {
                     aspect_ratio,
                 } => self.single_run_view(
                     SimpleHistoryChart::auto_max(&self.disk_read, *color),
-                    self.format_swap_tooltip(),
+                    self.format_disk_tooltip_inner(false),
                     *aspect_ratio,
                 ),
                 IoView::RunFront {
@@ -512,7 +512,7 @@ impl SystemMonitorApplet {
                     aspect_ratio,
                 } => self.single_run_view(
                     SimpleHistoryChart::auto_max(&self.disk_write, *color),
-                    self.format_swap_tooltip(),
+                    self.format_disk_tooltip_inner(true),
                     *aspect_ratio,
                 ),
             })
