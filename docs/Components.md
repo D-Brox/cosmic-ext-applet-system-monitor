@@ -107,13 +107,13 @@ The `sorting` field on the per-core bar chart can have the values `Unsorted`, `A
 
 ## Colors
 
-You can use colors defined in [CosmicPaletteInner](https://pop-os.github.io/libcosmic/cosmic/cosmic_theme/struct.CosmicPaletteInner.html), as well colors defined in the following format:
+You can use colors defined in [CosmicPaletteInner](https://pop-os.github.io/libcosmic/cosmic/cosmic_theme/struct.CosmicPaletteInner.html), as well colors defined in the following format (with values from `0.0` to `1.0`):
 
 ```ron
 (
     red: 0.0,
     green: 0.0,
-    blue: 255.0,
+    blue: 1.0,
     alpha: 1.0,
 )
 ```
