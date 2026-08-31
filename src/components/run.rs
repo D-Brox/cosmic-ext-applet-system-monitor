@@ -244,7 +244,7 @@ impl Program<Message, Theme, Renderer> for Background {
         _cursor: mouse::Cursor,
     ) -> Vec<Geometry<Renderer>> {
         let mut frame = Frame::new(renderer, bounds.size());
-        let bg_color = theme.cosmic().background.base;
+        let bg_color = theme.cosmic().background(true).base;
 
         let mut bg_builder = path::Builder::new();
         let external_bounds = bounds.expand(10.0);

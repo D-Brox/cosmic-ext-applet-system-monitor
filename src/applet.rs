@@ -4,7 +4,7 @@ use cosmic::{
     Application, Apply as _, Element, Theme,
     app::{Core, Task},
     cosmic_config,
-    iced::Subscription,
+    iced::{Color, Subscription},
     surface,
     widget::container,
 };
@@ -252,7 +252,7 @@ impl Application for SystemMonitorApplet {
 
 pub fn base_background(theme: &Theme) -> container::Style {
     container::Style {
-        background: Some(cosmic::iced::Color::from(theme.cosmic().primary.base).into()),
+        background: Some(Color::from(theme.cosmic().primary(true).base).into()),
         ..container::Style::default()
     }
 }
