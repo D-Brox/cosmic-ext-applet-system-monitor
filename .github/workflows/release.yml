@@ -29,6 +29,19 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          PREV=$(git tag --sort=-v:refname | grep -A1 "^${{ github.ref_name }}$" | tail -1)
+          {
+            echo 'body<<CHANGELOG_EOF'
+            echo "Changes since ${PREV}:"
+            echo ""
+            git log --oneline --no-decorate "${PREV}..${{ github.ref_name }}"
+            echo 'CHANGELOG_EOF'
+          } >> "$GITHUB_OUTPUT"
       - name: Install build dependencies
         run: |
           sudo apt update
@@ -65,6 +78,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: false
+          body: ${{ steps.changelog.outputs.body }}
           files: |
             ${{ steps.package.outputs.x86_64 }}
             ${{ steps.package.outputs.aarch64 }}
