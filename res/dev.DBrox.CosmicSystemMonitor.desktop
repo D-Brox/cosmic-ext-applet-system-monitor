@@ -2,6 +2,7 @@
 Name=System Monitor
 Name[cs]=Monitor systému
 Name[hu]=Rendszerfigyelő
+Name[pl]=Monitor Systemu
 Exec=cosmic-ext-applet-system-monitor
 Terminal=false
 Type=Application
@@ -10,6 +11,7 @@ Icon=dev.DBrox.CosmicSystemMonitor-symbolic
 Categories=COSMIC
 Keywords=Monitor;System;Process;CPU;GPU;Memory;Network;Disk;History;Usage;
 Keywords[cs]=Sledování;Monitor;Systém;Proces;CPU;GPU;Paměť;Síť;Disk;Historie;Využití;
+Keywords[pl]=Śledzenie;Monitor;System;Procesy;CPU;GPU;Pamięć;Sieć;Dysk;Historie;Wydajność;
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
