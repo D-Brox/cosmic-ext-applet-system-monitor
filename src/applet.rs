@@ -3,9 +3,12 @@
 use cosmic::{
     Application, Apply as _, Element, Theme,
     app::{Core, Task},
-    cosmic_config,
-    iced::{Color, Subscription},
-    surface,
+    cosmic_config::{self, ConfigSet},
+    iced::{Color, Rectangle, Subscription, window},
+    surface::{
+        self,
+        action::{app_popup, destroy_popup},
+    },
     widget::container,
 };
 use std::time::Duration;
@@ -14,7 +17,10 @@ use sysinfo::{
 };
 
 use crate::{
-    components::gpu::Gpus,
+    components::{
+        gpu::Gpus,
+        storage::{self, Drive},
+    },
     config::{ComponentConfig, Config, config_subscription},
     history::History,
 };
@@ -24,7 +30,7 @@ pub const ID: &str = "dev.DBrox.CosmicSystemMonitor";
 pub struct SystemMonitorApplet {
     pub core: Core,
     pub config: Config,
-    #[allow(dead_code)]
+    pub popup: Option<window::Id>,
     config_handler: Option<cosmic_config::Config>,
 
     pub sys: System,
@@ -47,6 +53,8 @@ pub struct SystemMonitorApplet {
     pub gpu_usage: Vec<History>,
     /// amount written between refresh of `sysinfo::Disks`. (DOES NOT STORE RATE)
     pub vram: Vec<History>,
+    /// physical drives and their used space, refreshed with the disk ticks
+    pub drives: Vec<Drive>,
 }
 
 #[derive(Debug, Clone)]
@@ -58,6 +66,8 @@ pub enum Message {
     TickDisk,
     TickGpu,
     Surface(surface::Action),
+    PopupClosed(window::Id),
+    ToggleExpanded(String),
 }
 
 #[derive(Clone, Debug)]
@@ -99,6 +109,7 @@ impl Application for SystemMonitorApplet {
         let app = Self {
             core,
             config: flags.config,
+            popup: None,
             config_handler: flags.config_handler,
 
             global_cpu: History::with_capacity(cpu),
@@ -118,15 +129,20 @@ impl Application for SystemMonitorApplet {
             ),
             nets: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list_specifics(
-                DiskRefreshKind::nothing().with_io_usage(),
+                DiskRefreshKind::nothing().with_io_usage().with_storage(),
             ),
             gpus,
+            drives: Vec::new(),
         };
 
         (app, Task::none())
     }
 
     fn view(&'_ self) -> Element<'_, Message> {
+        if self.config.popup_mode {
+            return self.popup_button();
+        }
+
         let item_iter = self.config.components.iter().map(|module| {
             match module {
                 ComponentConfig::Cpu(vis) => self.cpu_view(vis),
@@ -162,6 +178,15 @@ impl Application for SystemMonitorApplet {
                     self.vram[i].resize(sampling.gpu.sampling_window);
                 }
             }
+            Message::PopupClosed(id) => {
+                if self.popup == Some(id) {
+                    self.popup = None;
+                }
+            }
+            Message::ToggleExpanded(key) => {
+                toggle_key(&mut self.config.popup_expanded, key);
+                self.save("popup_expanded", &self.config.popup_expanded);
+            }
             Message::TickCpu => {
                 self.sys.refresh_cpu_usage();
                 self.global_cpu.push(self.sys.global_cpu_usage());
@@ -186,8 +211,10 @@ impl Application for SystemMonitorApplet {
                 self.download.push(received);
             }
             Message::TickDisk => {
-                self.disks
-                    .refresh_specifics(true, DiskRefreshKind::nothing().with_io_usage());
+                self.disks.refresh_specifics(
+                    true,
+                    DiskRefreshKind::nothing().with_io_usage().with_storage(),
+                );
                 let (read, written) = self
                     .disks
                     .iter()
@@ -197,6 +224,10 @@ impl Application for SystemMonitorApplet {
                     });
                 self.disk_read.push(read);
                 self.disk_write.push(written);
+                // Drive sizes only matter for the popup, skip the sysfs reads otherwise
+                if self.popup.is_some() || self.drives.is_empty() {
+                    self.drives = storage::drives(&self.disks);
+                }
             }
             Message::TickGpu => {
                 self.gpus.refresh();
@@ -245,6 +276,14 @@ impl Application for SystemMonitorApplet {
         Subscription::batch(subs)
     }
 
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::PopupClosed(id))
+    }
+
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
+        self.core.applet.popup_container(self.popup_view()).into()
+    }
+
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
@@ -254,5 +293,80 @@ pub fn base_background(theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Color::from(theme.cosmic().primary(true).base).into()),
         ..container::Style::default()
+    }
+}
+
+/// Adds `key` to the list, or removes it when already present
+fn toggle_key(list: &mut Vec<String>, key: String) {
+    if let Some(pos) = list.iter().position(|k| *k == key) {
+        list.remove(pos);
+    } else {
+        list.push(key);
+    }
+}
+
+const PANEL_ICON: &[u8] = include_bytes!("../res/panel-icon-symbolic.svg");
+
+impl SystemMonitorApplet {
+    fn save(&self, key: &str, value: &Vec<String>) {
+        if let Some(handler) = &self.config_handler {
+            if let Err(err) = handler.set(key, value) {
+                println!("failed to save {key}: {err}");
+            }
+        }
+    }
+
+    fn popup_button(&'_ self) -> Element<'_, Message> {
+        let have_popup = self.popup;
+        let icon = cosmic::widget::icon::from_svg_bytes(PANEL_ICON).symbolic(true);
+        let button = self
+            .core
+            .applet
+            .icon_button_from_handle(icon)
+            .on_press_with_rectangle(move |offset, bounds| {
+                if let Some(id) = have_popup {
+                    Message::Surface(destroy_popup(id))
+                } else {
+                    Message::Surface(app_popup::<SystemMonitorApplet>(
+                        |_| Default::default(),
+                        move |state: &mut SystemMonitorApplet| {
+                            let new_id = window::Id::unique();
+                            state.popup = Some(new_id);
+                            let mut popup_settings = state.core.applet.get_popup_settings(
+                                state.core.main_window_id().unwrap(),
+                                new_id,
+                                None,
+                                None,
+                                None,
+                            );
+                            #[allow(clippy::cast_possible_truncation)]
+                            {
+                                popup_settings.positioner.anchor_rect = Rectangle {
+                                    x: (bounds.x - offset.x) as i32,
+                                    y: (bounds.y - offset.y) as i32,
+                                    width: bounds.width as i32,
+                                    height: bounds.height as i32,
+                                };
+                            }
+                            popup_settings
+                        },
+                        Some(Box::new(|state: &SystemMonitorApplet| {
+                            Element::from(state.core.applet.popup_container(state.popup_view()))
+                                .map(cosmic::Action::App)
+                        })),
+                    ))
+                }
+            });
+
+        let button = self.core.applet.applet_tooltip(
+            button,
+            crate::fl!("system-monitor"),
+            self.popup.is_some(),
+            Message::Surface,
+            None,
+        );
+
+        // Autosize so the panel shrinks back after switching from the chart view
+        self.core.applet.autosize_window(button).into()
     }
 }

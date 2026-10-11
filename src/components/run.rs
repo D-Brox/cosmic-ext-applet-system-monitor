@@ -1,7 +1,7 @@
 use cosmic::{
     Element, Renderer, Theme,
     cosmic_theme::palette::WithAlpha,
-    iced::{Point, Rectangle, core::mouse},
+    iced::{Length, Point, Rectangle, core::mouse},
     widget::{
         Canvas,
         canvas::{Fill, Frame, Geometry, Program, Stroke, path, stroke},
@@ -119,7 +119,10 @@ macro_rules! impl_program_simple_history_chart {
         $(
             impl<'a> From<SimpleHistoryChart<'a, $t>> for Element<'a, Message> {
                 fn from(value: SimpleHistoryChart<'a, $t>) -> Self {
-                    Canvas::new(value).into()
+                    Canvas::new(value)
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                        .into()
                 }
             }
 
@@ -207,7 +210,10 @@ impl<'a> SuperimposedHistoryChart<'a> {
 
 impl<'a> From<SuperimposedHistoryChart<'a>> for Element<'a, Message> {
     fn from(value: SuperimposedHistoryChart<'a>) -> Self {
-        Canvas::new(value).into()
+        Canvas::new(value)
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                        .into()
     }
 }
 

@@ -5,7 +5,9 @@ mod components {
     pub mod bar;
     pub mod gpu;
     pub mod run;
+    pub mod storage;
 }
+mod popup;
 mod views;
 
 mod color;
@@ -18,6 +20,8 @@ use config::{CONFIG_VERSION, Config};
 use cosmic::cosmic_config::{Config as CosmicConfig, CosmicConfigEntry};
 
 fn main() -> cosmic::iced::Result {
+    localization::init();
+
     let (config_handler, config) = match CosmicConfig::new(ID, CONFIG_VERSION) {
         Ok(config_handler) => {
             let config = match Config::get_entry(&config_handler) {
