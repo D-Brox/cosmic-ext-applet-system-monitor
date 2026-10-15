@@ -6,6 +6,8 @@ A highly configurable system resource monitor for the COSMIC DE
 
 The instructions for configuring are located in the [documentation](./docs/README.md)
 
+NVIDIA GPU statistics are collected by a short-lived helper so the panel applet does not retain an NVML handle; this prevents descriptor accumulation while allowing hybrid dGPUs to enter RTD3 suspend when idle.
+
 ## Installing
 
 You can just grab the `.deb`, `.rpm` or tarball from the [releases](https://github.com/D-Brox/cosmic-ext-applet-system-monitor/releases/latest) page, or install from the [COSMIC Flatpak Repository](https://github.com/pop-os/cosmic-flatpak).

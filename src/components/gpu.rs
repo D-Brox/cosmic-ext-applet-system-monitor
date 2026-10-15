@@ -2,6 +2,7 @@ use nvml_wrapper::Nvml;
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 const NV_VENDOR_ID: u16 = 0x10DE;
 
@@ -22,8 +23,13 @@ struct Gpu {
 }
 
 enum GpuType {
-    PrayAndHope { sysfs_path: PathBuf, pci_slot: String }, // Nvidia
-    PlugAndPlay { sysfs_path: PathBuf }, // Anything else
+    PrayAndHope {
+        sysfs_path: PathBuf,
+        pci_slot: String,
+    }, // Nvidia
+    PlugAndPlay {
+        sysfs_path: PathBuf,
+    }, // Anything else
 }
 
 impl Gpus {
@@ -122,6 +128,45 @@ fn nvidia_runtime_active(sysfs_path: &Path) -> bool {
     }
 }
 
+fn nvidia_stats(pci_slot: &str) -> Option<GpuData> {
+    let output = Command::new(std::env::current_exe().ok()?)
+        .args(["--nvidia-stats", pci_slot])
+        .output()
+        .ok()?;
+
+    output
+        .status
+        .success()
+        .then(|| std::str::from_utf8(&output.stdout).ok())
+        .flatten()
+        .and_then(parse_nvidia_stats)
+}
+
+pub fn nvidia_stats_for_helper(pci_slot: &str) -> Option<GpuData> {
+    let nvml = Nvml::init().ok()?;
+    let device = nvml.device_by_pci_bus_id(pci_slot).ok()?;
+    let utilization = device.utilization_rates().ok()?;
+    let memory = device.memory_info().ok()?;
+
+    Some(GpuData {
+        usage: u64::from(utilization.gpu),
+        used_vram: memory.total - memory.free,
+        total_vram: memory.total,
+    })
+}
+
+fn parse_nvidia_stats(output: &str) -> Option<GpuData> {
+    let mut values = output.lines().next()?.split(',').map(str::trim);
+    let usage = values.next()?.parse().ok()?;
+    let used_vram = values.next()?.parse().ok()?;
+    let total_vram = values.next()?.parse().ok()?;
+    values.next().is_none().then_some(GpuData {
+        usage,
+        used_vram,
+        total_vram,
+    })
+}
+
 impl Gpu {
     fn new(sysfs_path: PathBuf) -> Option<Self> {
         Some(Self {
@@ -159,18 +204,10 @@ impl Gpu {
                     return;
                 }
 
-                // Holding it a NVLM handle across ticks would keep `/dev/nvidia*` open
-                // and pin runtime_usage > 0, preventing the dGPU from ever suspending.
-                if let Ok(nvml) = Nvml::init() {
-                    if let Ok(device) = nvml.device_by_pci_bus_id(pci_slot.clone()) {
-                        if let Ok(utilization) = device.utilization_rates() {
-                            self.data.usage = u64::from(utilization.gpu);
-                        }
-                        if let Ok(meminfo) = device.memory_info() {
-                            self.data.used_vram = meminfo.total - meminfo.free;
-                            self.data.total_vram = meminfo.total;
-                        }
-                    }
+                // Run NVML in a short-lived helper: repeatedly initializing and dropping its
+                // in-process handle leaks eventfds, while a persistent handle prevents RTD3.
+                if let Some(data) = nvidia_stats(pci_slot) {
+                    self.data = data;
                 }
             }
 
@@ -181,5 +218,26 @@ impl Gpu {
                     .map(|used_vram| self.data.used_vram = used_vram);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_nvidia_helper_statistics() {
+        let stats = parse_nvidia_stats("19, 709, 12227\n").expect("valid helper output");
+
+        assert_eq!(stats.usage, 19);
+        assert_eq!(stats.used_vram, 709);
+        assert_eq!(stats.total_vram, 12_227);
+    }
+
+    #[test]
+    fn rejects_incomplete_or_non_numeric_nvidia_helper_statistics() {
+        assert!(parse_nvidia_stats("19, 709\n").is_none());
+        assert!(parse_nvidia_stats("N/A, 709, 12227\n").is_none());
+        assert!(parse_nvidia_stats("19, 709, 12227, 1\n").is_none());
     }
 }

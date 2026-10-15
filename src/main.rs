@@ -18,6 +18,16 @@ use config::{CONFIG_VERSION, Config};
 use cosmic::cosmic_config::{Config as CosmicConfig, CosmicConfigEntry};
 
 fn main() -> cosmic::iced::Result {
+    let mut args = std::env::args().skip(1);
+    if matches!(args.next().as_deref(), Some("--nvidia-stats")) {
+        if let Some(pci_slot) = args.next() {
+            if let Some(data) = components::gpu::nvidia_stats_for_helper(&pci_slot) {
+                println!("{},{},{}", data.usage, data.used_vram, data.total_vram);
+            }
+        }
+        return Ok(());
+    }
+
     let (config_handler, config) = match CosmicConfig::new(ID, CONFIG_VERSION) {
         Ok(config_handler) => {
             let config = match Config::get_entry(&config_handler) {
