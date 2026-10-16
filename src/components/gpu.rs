@@ -3,8 +3,10 @@ use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::LazyLock;
 
 const NV_VENDOR_ID: u16 = 0x10DE;
+static SELF_EXE: LazyLock<Option<PathBuf>> = LazyLock::new(|| std::env::current_exe().ok());
 
 pub struct Gpus {
     inner: Vec<Gpu>,
@@ -60,9 +62,8 @@ impl Gpus {
                             })
                             .ok()?;
 
-                        // Find vendor, since for Nvidia we need to use nvml.
+                        // Find vendor and driver, since for Nvidia we may need to use nvml.
                         // For this, we test the vendor file, with the PCI_ID in uevent as backup.
-                        // Nvidia is a pain, so driver is probably needed as backup too.
                         let device_vendor_path = sysfs_path.join("vendor");
                         let vendor = std::fs::read_to_string(device_vendor_path)
                             .ok()
@@ -128,21 +129,20 @@ fn nvidia_runtime_active(sysfs_path: &Path) -> bool {
     }
 }
 
-fn nvidia_stats(pci_slot: &str) -> Option<GpuData> {
-    let output = Command::new(std::env::current_exe().ok()?)
+fn read_nvidia_stats(pci_slot: &str) -> Option<GpuData> {
+    let output = Command::new(SELF_EXE.as_deref()?)
         .args(["--nvidia-stats", pci_slot])
         .output()
         .ok()?;
 
-    output
-        .status
-        .success()
-        .then(|| std::str::from_utf8(&output.stdout).ok())
-        .flatten()
-        .and_then(parse_nvidia_stats)
+    output.status.success().then_some(
+        std::str::from_utf8(&output.stdout)
+            .ok()
+            .and_then(parse_nvidia_stats)?,
+    )
 }
 
-pub fn nvidia_stats_for_helper(pci_slot: &str) -> Option<GpuData> {
+pub fn query_nvidia_stats(pci_slot: &str) -> Option<GpuData> {
     let nvml = Nvml::init().ok()?;
     let device = nvml.device_by_pci_bus_id(pci_slot).ok()?;
     let utilization = device.utilization_rates().ok()?;
@@ -153,6 +153,20 @@ pub fn nvidia_stats_for_helper(pci_slot: &str) -> Option<GpuData> {
         used_vram: memory.total - memory.free,
         total_vram: memory.total,
     })
+}
+
+pub fn nvidia_stats_helper(pci_slot: Option<String>) {
+    if let Some(pci_slot) = pci_slot {
+        if let Some(data) = query_nvidia_stats(&pci_slot) {
+            println!("{},{},{}", data.usage, data.used_vram, data.total_vram);
+        } else {
+            eprintln!("failed to read NVIDIA stats for {pci_slot}");
+            std::process::exit(1);
+        }
+    } else {
+        eprintln!("--nvidia-stats requires a PCI bus id");
+        std::process::exit(2);
+    }
 }
 
 fn parse_nvidia_stats(output: &str) -> Option<GpuData> {
@@ -204,10 +218,14 @@ impl Gpu {
                     return;
                 }
 
-                // Run NVML in a short-lived helper: repeatedly initializing and dropping its
-                // in-process handle leaks eventfds, while a persistent handle prevents RTD3.
-                if let Some(data) = nvidia_stats(pci_slot) {
+                // Run NVML in a short-lived helper, to prevent fd leakage and RTD3 issues.
+                // Holding a NVLM handle in the main process across ticks would keep `/dev/nvidia*` open
+                // and pin runtime_usage > 0, preventing the dGPU from ever suspending.
+                if let Some(data) = read_nvidia_stats(pci_slot) {
                     self.data = data;
+                } else {
+                    self.data.usage = 0;
+                    self.data.used_vram = 0;
                 }
             }
 
