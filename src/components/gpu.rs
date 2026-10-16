@@ -76,12 +76,19 @@ impl Gpus {
                             }));
                         let driver = uevent.get("DRIVER").map(String::as_str);
 
-                        if vendor == Some(NV_VENDOR_ID) || driver == Some("nvidia") {
-                            let pci_slot = uevent.get("PCI_SLOT_NAME").cloned()?;
-                            Gpu::new_nvidia(sysfs_path, pci_slot)
-                        } else {
-                            Gpu::new(sysfs_path)
-                        }
+                        // Prefer the plain sysfs files.
+                        // Nvidia's open-source drivers are sane and expose sysfs info
+                        // like everyone else does, so they need no helper.
+                        Gpu::new(sysfs_path.clone()).or_else(|| {
+                            if vendor != Some(NV_VENDOR_ID) && driver != Some("nvidia") {
+                                return None; // Actual failure
+                            }
+                            // https://www.youtube.com/watch?v=Q4SWxWIOVBM
+                            Some(Gpu::new_nvidia(
+                                sysfs_path,
+                                uevent.get("PCI_SLOT_NAME")?.to_owned(),
+                            ))
+                        })
                     })
                     .collect::<Vec<_>>()
             })
@@ -193,8 +200,8 @@ impl Gpu {
         })
     }
 
-    fn new_nvidia(sysfs_path: PathBuf, pci_slot: String) -> Option<Self> {
-        Some(Self {
+    fn new_nvidia(sysfs_path: PathBuf, pci_slot: String) -> Self {
+        Self {
             vendor: GpuType::PrayAndHope {
                 sysfs_path,
                 pci_slot,
@@ -204,7 +211,7 @@ impl Gpu {
                 used_vram: 0,
                 total_vram: 0,
             },
-        })
+        }
     }
 
     fn refresh(&mut self) {
