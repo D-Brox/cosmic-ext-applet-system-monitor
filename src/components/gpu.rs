@@ -22,8 +22,13 @@ struct Gpu {
 }
 
 enum GpuType {
-    PrayAndHope { sysfs_path: PathBuf, pci_slot: String }, // Nvidia
-    PlugAndPlay { sysfs_path: PathBuf }, // Anything else
+    PrayAndHope {
+        sysfs_path: PathBuf,
+        pci_slot: String,
+    }, // Nvidia
+    PlugAndPlay {
+        sysfs_path: PathBuf,
+    }, // Anything else
 }
 
 impl Gpus {
