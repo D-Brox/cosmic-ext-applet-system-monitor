@@ -5,7 +5,9 @@ mod components {
     pub mod bar;
     pub mod gpu;
     pub mod run;
+    pub mod storage;
 }
+mod popup;
 mod views;
 
 mod color;
@@ -24,6 +26,7 @@ fn main() -> cosmic::iced::Result {
         nvidia_stats_helper(args.next());
         return Ok(());
     }
+    localization::init();
 
     let (config_handler, config) = match CosmicConfig::new(ID, CONFIG_VERSION) {
         Ok(config_handler) => {

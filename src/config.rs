@@ -23,6 +23,11 @@ pub struct Config {
     pub components: Box<[ComponentConfig]>,
     pub layout: LayoutConfig,
     pub tooltip_enabled: bool,
+    /// Show a single icon in the panel and the charts in a popup when clicked
+    pub popup_mode: bool,
+    /// Popup sections that are expanded (`cpu`, `mem`, `disk`, `net`, `gpu0`, ..., `disk-others`).
+    /// Everything else is collapsed, so the popup stays short by default.
+    pub popup_expanded: Vec<String>,
 }
 
 impl CosmicConfigEntry for Config {
@@ -33,6 +38,8 @@ impl CosmicConfigEntry for Config {
         ConfigSet::set(&tx, "components", &self.components)?;
         ConfigSet::set(&tx, "layout", &self.layout)?;
         ConfigSet::set(&tx, "tooltip_enabled", self.tooltip_enabled)?;
+        ConfigSet::set(&tx, "popup_mode", self.popup_mode)?;
+        ConfigSet::set(&tx, "popup_expanded", &self.popup_expanded)?;
         tx.commit()
     }
     fn get_entry(config: &CosmicConfig) -> Result<Self, (Vec<ConfigError>, Self)> {
@@ -59,6 +66,8 @@ impl CosmicConfigEntry for Config {
         config_get!(components, Box<[ComponentConfig]>);
         config_get!(layout, LayoutConfig);
         config_get!(tooltip_enabled, bool);
+        config_get!(popup_mode, bool);
+        config_get!(popup_expanded, Vec<String>);
 
         if errors.is_empty() {
             Ok(default)
@@ -97,6 +106,8 @@ impl CosmicConfigEntry for Config {
                 "components" => config_set!(components, Box<[ComponentConfig]>),
                 "layout" => config_set!(layout, LayoutConfig),
                 "tooltip_enabled" => config_set!(tooltip_enabled, bool),
+                "popup_mode" => config_set!(popup_mode, bool),
+                "popup_expanded" => config_set!(popup_expanded, Vec<String>),
                 _ => {}
             }
         }
@@ -267,6 +278,8 @@ impl Default for Config {
             .into(),
             sampling: SamplingConfig::default(),
             tooltip_enabled: true,
+            popup_mode: false,
+            popup_expanded: Vec::new(),
         }
     }
 }
