@@ -16,10 +16,16 @@ mod history;
 mod localization;
 
 use applet::{Flags, ID, SystemMonitorApplet};
+use components::gpu::nvidia_stats_helper;
 use config::{CONFIG_VERSION, Config};
 use cosmic::cosmic_config::{Config as CosmicConfig, CosmicConfigEntry};
 
 fn main() -> cosmic::iced::Result {
+    let mut args = std::env::args().skip(1);
+    if matches!(args.next().as_deref(), Some("--nvidia-stats")) {
+        nvidia_stats_helper(args.next());
+        return Ok(());
+    }
     localization::init();
 
     let (config_handler, config) = match CosmicConfig::new(ID, CONFIG_VERSION) {
