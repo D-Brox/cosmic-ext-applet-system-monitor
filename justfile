@@ -32,7 +32,7 @@ check-json: (check '--message-format=json')
 # Run with args
 run *args:
     cargo run {{args}}
-    
+
 erase-all-configs:
     rm ~/.config/cosmic/dev.DBrox.CosmicSystemMonitor/v*/*
 
@@ -41,5 +41,5 @@ run-logs *args:
     env RUST_LOG=cosmic_tasks=info RUST_BACKTRACE=full cargo run --release {{args}}
 
 spellcheck *args:
-	@codespell --skip="./i18n" --skip="./.git" --skip="./target" --builtin clear,rare,informal,code --ignore-words-list mut,crate,ro {{args}}
+	@codespell --skip="./i18n" --skip="./.git" --skip="./target" --skip="./res/*.desktop" --skip="./res/*.metainfo.xml" --builtin clear,rare,informal,code --ignore-words-list mut,crate,ro {{args}}
 	@echo Spellings look good!

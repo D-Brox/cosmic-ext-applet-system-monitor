@@ -1,9 +1,11 @@
-use nvml_wrapper::Nvml;
+use nvml_wrapper::{Nvml, enum_wrappers::device::TemperatureSensor};
 use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::LazyLock;
+
+use crate::components::temp;
 
 const NV_VENDOR_ID: u16 = 0x10DE;
 static SELF_EXE: LazyLock<Option<PathBuf>> = LazyLock::new(|| std::env::current_exe().ok());
@@ -17,6 +19,7 @@ pub struct GpuData {
     pub usage: u64,
     pub used_vram: u64,
     pub total_vram: u64,
+    pub temp: Option<f32>,
 }
 
 struct Gpu {
@@ -154,18 +157,31 @@ pub fn query_nvidia_stats(pci_slot: &str) -> Option<GpuData> {
     let device = nvml.device_by_pci_bus_id(pci_slot).ok()?;
     let utilization = device.utilization_rates().ok()?;
     let memory = device.memory_info().ok()?;
+    #[allow(clippy::cast_precision_loss)]
+    let temp = device
+        .temperature(TemperatureSensor::Gpu)
+        .ok()
+        .map(|celsius| celsius as f32);
 
     Some(GpuData {
         usage: u64::from(utilization.gpu),
         used_vram: memory.total - memory.free,
         total_vram: memory.total,
+        temp,
     })
 }
 
 pub fn nvidia_stats_helper(pci_slot: Option<String>) {
     if let Some(pci_slot) = pci_slot {
         if let Some(data) = query_nvidia_stats(&pci_slot) {
-            println!("{},{},{}", data.usage, data.used_vram, data.total_vram);
+            let temp = data
+                .temp
+                .map(|celsius| celsius.to_string())
+                .unwrap_or_default();
+            println!(
+                "{},{},{},{temp}",
+                data.usage, data.used_vram, data.total_vram
+            );
         } else {
             eprintln!("failed to read NVIDIA stats for {pci_slot}");
             std::process::exit(1);
@@ -181,10 +197,12 @@ fn parse_nvidia_stats(output: &str) -> Option<GpuData> {
     let usage = values.next()?.parse().ok()?;
     let used_vram = values.next()?.parse().ok()?;
     let total_vram = values.next()?.parse().ok()?;
+    let temp = values.next().and_then(|t| t.parse().ok());
     values.next().is_none().then_some(GpuData {
         usage,
         used_vram,
         total_vram,
+        temp,
     })
 }
 
@@ -195,6 +213,7 @@ impl Gpu {
                 usage: read_syspath(&sysfs_path, "gpu_busy_percent")?,
                 used_vram: read_syspath(&sysfs_path, "mem_info_vram_used")?,
                 total_vram: read_syspath(&sysfs_path, "mem_info_vram_total")?,
+                temp: temp::device_temp(&sysfs_path),
             },
             vendor: GpuType::PlugAndPlay { sysfs_path },
         })
@@ -210,6 +229,7 @@ impl Gpu {
                 usage: 0,
                 used_vram: 0,
                 total_vram: 0,
+                temp: None,
             },
         }
     }
@@ -222,6 +242,7 @@ impl Gpu {
             } => {
                 if !nvidia_runtime_active(sysfs_path) {
                     self.data.usage = 0;
+                    self.data.temp = None;
                     return;
                 }
 
@@ -233,6 +254,7 @@ impl Gpu {
                 } else {
                     self.data.usage = 0;
                     self.data.used_vram = 0;
+                    self.data.temp = None;
                 }
             }
 
@@ -241,6 +263,7 @@ impl Gpu {
                     .map(|usage| self.data.usage = usage);
                 _ = read_syspath(sysfs_path, "mem_info_vram_used")
                     .map(|used_vram| self.data.used_vram = used_vram);
+                self.data.temp = temp::device_temp(sysfs_path);
             }
         }
     }
@@ -263,6 +286,6 @@ mod tests {
     fn rejects_incomplete_or_non_numeric_nvidia_helper_statistics() {
         assert!(parse_nvidia_stats("19, 709\n").is_none());
         assert!(parse_nvidia_stats("N/A, 709, 12227\n").is_none());
-        assert!(parse_nvidia_stats("19, 709, 12227, 1\n").is_none());
+        assert!(parse_nvidia_stats("19, 709, 12227, 50, 1\n").is_none());
     }
 }

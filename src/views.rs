@@ -7,6 +7,7 @@ use crate::{
         run::{SimpleHistoryChart, SuperimposedHistoryChart},
     },
     config::{CpuView, IoView, PaddingOption, PercentView},
+    fl,
 };
 use cosmic::{
     Apply, Element, Renderer, Theme,
@@ -25,7 +26,7 @@ fn sized_container<'a>(
         .style(base_background)
 }
 
-fn format_bytes(bytes: u64) -> String {
+pub fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     #[allow(clippy::cast_precision_loss)]
     let mut size = bytes as f64;
@@ -54,7 +55,7 @@ fn format_percentage(current: u64, total: u64) -> String {
 }
 
 pub fn format_cpu_tooltip(usage: f32) -> String {
-    format!("CPU: {usage:.1}%")
+    fl!("tooltip-cpu", usage = format!("{usage:.1}"))
 }
 
 fn format_gpu_tooltip(gpu_index: usize, gpu_data: &GpuData) -> String {
@@ -66,17 +67,21 @@ fn format_gpu_tooltip(gpu_index: usize, gpu_data: &GpuData) -> String {
 }
 
 fn format_gpu_usage_tooltip(gpu_index: usize, gpu_data: &GpuData) -> String {
-    format!("GPU{} Usage: {}%", gpu_index, gpu_data.usage)
+    fl!(
+        "tooltip-gpu-usage",
+        index = gpu_index,
+        usage = gpu_data.usage
+    )
 }
 
 fn format_gpu_vram_tooltip(gpu_index: usize, gpu_data: &GpuData) -> String {
     let vram_percentage = format_percentage(gpu_data.used_vram, gpu_data.total_vram);
-    format!(
-        "GPU{} VRAM: {}/{} ({})",
-        gpu_index,
-        format_bytes(gpu_data.used_vram),
-        format_bytes(gpu_data.total_vram),
-        vram_percentage
+    fl!(
+        "tooltip-gpu-vram",
+        index = gpu_index,
+        used = format_bytes(gpu_data.used_vram),
+        total = format_bytes(gpu_data.total_vram),
+        percent = vram_percentage
     )
 }
 
@@ -93,11 +98,11 @@ impl SystemMonitorApplet {
         let used = self.sys.used_memory();
         let total = self.sys.total_memory();
         let percentage = format_percentage(used, total);
-        format!(
-            "RAM: {} / {} ({})",
-            format_bytes(used),
-            format_bytes(total),
-            percentage
+        fl!(
+            "tooltip-ram",
+            used = format_bytes(used),
+            total = format_bytes(total),
+            percent = percentage
         )
     }
 
@@ -105,14 +110,14 @@ impl SystemMonitorApplet {
         let used = self.sys.used_swap();
         let total = self.sys.total_swap();
         if total == 0 {
-            "Swap: Not available".to_string()
+            fl!("tooltip-swap-unavailable")
         } else {
             let percentage = format_percentage(used, total);
-            format!(
-                "Swap: {} / {} ({})",
-                format_bytes(used),
-                format_bytes(total),
-                percentage
+            fl!(
+                "tooltip-swap",
+                used = format_bytes(used),
+                total = format_bytes(total),
+                percent = percentage
             )
         }
     }
@@ -132,8 +137,12 @@ impl SystemMonitorApplet {
             &self.download
         };
         let current_rate = history.iter().last().copied().unwrap_or(0);
-        let direction = if is_upload { "Upload" } else { "Download" };
-        format!("{}: {}/s", direction, format_bytes(current_rate))
+        let rate = format_bytes(current_rate);
+        if is_upload {
+            fl!("upload-rate", rate = rate)
+        } else {
+            fl!("download-rate", rate = rate)
+        }
     }
 
     fn format_disk_tooltip(&self) -> String {
@@ -151,8 +160,12 @@ impl SystemMonitorApplet {
             &self.disk_read
         };
         let current_rate = history.iter().last().copied().unwrap_or(0);
-        let operation = if is_write { "Write" } else { "Read" };
-        format!("Disk {}: {}/s", operation, format_bytes(current_rate))
+        let rate = format_bytes(current_rate);
+        if is_write {
+            fl!("tooltip-disk-write", rate = rate)
+        } else {
+            fl!("tooltip-disk-read", rate = rate)
+        }
     }
 
     fn size_aspect_ratio(&self, aspect_ratio: f32) -> Size {
@@ -334,7 +347,11 @@ impl SystemMonitorApplet {
                             self.cpu_bar_view(
                                 usage,
                                 color,
-                                format!("CPU{core_idx}: {usage:.1}%"),
+                                fl!(
+                                    "tooltip-cpu-core",
+                                    index = core_idx,
+                                    usage = format!("{usage:.1}")
+                                ),
                                 *aspect_ratio,
                             )
                         })
@@ -346,7 +363,7 @@ impl SystemMonitorApplet {
                         .apply(|c| {
                             self.maybe_tooltip(
                                 c,
-                                format!("CPU: {} cores total", self.sys.cpus().len()),
+                                fl!("tooltip-cpu-cores", count = self.sys.cpus().len()),
                             )
                         })
                 }
