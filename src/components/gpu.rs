@@ -197,7 +197,7 @@ fn parse_nvidia_stats(output: &str) -> Option<GpuData> {
     let usage = values.next()?.parse().ok()?;
     let used_vram = values.next()?.parse().ok()?;
     let total_vram = values.next()?.parse().ok()?;
-    let temp = values.next()?.parse().ok();
+    let temp = values.next().and_then(|t| t.parse().ok());
     values.next().is_none().then_some(GpuData {
         usage,
         used_vram,
@@ -286,6 +286,6 @@ mod tests {
     fn rejects_incomplete_or_non_numeric_nvidia_helper_statistics() {
         assert!(parse_nvidia_stats("19, 709\n").is_none());
         assert!(parse_nvidia_stats("N/A, 709, 12227\n").is_none());
-        assert!(parse_nvidia_stats("19, 709, 12227, 1\n").is_none());
+        assert!(parse_nvidia_stats("19, 709, 12227, 50, 1\n").is_none());
     }
 }
