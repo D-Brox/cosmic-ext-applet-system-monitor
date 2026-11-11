@@ -14,22 +14,17 @@ struct Localizations;
 pub static LANGUAGE_LOADER: LazyLock<FluentLanguageLoader> = LazyLock::new(|| {
     let loader: FluentLanguageLoader = fluent_language_loader!();
 
+    let requested_languages = DesktopLanguageRequester::requested_languages();
+    if let Err(err) = i18n_embed::select(&loader, &Localizations, &requested_languages) {
+        println!("failed to load translations: {err}");
+    }
+    loader.set_use_isolating(false);
+
     loader
         .load_fallback_language(&Localizations)
         .expect("Error while loading fallback language");
-
     loader
 });
-
-/// Selects the translations matching the system language, falling back to English
-pub fn init() {
-    let requested = DesktopLanguageRequester::requested_languages();
-    if let Err(err) = i18n_embed::select(&*LANGUAGE_LOADER, &Localizations, &requested) {
-        println!("failed to load translations: {err}");
-    }
-    // Unicode isolation marks around arguments would show up as boxes in the panel
-    LANGUAGE_LOADER.set_use_isolating(false);
-}
 
 #[macro_export]
 macro_rules! fl {
