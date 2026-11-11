@@ -5,24 +5,22 @@
 
 use cosmic::{
     Element, Theme,
-    iced::{
-        Alignment, Length, Size,
-        widget::text::Wrapping,
-    },
+    iced::{Alignment, Length, Size, widget::text::Wrapping},
     widget::{Column, Row, button, container, icon, text},
 };
 
 use crate::{
-    fl,
     applet::{Message, SystemMonitorApplet, base_background},
     color::Color,
     components::{
         gpu::GpuData,
+        run::{SimpleHistoryChart, SuperimposedHistoryChart},
         storage::Drive,
         temp::format_celsius,
-        run::{SimpleHistoryChart, SuperimposedHistoryChart},
     },
     config::{ComponentConfig, CpuView, IoView, PercentView},
+    fl,
+    views::format_bytes,
 };
 
 const POPUP_WIDTH: f32 = 340.0;
@@ -30,22 +28,6 @@ const CHART_SIZE: Size = Size {
     width: POPUP_WIDTH,
     height: 44.0,
 };
-
-fn format_bytes(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
-    #[allow(clippy::cast_precision_loss)]
-    let mut size = bytes as f64;
-    let mut unit_index = 0;
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
-    }
-    if unit_index == 0 {
-        format!("{bytes} {}", UNITS[0])
-    } else {
-        format!("{size:.1} {}", UNITS[unit_index])
-    }
-}
 
 #[allow(clippy::cast_precision_loss)]
 fn percent(used: u64, total: u64) -> f64 {
@@ -70,20 +52,16 @@ fn cpu_color(vis: &[CpuView]) -> Color {
 /// (back, front) colors
 fn percent_colors(vis: &[PercentView], default: (Color, Color)) -> (Color, Color) {
     match vis.first() {
-        Some(
-            PercentView::Run {
-                color_back,
-                color_front,
-                ..
-            },
-        ) => (*color_back, *color_front),
-        Some(
-            PercentView::Bar {
-                color_left,
-                color_right,
-                ..
-            },
-        ) => (*color_left, *color_right),
+        Some(PercentView::Run {
+            color_back,
+            color_front,
+            ..
+        }) => (*color_back, *color_front),
+        Some(PercentView::Bar {
+            color_left,
+            color_right,
+            ..
+        }) => (*color_left, *color_right),
         Some(
             PercentView::RunBack { color, .. }
             | PercentView::RunFront { color, .. }
@@ -126,16 +104,17 @@ fn dim_text<'a>(label: impl Into<std::borrow::Cow<'a, str>> + 'a) -> Element<'a,
 }
 
 fn legend<'a>(color: Color, label: String) -> Element<'a, Message> {
-    let swatch = container(Column::new()).width(10).height(10).style(move |theme: &Theme| {
-        container::Style {
+    let swatch = container(Column::new())
+        .width(10)
+        .height(10)
+        .style(move |theme: &Theme| container::Style {
             background: Some(cosmic::iced::Color::from(color.as_cosmic_color(theme)).into()),
             border: cosmic::iced::Border {
                 radius: 2.0.into(),
                 ..Default::default()
             },
             ..container::Style::default()
-        }
-    });
+        });
     Row::new()
         .push(swatch)
         .push(text::caption(label))
@@ -179,7 +158,9 @@ fn drive_row<'a>(drive: &Drive, color: Color) -> Element<'a, Message> {
         .push(text::caption(usage).wrapping(Wrapping::None))
         .spacing(6);
     if let Some(celsius) = drive.temp {
-        details = details.push(dim_text("·")).push(dim_text(format_celsius(celsius)));
+        details = details
+            .push(dim_text("·"))
+            .push(dim_text(format_celsius(celsius)));
     }
     // The name gets the space that is left and wraps, so the details always fit
     let mut column = Column::new()
@@ -260,14 +241,12 @@ impl SystemMonitorApplet {
                     vis,
                     (Color::accent_green, Color::accent_purple),
                 ))],
-                ComponentConfig::Net(vis) => vec![self.net_section(io_colors(
-                    vis,
-                    (Color::accent_red, Color::accent_yellow),
-                ))],
-                ComponentConfig::Disk(vis) => vec![self.disk_section(io_colors(
-                    vis,
-                    (Color::accent_orange, Color::accent_pink),
-                ))],
+                ComponentConfig::Net(vis) => vec![
+                    self.net_section(io_colors(vis, (Color::accent_red, Color::accent_yellow))),
+                ],
+                ComponentConfig::Disk(vis) => vec![
+                    self.disk_section(io_colors(vis, (Color::accent_orange, Color::accent_pink))),
+                ],
                 ComponentConfig::Gpu(vis) => {
                     let colors =
                         percent_colors(vis, (Color::accent_warm_grey, Color::accent_indigo));
@@ -319,14 +298,16 @@ impl SystemMonitorApplet {
             fl!("memory"),
             format!("{:.1}%", percent(used, total)),
             None,
-            SuperimposedHistoryChart::new(
-                &self.swap, swap_total, &front, &self.ram, total, &back,
-            )
-            .into(),
+            SuperimposedHistoryChart::new(&self.swap, swap_total, &front, &self.ram, total, &back)
+                .into(),
             vec![
                 legend(
                     back,
-                    fl!("ram-usage", used = format_bytes(used), total = format_bytes(total)),
+                    fl!(
+                        "ram-usage",
+                        used = format_bytes(used),
+                        total = format_bytes(total)
+                    ),
                 ),
                 legend(front, swap_label),
             ],
@@ -371,15 +352,26 @@ impl SystemMonitorApplet {
             rows.push(
                 Row::new()
                     .push(container(text::caption_heading(fl!("drives"))).width(Length::Fill))
-                    .push(text::caption(fl!("drives-total", size = format_bytes(total))))
+                    .push(text::caption(fl!(
+                        "drives-total",
+                        size = format_bytes(total)
+                    )))
                     .padding(cosmic::iced::padding::top(6.0))
                     .into(),
             );
             let (mounted, others): (Vec<&Drive>, Vec<&Drive>) =
                 self.drives.iter().partition(|d| d.used.is_some());
             for (key, label, drives) in [
-                ("disk-mounted", fl!("drives-mounted", count = mounted.len()), mounted),
-                ("disk-others", fl!("drives-not-mounted", count = others.len()), others),
+                (
+                    "disk-mounted",
+                    fl!("drives-mounted", count = mounted.len()),
+                    mounted,
+                ),
+                (
+                    "disk-others",
+                    fl!("drives-not-mounted", count = others.len()),
+                    others,
+                ),
             ] {
                 if drives.is_empty() {
                     continue;

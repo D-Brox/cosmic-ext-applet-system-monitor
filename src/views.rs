@@ -1,5 +1,4 @@
 use crate::{
-    fl,
     applet::{Message, SystemMonitorApplet, base_background},
     color::Color,
     components::{
@@ -8,6 +7,7 @@ use crate::{
         run::{SimpleHistoryChart, SuperimposedHistoryChart},
     },
     config::{CpuView, IoView, PaddingOption, PercentView},
+    fl,
 };
 use cosmic::{
     Apply, Element, Renderer, Theme,
@@ -26,7 +26,7 @@ fn sized_container<'a>(
         .style(base_background)
 }
 
-fn format_bytes(bytes: u64) -> String {
+pub fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     #[allow(clippy::cast_precision_loss)]
     let mut size = bytes as f64;
@@ -67,7 +67,11 @@ fn format_gpu_tooltip(gpu_index: usize, gpu_data: &GpuData) -> String {
 }
 
 fn format_gpu_usage_tooltip(gpu_index: usize, gpu_data: &GpuData) -> String {
-    fl!("tooltip-gpu-usage", index = gpu_index, usage = gpu_data.usage)
+    fl!(
+        "tooltip-gpu-usage",
+        index = gpu_index,
+        usage = gpu_data.usage
+    )
 }
 
 fn format_gpu_vram_tooltip(gpu_index: usize, gpu_data: &GpuData) -> String {

@@ -211,9 +211,9 @@ impl<'a> SuperimposedHistoryChart<'a> {
 impl<'a> From<SuperimposedHistoryChart<'a>> for Element<'a, Message> {
     fn from(value: SuperimposedHistoryChart<'a>) -> Self {
         Canvas::new(value)
-                        .width(Length::Fill)
-                        .height(Length::Fill)
-                        .into()
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 }
 

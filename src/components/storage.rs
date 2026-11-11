@@ -23,7 +23,6 @@ pub struct Drive {
     pub temp: Option<f32>,
 }
 
-/// Lists physical drives and adds up the used space of the filesystems mounted on them.
 pub fn drives(disks: &Disks) -> Vec<Drive> {
     let mut used: HashMap<String, u64> = HashMap::new();
     // The same filesystem can show up at many mount points (e.g. inside a flatpak sandbox)
@@ -54,7 +53,11 @@ pub fn drives(disks: &Disks) -> Vec<Drive> {
             {
                 return None;
             }
-            let sectors: u64 = read_to_string(path.join("size")).ok()?.trim().parse().ok()?;
+            let sectors: u64 = read_to_string(path.join("size"))
+                .ok()?
+                .trim()
+                .parse()
+                .ok()?;
             if sectors == 0 {
                 return None;
             }
@@ -108,10 +111,12 @@ fn physical_parents(block: &str) -> Vec<String> {
     }
     if path.join("partition").exists() {
         // /sys/class/block/nvme0n1p2 -> .../nvme0n1/nvme0n1p2
-        if let Some(parent) = read_link(&path)
-            .ok()
-            .and_then(|target| target.parent()?.file_name().map(|n| n.to_string_lossy().into_owned()))
-        {
+        if let Some(parent) = read_link(&path).ok().and_then(|target| {
+            target
+                .parent()?
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+        }) {
             return vec![parent];
         }
     }

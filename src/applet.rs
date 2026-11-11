@@ -7,7 +7,7 @@ use cosmic::{
     iced::{Color, Rectangle, Subscription, window},
     surface::{
         self,
-        action::{app_popup, destroy_popup},
+        action::{LiveSettings, app_popup, destroy_popup},
     },
     widget::container,
 };
@@ -69,7 +69,7 @@ pub enum Message {
     TickNet,
     TickDisk,
     TickGpu,
-    Surface(surface::Action),
+    Surface(surface::Action<Message>),
     PopupClosed(window::Id),
     ToggleExpanded(String),
 }
@@ -201,9 +201,7 @@ impl Application for SystemMonitorApplet {
                 }
             }
             Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
+                return cosmic::task::message(cosmic::Action::Surface(a));
             }
             Message::TickMem => {
                 self.sys.refresh_memory();
@@ -318,10 +316,10 @@ const PANEL_ICON: &[u8] = include_bytes!("../res/panel-icon-symbolic.svg");
 
 impl SystemMonitorApplet {
     fn save(&self, key: &str, value: &Vec<String>) {
-        if let Some(handler) = &self.config_handler {
-            if let Err(err) = handler.set(key, value) {
-                println!("failed to save {key}: {err}");
-            }
+        if let Some(handler) = &self.config_handler
+            && let Err(err) = handler.set(key, value)
+        {
+            println!("failed to save {key}: {err}");
         }
     }
 
@@ -337,7 +335,7 @@ impl SystemMonitorApplet {
                     Message::Surface(destroy_popup(id))
                 } else {
                     Message::Surface(app_popup::<SystemMonitorApplet>(
-                        |_| Default::default(),
+                        |_| LiveSettings::default(),
                         move |state: &mut SystemMonitorApplet| {
                             let new_id = window::Id::unique();
                             state.popup = Some(new_id);
